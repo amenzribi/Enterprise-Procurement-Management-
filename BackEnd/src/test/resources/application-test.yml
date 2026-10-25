@@ -1,0 +1,10 @@
+# Used only by the SQL Server integration tests (-Pdb-it). They clean and re-migrate this database.
+spring:
+  datasource:
+    url: ${DB_TEST_URL:jdbc:sqlserver://localhost:1433;databaseName=procurement_test;integratedSecurity=true;encrypt=true;trustServerCertificate=true}
+  flyway:
+    clean-disabled: false
+
+app:
+  status:
+    expose-details: true

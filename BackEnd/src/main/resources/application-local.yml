@@ -1,0 +1,4 @@
+# Alias of the dev defaults for developers who prefer the "local" profile name.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=procurement_dev;integratedSecurity=true;encrypt=true;trustServerCertificate=true}

@@ -1,0 +1,6 @@
+# Demo profile: loads clearly labelled DEMONSTRATION data on top of the real schema.
+# Combine with a connection profile, e.g. SPRING_PROFILES_ACTIVE=dev,demo. Demo environments are often shared,
+# so this profile does not expose server details (QA-D-08).
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo

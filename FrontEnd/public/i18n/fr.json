@@ -1,0 +1,175 @@
+{
+  "app": {
+    "name": "Procurement Intelligence",
+    "suite": "De la demande à la réception"
+  },
+  "language": {
+    "label": "Langue d’affichage",
+    "names": {
+      "en": "English",
+      "fr": "Français"
+    },
+    "loadFailed": "Impossible de charger la langue « {{language}} ». La langue précédente est conservée."
+  },
+  "shell": {
+    "skipToContent": "Aller au contenu principal",
+    "sidebarLabel": "Barre latérale de l’application",
+    "mainNavigation": "Navigation principale",
+    "openNavigation": "Ouvrir la navigation",
+    "closeNavigation": "Fermer la navigation",
+    "collapseSidebar": "Réduire la barre latérale",
+    "expandSidebar": "Déployer la barre latérale",
+    "environment": {
+      "development": "Environnement de développement"
+    }
+  },
+  "nav": {
+    "groups": {
+      "workspace": "Espace de travail",
+      "requestToOrder": "De la demande à la commande",
+      "orderToReceipt": "De la commande à la réception",
+      "administration": "Administration",
+      "management": "Pilotage"
+    },
+    "items": {
+      "overview": "Vue d’ensemble",
+      "systemStatus": "État du système",
+      "requests": "Demandes d’achat",
+      "approvals": "Validations",
+      "purchasingInbox": "Boîte achats",
+      "sourcing": "Consultations",
+      "purchaseOrders": "Commandes",
+      "receipts": "Réceptions",
+      "organization": "Organisation",
+      "suppliers": "Fournisseurs",
+      "logistics": "Logistique",
+      "dashboards": "Tableaux de bord"
+    },
+    "plannedSprint": "Sprint {{sprint}}"
+  },
+  "overview": {
+    "title": "Procurement Intelligence",
+    "description": "Une seule porte d’entrée pour toutes les demandes d’achat, de l’expression du besoin jusqu’à la livraison et à la clôture, avec un responsable identifié à chaque étape.",
+    "available": {
+      "title": "Disponible dans cette version",
+      "items": {
+        "shell": "Espace de travail adapté à l’ordinateur, à la tablette et au téléphone",
+        "languages": "Anglais et français, modifiables à tout moment",
+        "statusCheck": "Vérification en direct de la connexion au serveur et à la base de données",
+        "schema": "Socle de données pour les sociétés, sites, départements, utilisateurs et une piste d’audit infalsifiable"
+      },
+      "checkConnection": "Vérifier la connexion"
+    },
+    "journey": {
+      "title": "Prochaines étapes",
+      "description": "Le parcours d’achat est livré étape par étape, chacune complète avant de passer à la suivante.",
+      "stages": {
+        "request": "Créer et soumettre une demande d’achat",
+        "approval": "Valider, rejeter ou renvoyer pour révision",
+        "purchasing": "Affecter à un acheteur de l’équipe achats",
+        "sourcing": "Recueillir et comparer les offres",
+        "order": "Émettre la commande",
+        "logistics": "Suivre les expéditions jusqu’au site",
+        "receipt": "Enregistrer les réceptions et les anomalies"
+      }
+    },
+    "demoNote": "Les sociétés et sites affichés en développement sont des données de démonstration. Leur nom se termine par « (Demo) »."
+  },
+  "planned": {
+    "title": "Prévu pour le sprint {{sprint}}",
+    "message": "Ce module n’est pas encore disponible. Il apparaîtra ici une fois développé et testé.",
+    "backToOverview": "Retour à la vue d’ensemble",
+    "descriptions": {
+      "requests": "Créez des demandes d’achat multi-lignes avec pièces jointes et suivez-les sous un numéro unique.",
+      "approvals": "Consultez les demandes qui attendent votre décision et traitez-les depuis n’importe quel appareil.",
+      "purchasingInbox": "Recevez les demandes validées, contrôlez-les et affectez chacune à un acheteur.",
+      "sourcing": "Consultez les fournisseurs, enregistrez leurs offres et comparez-les côte à côte.",
+      "purchaseOrders": "Émettez les commandes à partir de l’offre retenue et suivez leur confirmation.",
+      "receipts": "Enregistrez les réceptions complètes ou partielles, les marchandises endommagées et les autres anomalies.",
+      "organization": "Gérez les sociétés, sites, départements et centres de coûts.",
+      "suppliers": "Tenez à jour le registre des fournisseurs, leurs documents et leur performance.",
+      "logistics": "Suivez les expéditions locales et internationales étape par étape, avec leurs documents de transport et de douane.",
+      "dashboards": "Voyez où en est chaque demande, qui en est responsable, combien elle engage et si elle est en retard."
+    }
+  },
+  "systemStatus": {
+    "title": "État du système",
+    "description": "Vérifie que ce navigateur atteint le serveur d’application, et que le serveur atteint la base de données.",
+    "checkAgain": "Vérifier à nouveau",
+    "checkedAt": "Vérifié à {{time}}",
+    "summary": {
+      "checking": "Vérification de la connexion…",
+      "allConnected": "Tout est connecté",
+      "databaseDown": "Le serveur fonctionne mais n’atteint pas la base de données",
+      "serverUnreachable": "Le serveur d’application n’a pas répondu",
+      "databaseNotReported": "Le serveur n’a pas indiqué l’état de la base de données"
+    },
+    "hops": {
+      "browser": {
+        "name": "Ce navigateur"
+      },
+      "server": {
+        "name": "Serveur d’application",
+        "unreachable": "Aucune réponse du serveur."
+      },
+      "database": {
+        "name": "Base de données",
+        "down": "Le serveur n’a pas pu ouvrir de connexion à la base de données.",
+        "unknown": "Vérification impossible tant que le serveur est injoignable.",
+        "notReported": "La réponse du serveur ne contient pas l’état de la base de données."
+      }
+    },
+    "state": {
+      "pending": "Vérification",
+      "up": "Connecté",
+      "down": "Indisponible",
+      "unknown": "Inconnu"
+    },
+    "facts": {
+      "language": "Langue d’affichage",
+      "version": "Version",
+      "serverTime": "Heure du serveur",
+      "roundTrip": "Temps de réponse",
+      "milliseconds": "{{value}} ms",
+      "schemaVersion": "Version du schéma",
+      "sqlServer": "Version de SQL Server",
+      "none": "Aucune",
+      "notAvailable": "Non disponible"
+    },
+    "error": {
+      "title": "Le serveur d’application n’a pas répondu",
+      "message": "Vérifiez que le backend est démarré sur le port 8080, puis relancez la vérification. S’il est démarré, consultez sa console pour repérer les erreurs."
+    },
+    "empty": {
+      "title": "La base de données n’a pas encore de schéma",
+      "message": "La base de données est accessible mais aucune migration n’a été appliquée. Redémarrez le backend pour les appliquer."
+    },
+    "health": {
+      "title": "Contrôles de santé",
+      "caption": "État de chaque contrôle de santé du serveur",
+      "component": "Contrôle",
+      "status": "État",
+      "unavailable": "Les détails de santé ne sont pas disponibles.",
+      "components": {
+        "db": "Connexion à la base de données",
+        "diskSpace": "Espace disque",
+        "livenessState": "Serveur en fonctionnement",
+        "ping": "Serveur joignable",
+        "readinessState": "Prêt à traiter les requêtes",
+        "ssl": "Certificats"
+      },
+      "states": {
+        "UP": "Opérationnel",
+        "DOWN": "En panne",
+        "OUT_OF_SERVICE": "Hors service",
+        "UNKNOWN": "Inconnu"
+      }
+    }
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "heading": "Cette page n’existe pas",
+    "message": "L’adresse est peut-être mal saisie, ou la page a été déplacée.",
+    "backToOverview": "Aller à la vue d’ensemble"
+  }
+}

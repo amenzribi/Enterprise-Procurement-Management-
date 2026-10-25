@@ -1,0 +1,113 @@
+<a class="skip-link" href="#main" (click)="skipToContent($event)">{{ 'shell.skipToContent' | translate }}</a>
+
+<div
+  class="shell"
+  [class.is-collapsed]="collapsed() && !isDrawerMode()"
+  [class.is-drawer-mode]="isDrawerMode()"
+  [class.is-drawer-open]="drawerOpen()"
+>
+  <aside
+    id="app-sidebar"
+    class="sidebar"
+    [attr.aria-label]="'shell.sidebarLabel' | translate"
+    [attr.role]="isDrawerMode() ? 'dialog' : null"
+    [attr.aria-modal]="isDrawerMode() && drawerOpen() ? 'true' : null"
+    [attr.inert]="isDrawerMode() && !drawerOpen() ? '' : null"
+    [cdkTrapFocus]="isDrawerMode() && drawerOpen()"
+  >
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">EP</span>
+      <span class="brand-name">
+        <span class="brand-product">{{ 'app.name' | translate }}</span>
+        <span class="brand-suite">{{ 'app.suite' | translate }}</span>
+      </span>
+      @if (isDrawerMode()) {
+        <button
+          type="button"
+          class="icon-button drawer-close"
+          [attr.aria-label]="'shell.closeNavigation' | translate"
+          (click)="closeDrawer()"
+        >
+          <app-icon name="x" />
+        </button>
+      }
+    </div>
+
+    <nav class="nav" [attr.aria-label]="'shell.mainNavigation' | translate">
+      @for (group of navigation; track group.key) {
+        <div class="nav-group">
+          <h2 class="nav-group-title" [id]="'nav-group-' + group.key">{{ 'nav.groups.' + group.key | translate }}</h2>
+          <ul class="nav-list" [attr.aria-labelledby]="'nav-group-' + group.key">
+            @for (item of group.items; track item.key) {
+              <li>
+                <a
+                  class="nav-link"
+                  [class.is-planned]="item.plannedSprint"
+                  [routerLink]="item.route ?? ['/planned', item.key]"
+                  routerLinkActive="is-active"
+                  ariaCurrentWhenActive="page"
+                  [attr.title]="collapsed() && !isDrawerMode() ? (('nav.items.' + item.key) | translate) : null"
+                >
+                  <app-icon class="nav-icon" [name]="item.icon" />
+                  <span class="nav-label">{{ 'nav.items.' + item.key | translate }}</span>
+                  @if (item.plannedSprint) {
+                    <span class="nav-planned">
+                      {{ 'nav.plannedSprint' | translate: { sprint: item.plannedSprint } }}
+                    </span>
+                  }
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </nav>
+
+    @if (!isDrawerMode()) {
+      <div class="sidebar-footer">
+        <button
+          type="button"
+          class="icon-button collapse-toggle"
+          [attr.aria-expanded]="!collapsed()"
+          aria-controls="app-sidebar"
+          (click)="toggleCollapsed()"
+        >
+          <app-icon [name]="collapsed() ? 'panel-left-open' : 'panel-left-close'" />
+          <span class="collapse-label">{{ (collapsed() ? 'shell.expandSidebar' : 'shell.collapseSidebar') | translate }}</span>
+        </button>
+      </div>
+    }
+  </aside>
+
+  @if (isDrawerMode() && drawerOpen()) {
+    <div class="backdrop" aria-hidden="true" (click)="closeDrawer()"></div>
+  }
+
+  <div class="main-column">
+    <header class="topbar">
+      @if (isDrawerMode()) {
+        <button
+          type="button"
+          class="icon-button menu-button"
+          aria-controls="app-sidebar"
+          [attr.aria-expanded]="drawerOpen()"
+          [attr.aria-label]="'shell.openNavigation' | translate"
+          (click)="toggleDrawer()"
+        >
+          <app-icon name="menu" />
+        </button>
+        <span class="topbar-product">{{ 'app.name' | translate }}</span>
+      }
+      <div class="topbar-end">
+        @if (isDevMode) {
+          <app-status-badge tone="info">{{ 'shell.environment.development' | translate }}</app-status-badge>
+        }
+        <app-language-select />
+      </div>
+    </header>
+
+    <main id="main" class="content" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>

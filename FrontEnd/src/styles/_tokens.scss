@@ -1,0 +1,130 @@
+// Design tokens. Components use these custom properties only - never raw colour values.
+//
+// Palette rationale: a deep "harbour ink" navigation surface and a customs-teal accent echo the trade and
+// logistics world the product serves, on a cool neutral paper that keeps dense tables calm to read.
+// All text/background pairs below meet WCAG 2.2 AA (4.5:1) on their intended surface.
+
+:root {
+  color-scheme: light;
+
+  // Neutrals
+  --color-paper: #f4f6f6;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #eef1f2;
+  --color-line: #dde3e6;
+  --color-line-strong: #c3cdd2;
+  --color-text: #15222c;
+  --color-text-muted: #556570;
+  --color-text-inverse: #ffffff;
+
+  // Navigation surface
+  --color-nav: #12202b;
+  --color-nav-raised: #1d303e;
+  --color-nav-text: #c7d1d8;
+  --color-nav-text-strong: #ffffff;
+  --color-nav-muted: #8fa1ad;
+  --color-nav-line: #2a3f4e;
+
+  // Accent (interactive)
+  --color-accent: #0e7c7b;
+  --color-accent-hover: #0a6463;
+  --color-accent-soft: #e2f1f0;
+  --color-accent-on-dark: #5cc4c0;
+  --color-focus: #0e7c7b;
+
+  // Status (text colour on its own soft background)
+  --color-success: #1d7346;
+  --color-success-soft: #e3f2e9;
+  --color-warning: #8f5300;
+  --color-warning-soft: #fbefd9;
+  --color-danger: #b42318;
+  --color-danger-soft: #fce8e6;
+  --color-info: #2b589c;
+  --color-info-soft: #e6edf8;
+  --color-neutral: #556570;
+  --color-neutral-soft: #eceff1;
+
+  // Typography
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.75rem;    // 12px - metadata only
+  --text-sm: 0.8125rem;  // 13px - table cells, secondary text
+  --text-base: 0.875rem; // 14px - UI default
+  --text-md: 1rem;       // 16px - reading text
+  --text-lg: 1.125rem;   // 18px - section titles
+  --text-xl: 1.5rem;     // 24px - page titles
+  --text-2xl: 2rem;      // 32px - overview title
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --tracking-tight: -0.011em;
+
+  // Spacing (4px grid)
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  // Shape: small radius for controls, slightly larger for containers - hierarchy, not decoration
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  // Elevation: only for things that float above the page
+  --shadow-overlay: 0 12px 32px -8px rgb(18 32 43 / 0.28), 0 2px 6px rgb(18 32 43 / 0.12);
+
+  // Layout
+  --header-height: 3.5rem;
+  --sidebar-width: 16.5rem;
+  --sidebar-rail-width: 4rem;
+  --content-max-width: 72rem;
+
+  // Motion
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+// Dark theme tokens are defined so components stay theme-agnostic; a user-facing switch is planned later.
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-paper: #0f1a22;
+  --color-surface: #16242f;
+  --color-surface-sunken: #12202a;
+  --color-line: #263846;
+  --color-line-strong: #34495a;
+  --color-text: #e6ecef;
+  --color-text-muted: #a3b2bc;
+  --color-nav: #0b141b;
+  --color-nav-raised: #172631;
+  --color-accent: #4fb8b4;
+  // Text on the light dark-theme accent must be dark: white on #4fb8b4 is only 2.4:1 (CR-20), #0b141b is 8.5:1.
+  --color-text-inverse: #0b141b;
+  --color-accent-hover: #6cc9c5;
+  --color-accent-soft: #163a3c;
+  --color-focus: #6cc9c5;
+  --color-success: #6fcf97;
+  --color-success-soft: #173426;
+  --color-warning: #f2b55c;
+  --color-warning-soft: #3a2a12;
+  --color-danger: #f58b80;
+  --color-danger-soft: #3d1c19;
+  --color-info: #8fb4ec;
+  --color-info-soft: #1b2b44;
+  --color-neutral: #a3b2bc;
+  --color-neutral-soft: #22323e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

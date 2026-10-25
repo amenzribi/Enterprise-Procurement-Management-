@@ -1,0 +1,13 @@
+# Copy to BackEnd/config/application.yml (git-ignored). Spring Boot loads ./config/application.yml
+# automatically when the backend is started from the BackEnd folder. Environment variables
+# (DB_URL, DB_USERNAME, DB_PASSWORD, SERVER_PORT) can be used instead.
+#
+# Option A - Windows integrated authentication (the dev profile already defaults to this):
+#   jdbc:sqlserver://localhost:1433;databaseName=procurement_dev;integratedSecurity=true;encrypt=true;trustServerCertificate=true
+#
+# Option B - SQL Server authentication (requires mixed-mode authentication on the server):
+spring:
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=procurement_dev;encrypt=true;trustServerCertificate=true
+    username: procurement_app
+    password: change-me   # placeholder only - never commit a real password

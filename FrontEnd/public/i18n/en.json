@@ -1,0 +1,175 @@
+{
+  "app": {
+    "name": "Procurement Intelligence",
+    "suite": "Request to receipt"
+  },
+  "language": {
+    "label": "Display language",
+    "names": {
+      "en": "English",
+      "fr": "Français"
+    },
+    "loadFailed": "{{language}} could not be loaded. The previous language is kept."
+  },
+  "shell": {
+    "skipToContent": "Skip to main content",
+    "sidebarLabel": "Application sidebar",
+    "mainNavigation": "Main navigation",
+    "openNavigation": "Open navigation",
+    "closeNavigation": "Close navigation",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "environment": {
+      "development": "Development environment"
+    }
+  },
+  "nav": {
+    "groups": {
+      "workspace": "Workspace",
+      "requestToOrder": "Request to order",
+      "orderToReceipt": "Order to receipt",
+      "administration": "Administration",
+      "management": "Management"
+    },
+    "items": {
+      "overview": "Overview",
+      "systemStatus": "System status",
+      "requests": "Purchase requests",
+      "approvals": "Approvals",
+      "purchasingInbox": "Purchasing inbox",
+      "sourcing": "Sourcing",
+      "purchaseOrders": "Purchase orders",
+      "receipts": "Receipts",
+      "organization": "Organisation",
+      "suppliers": "Suppliers",
+      "logistics": "Logistics",
+      "dashboards": "Dashboards"
+    },
+    "plannedSprint": "Sprint {{sprint}}"
+  },
+  "overview": {
+    "title": "Procurement Intelligence",
+    "description": "One entry point for every purchase request, from the first need to delivery and closure, with a named owner at each step.",
+    "available": {
+      "title": "Available in this version",
+      "items": {
+        "shell": "Responsive workspace for desktop, tablet and phone",
+        "languages": "English and French, switchable at any time",
+        "statusCheck": "Live check of the connection to the server and database",
+        "schema": "Database foundation for companies, sites, departments, users and a tamper-evident audit trail"
+      },
+      "checkConnection": "Check the connection"
+    },
+    "journey": {
+      "title": "What comes next",
+      "description": "The purchasing journey is delivered stage by stage, each one complete before the next begins.",
+      "stages": {
+        "request": "Create and submit a purchase request",
+        "approval": "Approve, reject or return for revision",
+        "purchasing": "Assign to a buyer in the purchasing team",
+        "sourcing": "Collect and compare quotations",
+        "order": "Issue the purchase order",
+        "logistics": "Track shipments to the site",
+        "receipt": "Record receipts and exceptions"
+      }
+    },
+    "demoNote": "Companies and sites shown in development are demonstration data. Their names end in “(Demo)”."
+  },
+  "planned": {
+    "title": "Planned for sprint {{sprint}}",
+    "message": "This module is not available yet. It will appear here once it has been built and tested.",
+    "backToOverview": "Back to overview",
+    "descriptions": {
+      "requests": "Create multi-line purchase requests with attachments and track them under a single number.",
+      "approvals": "Review the requests waiting for your decision and act on them from any device.",
+      "purchasingInbox": "Receive approved requests, check them and assign each one to a buyer.",
+      "sourcing": "Invite suppliers, record their quotations and compare them side by side.",
+      "purchaseOrders": "Issue purchase orders from the selected quotation and follow their confirmation.",
+      "receipts": "Record full or partial receipts, damaged goods and other exceptions.",
+      "organization": "Manage companies, sites, departments and cost centres.",
+      "suppliers": "Maintain the supplier register, documents and performance.",
+      "logistics": "Follow local and international shipments step by step, with their transport and customs documents.",
+      "dashboards": "See where every request stands, who owns it, how much it commits and whether it is late."
+    }
+  },
+  "systemStatus": {
+    "title": "System status",
+    "description": "Checks that this browser can reach the application server, and that the server can reach the database.",
+    "checkAgain": "Check again",
+    "checkedAt": "Checked at {{time}}",
+    "summary": {
+      "checking": "Checking the connection…",
+      "allConnected": "Everything is connected",
+      "databaseDown": "The server is running but cannot reach the database",
+      "serverUnreachable": "The application server did not respond",
+      "databaseNotReported": "The server did not report the database status"
+    },
+    "hops": {
+      "browser": {
+        "name": "This browser"
+      },
+      "server": {
+        "name": "Application server",
+        "unreachable": "No response from the server."
+      },
+      "database": {
+        "name": "Database",
+        "down": "The server could not open a connection to the database.",
+        "unknown": "Cannot be checked while the server is unreachable.",
+        "notReported": "The server response did not include the database status."
+      }
+    },
+    "state": {
+      "pending": "Checking",
+      "up": "Connected",
+      "down": "Unavailable",
+      "unknown": "Unknown"
+    },
+    "facts": {
+      "language": "Display language",
+      "version": "Version",
+      "serverTime": "Server time",
+      "roundTrip": "Response time",
+      "milliseconds": "{{value}} ms",
+      "schemaVersion": "Schema version",
+      "sqlServer": "SQL Server version",
+      "none": "None",
+      "notAvailable": "Not available"
+    },
+    "error": {
+      "title": "The application server did not respond",
+      "message": "Make sure the backend is running on port 8080, then check again. If it is running, look at its console for errors."
+    },
+    "empty": {
+      "title": "The database has no schema yet",
+      "message": "The database is reachable but no migrations have been applied. Restart the backend to apply them."
+    },
+    "health": {
+      "title": "Health checks",
+      "caption": "Status of each server health check",
+      "component": "Check",
+      "status": "Status",
+      "unavailable": "Health details are not available.",
+      "components": {
+        "db": "Database connection",
+        "diskSpace": "Disk space",
+        "livenessState": "Server running",
+        "ping": "Server reachable",
+        "readinessState": "Ready to accept requests",
+        "ssl": "Certificates"
+      },
+      "states": {
+        "UP": "Up",
+        "DOWN": "Down",
+        "OUT_OF_SERVICE": "Out of service",
+        "UNKNOWN": "Unknown"
+      }
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "heading": "This page does not exist",
+    "message": "The address may be mistyped, or the page may have moved.",
+    "backToOverview": "Go to overview"
+  }
+}

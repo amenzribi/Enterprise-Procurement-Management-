@@ -1,0 +1,174 @@
+<app-page-header
+  [heading]="'systemStatus.title' | translate"
+  [description]="'systemStatus.description' | translate"
+>
+  <button appButton variant="secondary" type="button" [disabled]="state() === 'loading'" (click)="check()">
+    <app-icon name="refresh" [size]="16" />
+    {{ 'systemStatus.checkAgain' | translate }}
+  </button>
+</app-page-header>
+
+<!-- The single live announcement for this page; the error state below is not announced again. -->
+<p class="visually-hidden" aria-live="polite">{{ summary() | translate }}</p>
+
+<section class="route-panel" [attr.aria-busy]="state() === 'loading'" aria-labelledby="route-title">
+  <div class="route-heading">
+    <h2 id="route-title" class="route-title">{{ summary() | translate }}</h2>
+    @if (checkedAt(); as checkedAt) {
+      <p class="checked-at">
+        {{ 'systemStatus.checkedAt' | translate: { time: (checkedAt | date: 'mediumTime' : undefined : language()) } }}
+      </p>
+    }
+  </div>
+
+  <ol class="route">
+    @for (hop of hops(); track hop.key) {
+      <li class="hop" [class]="'hop is-' + hop.state">
+        <div class="hop-marker">
+          <app-icon [name]="hop.icon" [size]="20" />
+        </div>
+        <div class="hop-body">
+          <h3 class="hop-name">{{ 'systemStatus.hops.' + hop.key + '.name' | translate }}</h3>
+          <app-status-badge [tone]="tone(hop.state)">
+            {{ 'systemStatus.state.' + hop.state | translate }}
+          </app-status-badge>
+
+          <div class="facts">
+            @switch (hop.key) {
+              @case ('browser') {
+                <dl>
+                  <div class="fact">
+                    <dt>{{ 'systemStatus.facts.language' | translate }}</dt>
+                    <dd>{{ 'language.names.' + language() | translate }}</dd>
+                  </div>
+                </dl>
+              }
+              @case ('server') {
+                @if (state() === 'loading') {
+                  <app-skeleton width="9rem" height="0.875rem" />
+                  <app-skeleton width="7rem" height="0.875rem" />
+                } @else if (result(); as result) {
+                  <dl>
+                    <div class="fact">
+                      <dt>{{ 'systemStatus.facts.version' | translate }}</dt>
+                      <dd class="tabular">{{ result.status.version ?? ('systemStatus.facts.notAvailable' | translate) }}</dd>
+                    </div>
+                    <div class="fact">
+                      <dt>{{ 'systemStatus.facts.serverTime' | translate }}</dt>
+                      <dd class="tabular">
+                        @if (result.status.serverTime; as serverTime) {
+                          {{ serverTime | date: 'medium' : undefined : language() }}
+                        } @else {
+                          {{ 'systemStatus.facts.notAvailable' | translate }}
+                        }
+                      </dd>
+                    </div>
+                    <div class="fact">
+                      <dt>{{ 'systemStatus.facts.roundTrip' | translate }}</dt>
+                      <dd class="tabular">
+                        {{ 'systemStatus.facts.milliseconds' | translate: { value: (result.roundTripMs | number: '1.0-0' : language()) } }}
+                      </dd>
+                    </div>
+                  </dl>
+                } @else {
+                  <p class="fact-note">{{ 'systemStatus.hops.server.unreachable' | translate }}</p>
+                }
+              }
+              @case ('database') {
+                @if (state() === 'loading') {
+                  <app-skeleton width="8rem" height="0.875rem" />
+                  <app-skeleton width="10rem" height="0.875rem" />
+                } @else if (result(); as result) {
+                  @switch (result.status.database.status) {
+                    @case ('UP') {
+                      <dl>
+                        <div class="fact">
+                          <dt>{{ 'systemStatus.facts.schemaVersion' | translate }}</dt>
+                          <dd class="tabular">
+                            @if (result.status.database.schemaVersion; as schemaVersion) {
+                              {{ schemaVersion }}
+                            } @else if (result.status.database.noSchemaReported) {
+                              {{ 'systemStatus.facts.none' | translate }}
+                            } @else {
+                              {{ 'systemStatus.facts.notAvailable' | translate }}
+                            }
+                          </dd>
+                        </div>
+                        @if (result.status.database.productVersion; as productVersion) {
+                          <div class="fact">
+                            <dt>{{ 'systemStatus.facts.sqlServer' | translate }}</dt>
+                            <dd class="tabular">{{ productVersion }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    }
+                    @case ('DOWN') {
+                      <p class="fact-note">{{ 'systemStatus.hops.database.down' | translate }}</p>
+                    }
+                    @default {
+                      <p class="fact-note">{{ 'systemStatus.hops.database.notReported' | translate }}</p>
+                    }
+                  }
+                } @else {
+                  <p class="fact-note">{{ 'systemStatus.hops.database.unknown' | translate }}</p>
+                }
+              }
+            }
+          </div>
+        </div>
+      </li>
+    }
+  </ol>
+</section>
+
+@if (state() === 'error') {
+  <app-error-state
+    class="outcome"
+    [announce]="false"
+    [heading]="'systemStatus.error.title' | translate"
+    [message]="'systemStatus.error.message' | translate"
+    [retryLabel]="'systemStatus.checkAgain' | translate"
+    (retry)="check()"
+  />
+}
+
+@if (state() === 'ready') {
+  @if (result(); as result) {
+    @if (result.status.database.noSchemaReported) {
+      <app-empty-state
+        class="outcome"
+        icon="database"
+        [heading]="'systemStatus.empty.title' | translate"
+        [message]="'systemStatus.empty.message' | translate"
+      />
+    }
+
+    <app-panel class="outcome" [heading]="'systemStatus.health.title' | translate">
+      @if (healthComponents().length) {
+        <table class="health-table">
+          <caption class="visually-hidden">{{ 'systemStatus.health.caption' | translate }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'systemStatus.health.component' | translate }}</th>
+              <th scope="col">{{ 'systemStatus.health.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (component of healthComponents(); track component.name) {
+              <tr>
+                <td>{{ 'systemStatus.health.components.' + component.name | translate: { fallback: component.name } }}</td>
+                <td>
+                  <app-status-badge [tone]="componentTone(component.status)">
+                    {{ healthStateKey(component.status) | translate }}
+                  </app-status-badge>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="muted">{{ 'systemStatus.health.unavailable' | translate }}</p>
+      }
+    </app-panel>
+  }
+}

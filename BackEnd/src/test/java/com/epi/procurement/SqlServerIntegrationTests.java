@@ -1,0 +1,356 @@
+package com.epi.procurement;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import com.epi.procurement.audit.AuditChainVerification;
+import com.epi.procurement.audit.AuditLog;
+import com.epi.procurement.audit.AuditRecord;
+import com.epi.procurement.organization.Company;
+import com.epi.procurement.organization.CompanyRepository;
+import com.epi.procurement.organization.CompanyType;
+import com.epi.procurement.system.SystemStatus;
+import com.epi.procurement.system.SystemStatusTestAccess;
+
+/**
+ * Runs against a real SQL Server database (never a substitute). Enabled with {@code ./mvnw verify -Pdb-it};
+ * reported as skipped otherwise. The database is cleaned and re-migrated, so it must be a test database.
+ */
+@EnabledIfSystemProperty(named = "db.it", matches = "true")
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles({ "test", "demo" })
+class SqlServerIntegrationTests {
+
+	@Autowired
+	Flyway flyway;
+
+	@Autowired
+	JdbcTemplate jdbc;
+
+	@Autowired
+	CompanyRepository companies;
+
+	@Autowired
+	AuditLog auditLog;
+
+	@Autowired
+	MockMvc mvc;
+
+	@Autowired
+	Environment environment;
+
+	@Autowired
+	PlatformTransactionManager transactionManager;
+
+	@TestConfiguration
+	static class CleanTestDatabase {
+
+		@Bean
+		FlywayMigrationStrategy cleanThenMigrate() {
+			return flyway -> {
+				String url = flyway.getConfiguration().getUrl();
+				String database = new JdbcTemplate(flyway.getConfiguration().getDataSource())
+					.queryForObject("SELECT DB_NAME()", String.class);
+				if (database == null || !database.endsWith("_test")) {
+					throw new IllegalStateException("Refusing to clean non-test database " + database + " (" + url + ")");
+				}
+				flyway.clean();
+				flyway.migrate();
+			};
+		}
+
+	}
+
+	@Test
+	void migratesFullyAndRerunIsANoOp() {
+		assertThat(flyway.info().current()).isNotNull();
+		assertThat(flyway.info().pending()).isEmpty();
+		assertThat(flyway.migrate().migrationsExecuted).isZero();
+
+		List<String> tables = jdbc.queryForList("SELECT name FROM sys.tables", String.class);
+		assertThat(tables).contains("audit_chain_head", "audit_event", "company", "cost_center", "country",
+				"currency", "department", "document_counter", "organization_group", "site", "user_account");
+	}
+
+	@Test
+	void databaseSeededWithDemoDataValidatesWithoutTheDemoProfile() {
+		// Same configuration as a start with "dev" only, after this database was migrated with "demo" (QA-D-02).
+		Flyway withoutDemo = Flyway.configure()
+			.configuration(flyway.getConfiguration())
+			.locations("classpath:db/migration")
+			.ignoreMigrationPatterns(environment.getProperty("spring.flyway.ignore-migration-patterns", String[].class))
+			.load();
+
+		assertThat(withoutDemo.validateWithResult().validationSuccessful).isTrue();
+		assertThat(withoutDemo.migrate().migrationsExecuted).isZero();
+		// Demo rows are not removed by switching the profile off.
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM company WHERE code LIKE 'DEMO-%'", Integer.class))
+			.isEqualTo(4);
+	}
+
+	@Test
+	void currenciesCarryIsoMinorUnits() {
+		assertThat(jdbc.queryForObject("SELECT minor_units FROM currency WHERE code = 'TND'", Integer.class))
+			.isEqualTo(3);
+		assertThat(jdbc.queryForObject("SELECT minor_units FROM currency WHERE code = 'EUR'", Integer.class))
+			.isEqualTo(2);
+		assertThat(jdbc.queryForObject("SELECT minor_units FROM currency WHERE code = 'JPY'", Integer.class))
+			.isZero();
+	}
+
+	@Test
+	void demoDataIsLoadedAndLabelled() {
+		List<Company> demo = companies.findAll().stream().filter(c -> c.getCode().startsWith("DEMO-")).toList();
+
+		assertThat(demo).hasSize(4).allSatisfy(c -> assertThat(c.getLegalName()).endsWith("(Demo)"));
+		assertThat(demo).extracting(Company::getType)
+			.containsExactlyInAnyOrder(CompanyType.PARENT, CompanyType.PURCHASING_CENTER, CompanyType.SUBSIDIARY,
+					CompanyType.SUBSIDIARY);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM site WHERE name NOT LIKE N'%(Demo)'", Integer.class))
+			.isZero();
+	}
+
+	@Test
+	void instantsRoundTripAsUtcDatetime2() {
+		jdbc.update("UPDATE company SET updated_at = '2026-01-15T10:30:45.123' WHERE code = 'DEMO-HOLD'");
+
+		Company holding = companies.findAll().stream().filter(c -> c.getCode().equals("DEMO-HOLD")).findFirst().orElseThrow();
+
+		assertThat(holding.getUpdatedAt()).isEqualTo(Instant.parse("2026-01-15T10:30:45.123Z"));
+		assertThat(jdbc.queryForObject(
+				"SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'company' AND COLUMN_NAME = 'updated_at'",
+				String.class))
+			.isEqualTo("datetime2");
+	}
+
+	@Test
+	void sameCompanyForeignKeysRejectCrossCompanyReferences() {
+		assertThatThrownBy(() -> jdbc.update("""
+				INSERT INTO department (company_id, site_id, code, name)
+				SELECT (SELECT id FROM company WHERE code = 'DEMO-FR-PLT'), (SELECT id FROM site WHERE code = 'DEMO-SFAX'),
+				       'X-COMPANY', N'Cross-company test'"""))
+			.hasMessageContaining("fk_department_site_same_company");
+	}
+
+	@Test
+	void auditEventsAreChainedStoredInUtcAndAppendOnly() {
+		Long companyId = companyId("DEMO-HOLD");
+		Instant before = Instant.now();
+		long first = auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "1", "CREATE", null,
+				"DRAFT", "first", "{\"n\":1}"));
+		long second = auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "1", "SUBMIT",
+				"DRAFT", "SUBMITTED", "Spécification validée", null));
+
+		assertThat(second).isGreaterThan(first);
+		AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
+		assertThat(verification.valid()).isTrue();
+		assertThat(verification.eventsChecked()).isEqualTo(2);
+
+		Instant stored = jdbc.queryForObject("SELECT occurred_at FROM audit_event WHERE id = ?", LocalDateTime.class, first)
+			.toInstant(ZoneOffset.UTC);
+		assertThat(Duration.between(before, stored).abs()).isLessThan(Duration.ofMinutes(1));
+
+		assertThatThrownBy(() -> jdbc.update("UPDATE audit_event SET comment = 'tampered' WHERE id = ?", first))
+			.hasMessageContaining("append-only");
+		assertThatThrownBy(() -> jdbc.update("DELETE FROM audit_event WHERE id = ?", first))
+			.hasMessageContaining("append-only");
+		assertThatThrownBy(() -> jdbc.execute("TRUNCATE TABLE audit_event")).hasMessageContaining("FOREIGN KEY");
+		assertThat(auditLog.verifyChain("company:" + companyId).valid()).isTrue();
+	}
+
+	@Test
+	void chainHeadsCannotBeDeletedRewoundOrRekeyed() {
+		Long companyId = companyId("DEMO-TN-PLT");
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "3", "CREATE", null, null, null, null));
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "3", "SUBMIT", null, null, null, null));
+		String chainKey = "company:" + companyId;
+		long lastSeq = jdbc.queryForObject("SELECT last_seq FROM audit_chain_head WHERE chain_key = ?", Long.class,
+				chainKey);
+
+		assertThatThrownBy(() -> jdbc.update("DELETE FROM audit_chain_head WHERE chain_key = ?", chainKey))
+			.hasMessageContaining("cannot be deleted");
+		assertThatThrownBy(() -> jdbc.update("UPDATE audit_chain_head SET last_seq = 1 WHERE chain_key = ?", chainKey))
+			.hasMessageContaining("strictly increase");
+		// Re-keying is refused by the events' foreign key, or by the trigger for a head without events.
+		assertThatThrownBy(() -> jdbc.update("UPDATE audit_chain_head SET chain_key = 'company:0' WHERE chain_key = ?",
+				chainKey))
+			.isInstanceOf(DataAccessException.class);
+		jdbc.update("INSERT INTO audit_chain_head (chain_key, last_seq, last_hash) VALUES ('empty-chain', 0, NULL)");
+		assertThatThrownBy(() -> jdbc.update(
+				"UPDATE audit_chain_head SET chain_key = 'renamed-chain' WHERE chain_key = 'empty-chain'"))
+			.hasMessageContaining("cannot be changed");
+		assertThatThrownBy(() -> jdbc.update("UPDATE audit_chain_head SET last_seq = 0 WHERE chain_key = 'empty-chain'"))
+			.hasMessageContaining("strictly increase");
+
+		assertThat(jdbc.queryForObject("SELECT last_seq FROM audit_chain_head WHERE chain_key = ?", Long.class, chainKey))
+			.isEqualTo(lastSeq);
+		assertThat(auditLog.verifyChain(chainKey).valid()).isTrue();
+	}
+
+	@Test
+	void anAppendRolledBackWithItsBusinessTransactionLeavesNoTrace() {
+		Long companyId = companyId("DEMO-TN-PLT");
+		String chainKey = "company:" + companyId;
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "4", "CREATE", null, null, null, null));
+		long headBefore = jdbc.queryForObject("SELECT last_seq FROM audit_chain_head WHERE chain_key = ?", Long.class,
+				chainKey);
+
+		assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
+			auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "4", "APPROVE", null, null,
+					null, null));
+			throw new IllegalStateException("business change failed");
+		})).hasMessage("business change failed");
+
+		assertThat(jdbc.queryForObject("SELECT last_seq FROM audit_chain_head WHERE chain_key = ?", Long.class, chainKey))
+			.isEqualTo(headBefore);
+		assertThat(auditLog.verifyChain(chainKey).valid()).isTrue();
+	}
+
+	@Test
+	void aChainWithoutHeadIsReportedInvalid() {
+		AuditChainVerification verification = auditLog.verifyChain("company:999999999");
+
+		assertThat(verification.valid()).isFalse();
+		assertThat(verification.eventsChecked()).isZero();
+	}
+
+	@Test
+	void verificationDuringConcurrentAppendsNeverRaisesAFalseAlarm() throws Exception {
+		// Uses the global chain (no company) so the other tests' per-company counts are unaffected.
+		Long companyId = null;
+		String chainKey = "global";
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "5", "CREATE", null, null, null, null));
+		ExecutorService writer = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> appends = writer.submit(() -> {
+				for (int i = 0; i < 60; i++) {
+					auditLog.record(new AuditRecord(null, "Writer", companyId, "TEST", "5", "PING", null, null, null, null));
+				}
+			});
+			int verifications = 0;
+			while (!appends.isDone()) {
+				assertThat(auditLog.verifyChain(chainKey).valid()).isTrue();
+				verifications++;
+			}
+			appends.get();
+			assertThat(verifications).isPositive();
+		}
+		finally {
+			writer.shutdown();
+		}
+		assertThat(auditLog.verifyChain(chainKey).valid()).isTrue();
+	}
+
+	@Test
+	void tamperingIsDetectedByChainVerification() {
+		Long companyId = companyId("DEMO-FR-PLT");
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "2", "CREATE", null, "DRAFT", null, null));
+		long target = auditLog.record(
+				new AuditRecord(null, "Integration test", companyId, "TEST", "2", "APPROVE", "DRAFT", "APPROVED", "ok", null));
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "2", "CLOSE", "APPROVED", "CLOSED", null, null));
+
+		jdbc.execute("DISABLE TRIGGER trg_audit_event_append_only ON audit_event");
+		try {
+			jdbc.update("UPDATE audit_event SET comment = 'changed' WHERE id = ?", target);
+		}
+		finally {
+			jdbc.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
+		}
+
+		AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
+		assertThat(verification.valid()).isFalse();
+		assertThat(verification.firstInvalidEventId()).isEqualTo(target);
+	}
+
+	@Test
+	void concurrentAppendsProduceOneLinearChain() throws Exception {
+		Long companyId = companyId("DEMO-CPA");
+		int threads = 8;
+		int perThread = 20;
+		ExecutorService pool = Executors.newFixedThreadPool(threads);
+		try {
+			List<Future<?>> futures = new ArrayList<>();
+			for (int t = 0; t < threads; t++) {
+				int thread = t;
+				futures.add(pool.submit(() -> {
+					for (int i = 0; i < perThread; i++) {
+						auditLog.record(new AuditRecord(null, "Thread " + thread, companyId, "TEST", "concurrency",
+								"PING", null, null, "event " + i, null));
+					}
+				}));
+			}
+			for (Future<?> future : futures) {
+				future.get();
+			}
+		}
+		finally {
+			pool.shutdown();
+		}
+
+		AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
+		assertThat(verification.valid()).isTrue();
+		assertThat(verification.eventsChecked()).isEqualTo(threads * perThread);
+	}
+
+	@Test
+	void statusEndpointReportsTheRealDatabase() throws Exception {
+		mvc.perform(get("/api/v1/system/status"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.database.status").value("UP"))
+			.andExpect(jsonPath("$.database.schemaVersion").value(flyway.info().current().getVersion().getVersion()))
+			.andExpect(jsonPath("$.database.productVersion").isNotEmpty());
+	}
+
+	@Test
+	void probeHidesServerDetailsWhenNotEnabled() {
+		SystemStatus.DatabaseStatus status = SystemStatusTestAccess.probe(jdbc, false);
+
+		assertThat(status.status()).isEqualTo(SystemStatus.State.UP);
+		assertThat(status.productVersion()).isNull();
+		assertThat(status.schemaVersion()).isEqualTo(flyway.info().current().getVersion().getVersion());
+	}
+
+	@Test
+	void actuatorHealthIncludesTheDatabase() throws Exception {
+		mvc.perform(get("/actuator/health"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("UP"))
+			.andExpect(jsonPath("$.components.db.status").value("UP"));
+	}
+
+	private Long companyId(String code) {
+		return jdbc.queryForObject("SELECT id FROM company WHERE code = ?", Long.class, code);
+	}
+
+}

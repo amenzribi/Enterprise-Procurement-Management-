@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: procurement
+  datasource:
+    # DB_URL is mandatory outside the dev/local/test profiles: startup fails fast when it is missing (DR-14).
+    # DB_USERNAME / DB_PASSWORD are only needed for SQL Server authentication.
+    url: ${DB_URL}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    hikari:
+      pool-name: procurement-db
+      # Fail fast when the database is unreachable: status/health answer DOWN in under 2 s (QA-D-06).
+      connection-timeout: 1500
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      # Instants are stored as DATETIME2(3) in UTC (DR-17).
+      hibernate.type.preferred_instant_jdbc_type: TIMESTAMP
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+    # The demo data is a repeatable migration loaded only with the "demo" profile. Ignoring missing repeatables
+    # lets a database seeded with demo data start without that profile (QA-D-02). The demo rows then remain in
+    # the database: switching the profile off does not remove data that was already loaded.
+    ignore-migration-patterns: "*:future,repeatable:missing"
+    # Schema changes must never be destroyed by tooling outside tests.
+    clean-disabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+app:
+  status:
+    # Exposes the database product version on /api/v1/system/status (DR-15). Enabled in dev/demo only.
+    expose-details: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-components: always
+      show-details: never
+  info:
+    env:
+      enabled: false
+
+# API documentation is off by default and enabled only by the dev profile (QA-D-07); from Sprint 1 it is
+# restricted to administrators.
+springdoc:
+  api-docs:
+    enabled: false
+    path: /api/v1/openapi
+  swagger-ui:
+    enabled: false
+    path: /api/v1/docs

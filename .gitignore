@@ -1,0 +1,49 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Secrets and local configuration — never commit
+.env
+.env.*
+!.env.example
+*.local.yml
+*.local.yaml
+*.local.properties
+!*.example.yml
+!*.example.yaml
+!*.example.properties
+
+# Backend (Maven)
+BackEnd/target/
+BackEnd/.mvn/wrapper/maven-wrapper.jar
+BackEnd/*.log
+BackEnd/data/
+
+# Frontend (Angular)
+FrontEnd/node_modules/
+FrontEnd/dist/
+FrontEnd/.angular/
+FrontEnd/coverage/
+FrontEnd/*.log
+
+# Runtime files
+logs/
+*.log
+storage/
+
+# IDE-generated (VS Code Java tooling)
+/build/
+.playwright-mcp/
+
+# Local backend override config (may contain credentials)
+BackEnd/config/application.yml
+BackEnd/config/application.yaml
+BackEnd/config/application.properties

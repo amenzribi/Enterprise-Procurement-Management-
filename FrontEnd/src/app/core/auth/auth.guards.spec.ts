@@ -1,0 +1,69 @@
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
+import { authGuard, guestGuard } from './auth.guards';
+import { AuthService } from './auth.service';
+import { safeReturnUrl } from './safe-return-url';
+
+describe('auth guards', () => {
+  const authenticated = signal(false);
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: AuthService, useValue: { isAuthenticated: authenticated } }],
+    });
+  });
+
+  const run = (guard: typeof authGuard, url = '/requests/12') =>
+    TestBed.runInInjectionContext(() =>
+      guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot),
+    );
+
+  it('lets a signed-in user into the workspace', () => {
+    authenticated.set(true);
+    expect(run(authGuard)).toBe(true);
+  });
+
+  it('sends an anonymous user to sign-in and remembers where they wanted to go', () => {
+    authenticated.set(false);
+    const result = run(authGuard) as UrlTree;
+
+    expect(TestBed.inject(Router).serializeUrl(result)).toBe('/sign-in?returnUrl=%2Frequests%2F12');
+  });
+
+  it('sends a signed-in user away from the sign-in page', () => {
+    authenticated.set(true);
+    expect(TestBed.inject(Router).serializeUrl(run(guestGuard) as UrlTree)).toBe('/requests');
+  });
+
+  it('shows the sign-in page to anonymous users', () => {
+    authenticated.set(false);
+    expect(run(guestGuard)).toBe(true);
+  });
+});
+
+describe('safeReturnUrl', () => {
+  it.each([
+    ['/requests/12', '/requests/12'],
+    ['/requests?status=DRAFT&page=2', '/requests?status=DRAFT&page=2'],
+  ])('keeps the internal path %s', (input, expected) => {
+    expect(safeReturnUrl(input)).toBe(expected);
+  });
+
+  it.each([
+    'https://evil.example/phish',
+    '//evil.example',
+    '/\\evil.example',
+    '\\\\evil.example',
+    'javascript:alert(1)',
+    '/javascript:alert(1)',
+    'requests',
+    '/sign-in?returnUrl=/requests',
+    '/requests\n/next',
+    '',
+    null,
+    undefined,
+  ])('rejects %s and falls back to My requests', (input) => {
+    expect(safeReturnUrl(input as string | null | undefined)).toBe('/requests');
+  });
+});

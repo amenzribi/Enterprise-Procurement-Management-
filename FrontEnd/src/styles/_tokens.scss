@@ -2,7 +2,9 @@
 //
 // Palette rationale: a deep "harbour ink" navigation surface and a customs-teal accent echo the trade and
 // logistics world the product serves, on a cool neutral paper that keeps dense tables calm to read.
-// All text/background pairs below meet WCAG 2.2 AA (4.5:1) on their intended surface.
+// All text/background pairs below meet WCAG 2.2 AA (4.5:1) on every surface they can sit on, including row hover
+// (surface-sunken) and soft status fills. Light accent #0b6f6e: 5.98 on white, 5.27 on sunken, 5.07 on the softest
+// fills; white on accent 5.98. Dark accent #4fb8b4: >= 5.19 on every dark surface.
 
 :root {
   color-scheme: light;
@@ -26,11 +28,11 @@
   --color-nav-line: #2a3f4e;
 
   // Accent (interactive)
-  --color-accent: #0e7c7b;
-  --color-accent-hover: #0a6463;
+  --color-accent: #0b6f6e;
+  --color-accent-hover: #085756;
   --color-accent-soft: #e2f1f0;
   --color-accent-on-dark: #5cc4c0;
-  --color-focus: #0e7c7b;
+  --color-focus: #0b6f6e;
 
   // Status (text colour on its own soft background)
   --color-success: #1d7346;

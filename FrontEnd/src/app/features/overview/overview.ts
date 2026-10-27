@@ -29,10 +29,16 @@ import { JOURNEY_STAGES, findNavItem } from '../../layout/navigation';
             </li>
           }
         </ul>
-        <a appButton variant="primary" routerLink="/system-status" class="cta">
-          <app-icon name="activity" [size]="16" />
-          {{ 'overview.available.checkConnection' | translate }}
-        </a>
+        <div class="ctas">
+          <a appButton variant="primary" routerLink="/requests">
+            <app-icon name="file-plus" [size]="16" />
+            {{ 'overview.available.openRequests' | translate }}
+          </a>
+          <a appButton variant="secondary" routerLink="/system-status">
+            <app-icon name="activity" [size]="16" />
+            {{ 'overview.available.checkConnection' | translate }}
+          </a>
+        </div>
       </app-panel>
 
       <app-panel [heading]="'overview.journey.title' | translate">
@@ -41,9 +47,13 @@ import { JOURNEY_STAGES, findNavItem } from '../../layout/navigation';
           @for (stage of journey; track stage.key) {
             <li class="stage">
               <span class="stage-name">{{ 'overview.journey.stages.' + stage.key | translate }}</span>
-              <app-status-badge tone="neutral">
-                {{ 'nav.plannedSprint' | translate: { sprint: stage.sprint } }}
-              </app-status-badge>
+              @if (stage.sprint) {
+                <app-status-badge tone="neutral">
+                  {{ 'nav.plannedSprint' | translate: { sprint: stage.sprint } }}
+                </app-status-badge>
+              } @else {
+                <app-status-badge tone="success">{{ 'overview.journey.availableNow' | translate }}</app-status-badge>
+              }
             </li>
           }
         </ol>
@@ -87,7 +97,10 @@ import { JOURNEY_STAGES, findNavItem } from '../../layout/navigation';
       color: var(--color-success);
     }
 
-    .cta {
+    .ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
       margin-block-start: var(--space-6);
     }
 
@@ -138,7 +151,7 @@ import { JOURNEY_STAGES, findNavItem } from '../../layout/navigation';
   `,
 })
 export class OverviewPage {
-  protected readonly available = ['shell', 'languages', 'statusCheck', 'schema'] as const;
+  protected readonly available = ['signIn', 'requests', 'isolation', 'shell', 'languages', 'statusCheck'] as const;
   /** Stage sprints come from the navigation, the single source of the roadmap shown in the interface. */
   protected readonly journey = JOURNEY_STAGES.map((stage) => ({
     key: stage.key,

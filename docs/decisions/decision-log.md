@@ -13,6 +13,7 @@ Architecture decisions. Significant ones have their own ADR file; smaller ones a
 | ADR-007 | 2026-10-24 | Company visibility model, centrally enforced scope, verified by tests | Accepted |
 | ADR-008 | 2026-10-24 | Spring Boot 4.1 / Java 21 | Accepted |
 | ADR-009 | 2026-10-24 | E-mail notifications through a transactional outbox | Accepted |
+| ADR-010 | 2026-10-25 | Adopt Java 25 LTS | Rejected (client kept Java 21) |
 
 ## ADR-002 Modular monolith with Spring Modulith
 
@@ -76,7 +77,20 @@ SQL Server Row-Level Security with `SESSION_CONTEXT` as defence in depth.
 ## ADR-008 Spring Boot 4.1 / Java 21
 
 The spec names Spring Boot 3. The 3.x line's open-source support has ended; Spring Boot 4.1.2 is the current
-supported release (start.spring.io default on 2026-10-24) and supports Java 21, the LTS installed and named in §22.
+supported release (start.spring.io default on 2026-10-24) and supports Java 21, the LTS installed and named in §22
+at the time of this decision. ADR-010 (Java 25) was proposed and rejected; Java 21 remains the target.
+
+## ADR-010 Adopt Java 25 LTS — Rejected
+
+Status: Rejected on 2026-10-25. The client chose to stay on Java 21: it is installed on the development machine,
+named in the specification (§22), and all Sprint 0/1 checks were validated on it. Java 25 can be reconsidered as a
+separate upgrade with its own build and test run on JDK 25. Original proposal kept below for the record.
+
+
+Update ADR-008's backend runtime and compiler target from Java 21 to Java 25 LTS while retaining Spring Boot 4.1,
+the Maven Wrapper, and Microsoft SQL Server as the only database. Java 25 is the current LTS target; the existing
+Spring Boot 4.1 line supports Java 25, so no framework or database migration is required. Builds and tests must
+run on JDK 25 before this runtime target is considered validated.
 
 ## ADR-009 Notifications
 

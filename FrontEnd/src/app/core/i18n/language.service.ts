@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, Subject, catchError, map, of, tap } from 'rxjs';
 
 export const SUPPORTED_LANGUAGES = ['en', 'fr'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
@@ -32,6 +32,13 @@ export class LanguageService {
   /** The language whose texts last failed to load during a switch, until the next successful switch. */
   readonly switchFailure = this.failedLanguage.asReadonly();
 
+  private readonly userSelections = new Subject<Language>();
+  /**
+   * Successful switches made by the user (not those applied from the account preference), so the account can
+   * store them (S1-AC-12).
+   */
+  readonly selections = this.userSelections.asObservable();
+
   init(): Observable<boolean> {
     const preferred = this.resolveInitialLanguage();
     return this.load(preferred).pipe(
@@ -47,12 +54,18 @@ export class LanguageService {
     );
   }
 
-  /** Emits true when the switch succeeded; on failure the current language is kept and `switchFailure` is set. */
-  use(language: Language): Observable<boolean> {
+  /**
+   * Emits true when the switch succeeded; on failure the current language is kept and `switchFailure` is set.
+   * `origin` tells whether the user chose the language or it was applied from their account.
+   */
+  use(language: Language, origin: 'user' | 'account' = 'user'): Observable<boolean> {
     return this.load(language).pipe(
       tap(() => {
         this.store(language);
         this.failedLanguage.set(null);
+        if (origin === 'user') {
+          this.userSelections.next(language);
+        }
       }),
       catchError(() => {
         this.failedLanguage.set(language);

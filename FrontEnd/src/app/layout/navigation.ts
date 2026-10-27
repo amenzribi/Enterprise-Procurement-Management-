@@ -31,7 +31,7 @@ export const NAVIGATION: NavGroup[] = [
   {
     key: 'requestToOrder',
     items: [
-      { key: 'requests', icon: 'file-plus', plannedSprint: 1 },
+      { key: 'requests', icon: 'file-plus', route: '/requests' },
       { key: 'approvals', icon: 'circle-check', plannedSprint: 2 },
       { key: 'purchasingInbox', icon: 'inbox', plannedSprint: 3 },
       { key: 'sourcing', icon: 'scale', plannedSprint: 4 },
@@ -52,7 +52,7 @@ export const NAVIGATION: NavGroup[] = [
   {
     key: 'administration',
     items: [
-      { key: 'organization', icon: 'building', plannedSprint: 1 },
+      { key: 'organization', icon: 'building', plannedSprint: 2 },
       { key: 'suppliers', icon: 'users', plannedSprint: 4 },
     ],
   },
@@ -60,7 +60,7 @@ export const NAVIGATION: NavGroup[] = [
 
 /**
  * The purchasing journey in order, each stage pointing at the navigation item that delivers it, so stage sprints
- * are always read from {@link NAVIGATION}.
+ * are always read from {@link NAVIGATION}. A stage whose item has a route is available now.
  */
 export const JOURNEY_STAGES = [
   { key: 'request', navItem: 'requests' },

@@ -9,7 +9,7 @@ Ordered. Items reference the [requirements register](requirements-register.md). 
 | 1 | Spring Security with local accounts (dev/demo), BCrypt/Argon2, session or JWT, sign-in/out screens | FR-IAM-01 | M |
 | 2 | Role and scope model (role × company/department/country/category), seeded demo users per role | FR-IAM-02 | M |
 | 3 | Company-scope resolver and enforcement in services; cross-company access tests helper | FR-IAM-03 | M |
-| 4 | Organisation admin: list/view/edit companies, sites, departments, cost centres | FR-ORG-01/02 | M |
+| 4 | ~~Organisation admin~~ — moved to Sprint 2 (needed with circuit configuration) | FR-ORG-01/02 | M |
 | 5 | Request aggregate (header, lines, actors), migration, numbering sequence per company/year | FR-REQ-01 | L |
 | 6 | Draft create/edit form (multi-line, validation, EN/FR) | FR-REQ-01 | L |
 | 7 | Submit with checks and audit event | FR-REQ-03, FR-AUD-01 | M |
@@ -24,6 +24,7 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 
 | # | Item | Req | Size |
 |---|---|---|---|
+| 10b | Sprint 1 review carry-over: S1CR-09 `TransactionLocks` fails fast on an auto-commit connection + DB test that no transaction/lock survives commit and rollback; S1CR-10/11 suggestions (line-number ceiling, per-request user lookup) | NFR-05 | S |
 | 11 | Circuit rule table and admin screen | FR-APR-01 | L |
 | 12 | Approval state machine, approver inbox, actions with mandatory reasons | FR-APR-02 | L |
 | 13 | Delegation (absence and per-task) with authority-limit checks | FR-APR-03 | M |

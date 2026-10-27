@@ -2,6 +2,7 @@ package com.epi.procurement;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,17 +19,10 @@ import java.util.concurrent.Future;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -41,22 +35,17 @@ import com.epi.procurement.organization.CompanyRepository;
 import com.epi.procurement.organization.CompanyType;
 import com.epi.procurement.system.SystemStatus;
 import com.epi.procurement.system.SystemStatusTestAccess;
+import com.epi.procurement.platform.persistence.TransactionLocks;
+import com.epi.procurement.platform.web.ApiProblemException;
+import com.epi.procurement.support.SqlServerTestSupport;
 
 /**
- * Runs against a real SQL Server database (never a substitute). Enabled with {@code ./mvnw verify -Pdb-it};
- * reported as skipped otherwise. The database is cleaned and re-migrated, so it must be a test database.
+ * Schema, reference data, audit trail and diagnostics against the real SQL Server test database.
  */
-@EnabledIfSystemProperty(named = "db.it", matches = "true")
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles({ "test", "demo" })
-class SqlServerIntegrationTests {
+class SqlServerIntegrationTests extends SqlServerTestSupport {
 
 	@Autowired
 	Flyway flyway;
-
-	@Autowired
-	JdbcTemplate jdbc;
 
 	@Autowired
 	CompanyRepository companies;
@@ -72,25 +61,6 @@ class SqlServerIntegrationTests {
 
 	@Autowired
 	PlatformTransactionManager transactionManager;
-
-	@TestConfiguration
-	static class CleanTestDatabase {
-
-		@Bean
-		FlywayMigrationStrategy cleanThenMigrate() {
-			return flyway -> {
-				String url = flyway.getConfiguration().getUrl();
-				String database = new JdbcTemplate(flyway.getConfiguration().getDataSource())
-					.queryForObject("SELECT DB_NAME()", String.class);
-				if (database == null || !database.endsWith("_test")) {
-					throw new IllegalStateException("Refusing to clean non-test database " + database + " (" + url + ")");
-				}
-				flyway.clean();
-				flyway.migrate();
-			};
-		}
-
-	}
 
 	@Test
 	void migratesFullyAndRerunIsANoOp() {
@@ -166,6 +136,7 @@ class SqlServerIntegrationTests {
 	@Test
 	void auditEventsAreChainedStoredInUtcAndAppendOnly() {
 		Long companyId = companyId("DEMO-HOLD");
+		long eventsBefore = auditLog.verifyChain("company:" + companyId).eventsChecked();
 		Instant before = Instant.now();
 		long first = auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "1", "CREATE", null,
 				"DRAFT", "first", "{\"n\":1}"));
@@ -175,7 +146,7 @@ class SqlServerIntegrationTests {
 		assertThat(second).isGreaterThan(first);
 		AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
 		assertThat(verification.valid()).isTrue();
-		assertThat(verification.eventsChecked()).isEqualTo(2);
+		assertThat(verification.eventsChecked()).isEqualTo(eventsBefore + 2);
 
 		Instant stored = jdbc.queryForObject("SELECT occurred_at FROM audit_event WHERE id = ?", LocalDateTime.class, first)
 			.toInstant(ZoneOffset.UTC);
@@ -288,14 +259,28 @@ class SqlServerIntegrationTests {
 			jdbc.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
 		}
 
-		AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
-		assertThat(verification.valid()).isFalse();
-		assertThat(verification.firstInvalidEventId()).isEqualTo(target);
+		try {
+			AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
+			assertThat(verification.valid()).isFalse();
+			assertThat(verification.firstInvalidEventId()).isEqualTo(target);
+		}
+		finally {
+			// The database is shared by all integration tests: restore the original content.
+			jdbc.execute("DISABLE TRIGGER trg_audit_event_append_only ON audit_event");
+			try {
+				jdbc.update("UPDATE audit_event SET comment = 'ok' WHERE id = ?", target);
+			}
+			finally {
+				jdbc.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
+			}
+		}
+		assertThat(auditLog.verifyChain("company:" + companyId).valid()).isTrue();
 	}
 
 	@Test
 	void concurrentAppendsProduceOneLinearChain() throws Exception {
 		Long companyId = companyId("DEMO-CPA");
+		long eventsBefore = auditLog.verifyChain("company:" + companyId).eventsChecked();
 		int threads = 8;
 		int perThread = 20;
 		ExecutorService pool = Executors.newFixedThreadPool(threads);
@@ -320,12 +305,12 @@ class SqlServerIntegrationTests {
 
 		AuditChainVerification verification = auditLog.verifyChain("company:" + companyId);
 		assertThat(verification.valid()).isTrue();
-		assertThat(verification.eventsChecked()).isEqualTo(threads * perThread);
+		assertThat(verification.eventsChecked()).isEqualTo(eventsBefore + threads * perThread);
 	}
 
 	@Test
-	void statusEndpointReportsTheRealDatabase() throws Exception {
-		mvc.perform(get("/api/v1/system/status"))
+	void statusEndpointReportsTheRealDatabaseToAdministrators() throws Exception {
+		mvc.perform(get("/api/v1/system/status").with(user("admin").roles("ADMIN")))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.database.status").value("UP"))
 			.andExpect(jsonPath("$.database.schemaVersion").value(flyway.info().current().getVersion().getVersion()))
@@ -342,15 +327,107 @@ class SqlServerIntegrationTests {
 	}
 
 	@Test
-	void actuatorHealthIncludesTheDatabase() throws Exception {
-		mvc.perform(get("/actuator/health"))
+	void actuatorHealthShowsTheDatabaseToAdministratorsOnly() throws Exception {
+		mvc.perform(get("/actuator/health").with(user("admin").roles("ADMIN")))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("UP"))
 			.andExpect(jsonPath("$.components.db.status").value("UP"));
+		mvc.perform(get("/actuator/health"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("UP"))
+			.andExpect(jsonPath("$.components").doesNotExist());
 	}
 
-	private Long companyId(String code) {
-		return jdbc.queryForObject("SELECT id FROM company WHERE code = ?", Long.class, code);
+	/**
+	 * QA1-D-06: appending still works when a trigger exists on audit_event (e.g. one added by a DBA).
+	 */
+	@Test
+	void auditAppendsWorkWithATriggerOnTheTable() {
+		jdbc.execute("CREATE TRIGGER trg_test_audit_noop ON audit_event AFTER INSERT AS SET NOCOUNT ON;");
+		try {
+			long id = auditLog.record(new AuditRecord(null, "Integration test", null, "TEST", "7", "PING", null, null,
+					null, null));
+			assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE id = ?", Integer.class, id))
+				.isEqualTo(1);
+		}
+		finally {
+			jdbc.execute("DROP TRIGGER trg_test_audit_noop");
+		}
+		assertThat(auditLog.verifyChain("global").valid()).isTrue();
+	}
+
+	/**
+	 * S1CR-03: an application lock held elsewhere makes the caller fail fast with 503 busy, not hang.
+	 */
+	@Test
+	void aHeldApplicationLockFailsFastAsBusy(@Autowired TransactionLocks locks) throws Exception {
+		java.util.concurrent.CountDownLatch held = new java.util.concurrent.CountDownLatch(1);
+		java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+		ExecutorService holder = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> holding = holder.submit(() -> new TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
+				locks.lockExclusively("test-resource");
+				held.countDown();
+				try {
+					release.await();
+				}
+				catch (InterruptedException ex) {
+					Thread.currentThread().interrupt();
+				}
+			}));
+			if (!held.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+				// Surface the holder's failure instead of waiting forever.
+				holding.get(1, java.util.concurrent.TimeUnit.SECONDS);
+				throw new AssertionError("The holder never acquired the application lock");
+			}
+			long start = System.nanoTime();
+			assertThatThrownBy(() -> new TransactionTemplate(transactionManager)
+				.executeWithoutResult(tx -> locks.lockExclusively("test-resource")))
+				.isInstanceOfSatisfying(ApiProblemException.class, ex -> {
+					assertThat(ex.getStatus().value()).isEqualTo(503);
+					assertThat(ex.getCode()).isEqualTo("busy");
+				});
+			assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(5));
+			release.countDown();
+			holding.get();
+		}
+		finally {
+			release.countDown();
+			holder.shutdown();
+		}
+	}
+
+	/**
+	 * CR-25: an event positioned after the chain head (head rewound by someone able to bypass the triggers) makes
+	 * the chain invalid.
+	 */
+	@Test
+	void eventsBeyondTheChainHeadAreReported() {
+		Long companyId = companyId("DEMO-HOLD");
+		String chainKey = "company:" + companyId;
+		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "6", "CREATE", null, null, null, null));
+		long hidden = auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "6", "SUBMIT", null,
+				null, null, null));
+		long hiddenSeq = jdbc.queryForObject("SELECT chain_seq FROM audit_event WHERE id = ?", Long.class, hidden);
+		Long previous = jdbc.queryForObject("SELECT id FROM audit_event WHERE chain_key = ? AND chain_seq = ?",
+				Long.class, chainKey, hiddenSeq - 1);
+		byte[] previousHash = jdbc.queryForObject("SELECT hash FROM audit_event WHERE id = ?", byte[].class, previous);
+
+		jdbc.execute("DISABLE TRIGGER trg_audit_chain_head_forward_only ON audit_chain_head");
+		try {
+			jdbc.update("UPDATE audit_chain_head SET last_seq = ?, last_hash = ?, last_event_id = ? WHERE chain_key = ?",
+					hiddenSeq - 1, previousHash, previous, chainKey);
+			AuditChainVerification verification = auditLog.verifyChain(chainKey);
+			assertThat(verification.valid()).isFalse();
+			assertThat(verification.firstInvalidEventId()).isEqualTo(hidden);
+		}
+		finally {
+			byte[] hiddenHash = jdbc.queryForObject("SELECT hash FROM audit_event WHERE id = ?", byte[].class, hidden);
+			jdbc.update("UPDATE audit_chain_head SET last_seq = ?, last_hash = ?, last_event_id = ? WHERE chain_key = ?",
+					hiddenSeq, hiddenHash, hidden, chainKey);
+			jdbc.execute("ENABLE TRIGGER trg_audit_chain_head_forward_only ON audit_chain_head");
+		}
+		assertThat(auditLog.verifyChain(chainKey).valid()).isTrue();
 	}
 
 }

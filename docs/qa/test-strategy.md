@@ -59,7 +59,7 @@ File: `docs/qa/defects/S<sprint>-D<nn>.md` (or a section in the sprint test repo
 - Severity: Blocker | Major | Minor | Cosmetic
 - AC / requirement: S0-AC-xx / §n / US-xx
 - Revision: <git commit or "working tree at <date time>">
-- Environment: Windows 11, JDK 21, Node 24, SQL Server 17.0, Chromium <ver>, viewport, language
+- Environment: Windows 11, JDK 25 LTS, Node 24, SQL Server 17.0, Chromium <ver>, viewport, language
 - Preconditions:
 - Steps to reproduce:
   1.

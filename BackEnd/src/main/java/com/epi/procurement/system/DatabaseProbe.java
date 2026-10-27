@@ -5,6 +5,9 @@ package com.epi.procurement.system;
  */
 interface DatabaseProbe {
 
-	SystemStatus.DatabaseStatus probe();
+	/**
+	 * @param includeDetails whether to include the server product version (administrators only - S1-AC-13)
+	 */
+	SystemStatus.DatabaseStatus probe(boolean includeDetails);
 
 }

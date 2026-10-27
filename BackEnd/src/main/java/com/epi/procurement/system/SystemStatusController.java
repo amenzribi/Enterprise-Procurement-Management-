@@ -5,6 +5,8 @@ import java.time.OffsetDateTime;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,11 +33,20 @@ class SystemStatusController {
 	}
 
 	/**
-	 * Always answers 200 so clients can display partial status; database failures are reported as DOWN.
+	 * Requires a signed-in user (security configuration). Always answers 200 so clients can display partial status;
+	 * database failures are reported as DOWN. The database product version is shown to administrators only
+	 * (S1-AC-13).
 	 */
 	@GetMapping("/status")
 	SystemStatus status() {
-		return new SystemStatus(applicationName, version, OffsetDateTime.now(clock), databaseProbe.probe());
+		return new SystemStatus(applicationName, version, OffsetDateTime.now(clock), databaseProbe.probe(isAdmin()));
+	}
+
+	private static boolean isAdmin() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		return authentication != null && authentication.getAuthorities()
+			.stream()
+			.anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
 	}
 
 }

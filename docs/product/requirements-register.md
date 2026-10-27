@@ -7,15 +7,15 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 
 | ID | Requirement | Spec | Story | Release | Sprint | Status |
 |---|---|---|---|---|---|---|
-| FR-ORG-01 | Group, companies (parent, subsidiary, central purchasing), sites, departments, cost centres | §3.1, §3.6, §23 | — | MVP | S0 schema, S1 admin | In progress |
+| FR-ORG-01 | Group, companies (parent, subsidiary, central purchasing), sites, departments, cost centres | §3.1, §3.6, §23 | — | MVP | S0 schema, S2 admin | In progress |
 | FR-ORG-02 | Per-company currency, language, time zone, ERP company code, purchase mode | §3.6, §3.7 | — | MVP | S0 schema, S1 | In progress |
-| FR-IAM-01 | Authentication (local dev accounts; OIDC in production) | §24, §22 | — | MVP | S1 | Planned |
-| FR-IAM-02 | Roles of §20 with scope by company/department/country/category | §20 | — | MVP | S1 | Planned |
-| FR-IAM-03 | Company isolation for every query and endpoint | §3.6, §17 | — | MVP | S1→all | Planned |
+| FR-IAM-01 | Authentication (local dev accounts; OIDC in production) | §24, §22 | — | MVP | S1 | Done (S1) |
+| FR-IAM-02 | Roles of §20 with scope by company/department/country/category | §20 | — | MVP | S1 | Done (S1) |
+| FR-IAM-03 | Company isolation for every query and endpoint | §3.6, §17 | — | MVP | S1→all | Done (S1) |
 | FR-IAM-04 | MFA for management, purchasing, finance (via IdP) | §24 | — | MVP | S9 | Planned |
-| FR-REQ-01 | Multi-line request with unique number and request actors (entered by, requester, beneficiary, requesting/charged/buying company) | §3.2, §6.1 | US-01 | MVP | S1 | Planned |
+| FR-REQ-01 | Multi-line request with unique number and request actors (entered by, requester, beneficiary, requesting/charged/buying company) | §3.2, §6.1 | US-01 | MVP | S1 | Done (S1) |
 | FR-REQ-02 | Attachments per request and per line, versioned | §6.1, §19 | US-01 | MVP | S2 | Planned |
-| FR-REQ-03 | Pre-submission checks: mandatory fields by category, near-duplicate warning | §6.3 | — | MVP | S1–S2 | Planned |
+| FR-REQ-03 | Pre-submission checks: mandatory fields by category, near-duplicate warning | §6.3 | — | MVP | S1–S2 | Partly done (S1: mandatory fields; duplicate warning in S2) |
 | FR-REQ-04 | Stock / framework-contract / price-history checks | §6.3 | — | P2 | — | Deferred |
 | FR-REQ-05 | Excel import of a parts list into one request | §6.2 | — | MVP | S7 | Planned |
 | FR-REQ-06 | Per-line status, header status derived (assumption A2) | §5 | — | MVP | S1→S6 | Planned |

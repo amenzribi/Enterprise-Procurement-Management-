@@ -1,0 +1,236 @@
+<app-page-header
+  [heading]="(scope() === 'visible' ? 'requests.list.visibleTitle' : 'requests.list.title') | translate"
+  [description]="(scope() === 'visible' ? 'requests.list.visibleDescription' : 'requests.list.description') | translate"
+>
+  @if (canCreate()) {
+    <a appButton routerLink="/requests/new">
+      <app-icon name="plus" [size]="16" />
+      {{ 'requests.list.new' | translate }}
+    </a>
+  }
+</app-page-header>
+
+@if (canSeeOthers()) {
+  <nav class="scopes" [attr.aria-label]="'requests.list.scopeLabel' | translate">
+    <a class="scope" [class.is-active]="scope() === 'mine'" [attr.aria-current]="scope() === 'mine' ? 'page' : null"
+      routerLink="/requests" [queryParams]="{}" (click)="$event.preventDefault(); selectScope('mine')">
+      {{ 'requests.list.scopes.mine' | translate }}
+    </a>
+    <a class="scope" [class.is-active]="scope() === 'visible'" [attr.aria-current]="scope() === 'visible' ? 'page' : null"
+      routerLink="/requests" [queryParams]="{ scope: 'visible' }" (click)="$event.preventDefault(); selectScope('visible')">
+      {{ 'requests.list.scopes.visible' | translate }}
+    </a>
+  </nav>
+}
+
+<div class="toolbar" role="search" [attr.aria-label]="'requests.list.filtersLabel' | translate">
+  <div class="search">
+    <label for="requests-search" class="visually-hidden">{{ 'requests.list.search' | translate }}</label>
+    <app-icon name="search" [size]="16" class="search-icon" />
+    <input
+      id="requests-search"
+      type="search"
+      [attr.maxlength]="maxSearchLength"
+      [value]="searchText()"
+      [attr.placeholder]="'requests.list.searchPlaceholder' | translate"
+      (input)="onSearch($any($event.target).value)"
+    />
+  </div>
+
+  <div class="filter">
+    <label for="requests-status">{{ 'requests.list.statusFilter' | translate }}</label>
+    <select id="requests-status" [value]="query().status ?? ''" (change)="onStatus($any($event.target).value)">
+      <option value="">{{ 'requests.list.allStatuses' | translate }}</option>
+      @for (status of statuses; track status) {
+        <option [value]="status" [selected]="query().status === status">{{ statusLabel(status) | translate }}</option>
+      }
+    </select>
+  </div>
+
+  @if (isNarrow()) {
+    <div class="filter">
+      <label for="requests-sort">{{ 'requests.list.sortBy' | translate }}</label>
+      <select id="requests-sort" (change)="onSortSelect($any($event.target).value)">
+        @for (column of columns; track column.key) {
+          <option [value]="column.key + ',asc'" [selected]="query().sort === column.key && query().direction === 'asc'">
+            {{ column.label | translate }} · {{ 'requests.list.ascending' | translate }}
+          </option>
+          <option [value]="column.key + ',desc'" [selected]="query().sort === column.key && query().direction === 'desc'">
+            {{ column.label | translate }} · {{ 'requests.list.descending' | translate }}
+          </option>
+        }
+      </select>
+    </div>
+  }
+</div>
+
+<p class="visually-hidden" role="status" aria-live="polite">
+  @switch (state().kind) {
+    @case ('loading') { {{ 'requests.list.loading' | translate }} }
+    @case ('loaded') {
+      @if (summary(); as range) {
+        {{ 'requests.list.range' | translate: range }}
+      } @else {
+        {{ 'requests.list.empty.title' | translate }}
+      }
+    }
+  }
+</p>
+
+@switch (state().kind) {
+  @case ('loading') {
+    <div class="skeleton-list">
+      @for (row of [1, 2, 3, 4, 5]; track row) {
+        <div class="skeleton-row">
+          <app-skeleton width="7rem" />
+          <app-skeleton width="40%" />
+          <app-skeleton width="5rem" />
+        </div>
+      }
+    </div>
+  }
+
+  @case ('error') {
+    @if (errorCode(); as code) {
+      <app-error-state
+        [heading]="'requests.list.error.title' | translate"
+        [message]="'errors.' + code | translate"
+        [retryLabel]="'common.retry' | translate"
+        [announce]="false"
+        (retry)="retry()"
+      />
+    }
+  }
+
+  @case ('loaded') {
+    @if (page(); as loaded) {
+      @if (loaded.items.length === 0) {
+        @if (hasFilters()) {
+          <app-empty-state
+            icon="search"
+            [heading]="'requests.list.noMatch.title' | translate"
+            [message]="'requests.list.noMatch.message' | translate"
+          >
+            <button appButton variant="secondary" type="button" (click)="clearFilters()">
+              {{ 'requests.list.clearFilters' | translate }}
+            </button>
+          </app-empty-state>
+        } @else {
+          <app-empty-state
+            icon="file-plus"
+            [heading]="(scope() === 'visible' ? 'requests.list.emptyVisible.title' : 'requests.list.empty.title') | translate"
+            [message]="(scope() === 'visible' ? 'requests.list.emptyVisible.message' : (canCreate() ? 'requests.list.empty.message' : 'requests.list.empty.messageNoCreate')) | translate"
+          >
+            @if (canCreate() && scope() === 'mine') {
+              <a appButton routerLink="/requests/new">
+                <app-icon name="plus" [size]="16" />
+                {{ 'requests.list.new' | translate }}
+              </a>
+            }
+          </app-empty-state>
+        }
+      } @else {
+        @if (isNarrow()) {
+          <ul class="cards">
+            @for (item of loaded.items; track item.id) {
+              <li class="card">
+                <div class="card-top">
+                  <a class="card-link" [routerLink]="['/requests', item.id]">
+                    <span class="number tabular">{{ item.number ?? ('requests.list.draftNumber' | translate) }}</span>
+                    <span class="card-title">{{ item.title }}</span>
+                    @if (scope() === 'visible' && item.requester) {
+                      <span class="row-sub">{{ item.requester.displayName }}</span>
+                    }
+                  </a>
+                  <app-status-badge [tone]="tone(item.status)">{{ statusLabel(item.status) | translate }}</app-status-badge>
+                </div>
+                <dl class="card-facts">
+                  <div>
+                    <dt>{{ 'requests.list.columns.total' | translate }}</dt>
+                    <dd class="tabular">{{ total(item) || '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'requests.list.columns.requiredDate' | translate }}</dt>
+                    <dd>{{ item.requiredDate ? (item.requiredDate | date: 'mediumDate' : undefined : locale()) : '—' }}</dd>
+                  </div>
+                </dl>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="table-wrap" tabindex="0" role="region" [attr.aria-label]="'requests.list.caption' | translate">
+            <table class="table">
+              <caption class="visually-hidden">{{ 'requests.list.caption' | translate }}</caption>
+              <thead>
+                <tr>
+                  @for (column of columns; track column.key) {
+                    <th scope="col" [attr.aria-sort]="ariaSort(column.key)" [class.numeric]="column.numeric">
+                      <button type="button" class="sort" (click)="sortBy(column.key)">
+                        {{ column.label | translate }}
+                        <app-icon
+                          [name]="ariaSort(column.key) === 'ascending' ? 'arrow-up' : ariaSort(column.key) === 'descending' ? 'arrow-down' : 'arrow-up-down'"
+                          [size]="14"
+                          class="sort-icon"
+                          [class.is-active]="ariaSort(column.key)"
+                        />
+                      </button>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of loaded.items; track item.id) {
+                  <tr>
+                    <td class="number tabular">
+                      <a [routerLink]="['/requests', item.id]">{{ item.number ?? ('requests.list.draftNumber' | translate) }}</a>
+                    </td>
+                    <td class="title-cell">
+                      {{ item.title }}
+                      @if (scope() === 'visible' && item.requester) {
+                        <span class="row-sub">{{ item.requester.displayName }} · {{ item.requestingCompany?.name }}</span>
+                      }
+                    </td>
+                    <td><app-status-badge [tone]="tone(item.status)">{{ statusLabel(item.status) | translate }}</app-status-badge></td>
+                    <td class="numeric tabular">{{ total(item) || '—' }}</td>
+                    <td class="tabular">{{ item.requiredDate ? (item.requiredDate | date: 'mediumDate' : undefined : locale()) : '—' }}</td>
+                    <td class="tabular muted">{{ item.updatedAt ? (item.updatedAt | date: 'short' : undefined : locale()) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (summary(); as range) {
+          <nav class="pager" [attr.aria-label]="'requests.list.pagination' | translate">
+            <p class="pager-range tabular">{{ 'requests.list.range' | translate: range }}</p>
+            <div class="pager-buttons">
+              <button
+                appButton
+                variant="secondary"
+                size="small"
+                type="button"
+                [disabled]="query().page === 0"
+                (click)="goToPage(query().page - 1)"
+              >
+                <app-icon name="chevron-left" [size]="16" />
+                {{ 'requests.list.previous' | translate }}
+              </button>
+              <button
+                appButton
+                variant="secondary"
+                size="small"
+                type="button"
+                [disabled]="range.to >= range.total"
+                (click)="goToPage(query().page + 1)"
+              >
+                {{ 'requests.list.next' | translate }}
+                <app-icon name="chevron-right" [size]="16" />
+              </button>
+            </div>
+          </nav>
+        }
+      }
+    }
+  }
+}

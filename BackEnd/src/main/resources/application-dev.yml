@@ -3,9 +3,13 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=procurement_dev;integratedSecurity=true;encrypt=true;trustServerCertificate=true}
 
+  flyway:
+    # Lets a database seeded with the demo profile start without it (QA-D-02, CR-28). Demo rows remain.
+    ignore-migration-patterns: "*:future,repeatable:missing"
+
 app:
-  status:
-    expose-details: true
+  security:
+    cookie-secure: false
 
 springdoc:
   api-docs:

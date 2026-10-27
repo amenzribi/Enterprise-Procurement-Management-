@@ -1,0 +1,297 @@
+@switch (pageState()) {
+  @case ('loading') {
+    <p class="visually-hidden" role="status">{{ 'requests.detail.loading' | translate }}</p>
+    <div class="loading">
+      <app-skeleton height="2rem" width="16rem" />
+      <app-skeleton height="7rem" />
+      <app-skeleton height="12rem" />
+    </div>
+  }
+
+  @case ('error') {
+    <h1 class="title" tabindex="-1">{{ 'requests.detail.title' | translate }}</h1>
+    <app-error-state
+      [heading]="'requests.detail.loadError' | translate"
+      [message]="'errors.' + (loadError() ?? 'unexpected-error') | translate"
+      [retryLabel]="'common.retry' | translate"
+      (retry)="load()"
+    />
+  }
+
+  @case ('not-found') {
+    <h1 class="title" tabindex="-1">{{ 'requests.notFound.title' | translate }}</h1>
+    <app-empty-state icon="search" [heading]="'requests.notFound.title' | translate" [message]="'requests.notFound.message' | translate">
+      <a appButton variant="secondary" routerLink="/requests">{{ 'requests.backToList' | translate }}</a>
+    </app-empty-state>
+  }
+
+  @case ('ready') {
+    @if (request(); as r) {
+      <a class="back" routerLink="/requests">
+        <app-icon name="arrow-left" [size]="16" />
+        {{ 'requests.backToList' | translate }}
+      </a>
+
+      <!-- The dossier header: number, status, stage, owner and since when — the answer to "where is my purchase?" -->
+      <header class="dossier">
+        <div class="dossier-main">
+          <p class="dossier-number tabular" [class.is-draft]="!r.number">
+            {{ r.number ?? ('requests.list.draftNumber' | translate) }}
+          </p>
+          <h1 class="title" tabindex="-1">{{ r.title }}</h1>
+          <div class="dossier-status">
+            <app-status-badge [tone]="tone(r.status)">{{ statusLabel(r.status) | translate }}</app-status-badge>
+            @if (r.priority === 'URGENT') {
+              <app-status-badge tone="danger">{{ 'requests.priority.URGENT' | translate }}</app-status-badge>
+            }
+          </div>
+        </div>
+
+        <dl class="dossier-facts">
+          <div class="fact">
+            <dt>{{ 'requests.detail.stage' | translate }}</dt>
+            <dd>{{ stage() ? ('requests.stages.' + stage() | translate) : '—' }}</dd>
+          </div>
+          <div class="fact">
+            <dt>{{ 'requests.detail.owner' | translate }}</dt>
+            <dd>
+              {{ r.currentOwner?.displayName ?? r.requester.displayName }}
+              @if (ownerSince()) {
+                <span class="fact-sub">
+                  {{ 'requests.detail.since' | translate: { elapsed: ownerSince() } }}
+                  @if (r.ownerSince) {
+                    <time [attr.datetime]="r.ownerSince">({{ r.ownerSince | date: 'medium' : undefined : locale() }})</time>
+                  }
+                </span>
+              }
+            </dd>
+          </div>
+          <div class="fact">
+            <dt>{{ 'requests.detail.total' | translate }}</dt>
+            <dd class="tabular fact-strong">{{ money(r.totalAmount) }}</dd>
+          </div>
+          <div class="fact">
+            <dt>{{ 'requests.fields.requiredDate' | translate }}</dt>
+            <dd class="tabular">{{ r.requiredDate ? (r.requiredDate | date: 'mediumDate' : undefined : locale()) : '—' }}</dd>
+          </div>
+        </dl>
+
+        @if (actions().length > 0) {
+          <div class="dossier-actions">
+            @if (actions().includes('SUBMIT')) {
+              <button appButton type="button" [disabled]="submitting()" (click)="submit()">
+                <app-icon name="send" [size]="16" />
+                {{ (submitting() ? 'requests.form.submitting' : 'requests.form.submit') | translate }}
+              </button>
+            }
+            @if (actions().includes('EDIT')) {
+              <a appButton variant="secondary" [routerLink]="['/requests', r.id, 'edit']">
+                <app-icon name="pencil" [size]="16" />
+                {{ 'requests.detail.edit' | translate }}
+              </a>
+            }
+          </div>
+        }
+      </header>
+
+      <div class="columns">
+        <div class="main">
+          <section class="panel" aria-labelledby="detail-lines">
+            <h2 class="panel-title" id="detail-lines">{{ 'requests.form.sections.lines' | translate }}</h2>
+            <!-- Scrolls sideways on phones: focusable and named so keyboard users can scroll it too. -->
+            <div class="table-wrap" tabindex="0" role="region" aria-labelledby="detail-lines">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="numeric">#</th>
+                    <th scope="col">{{ 'requests.fields.lineDescription' | translate }}</th>
+                    <th scope="col" class="numeric">{{ 'requests.fields.quantity' | translate }}</th>
+                    <th scope="col">{{ 'requests.fields.unit' | translate }}</th>
+                    <th scope="col" class="numeric">{{ 'requests.fields.unitPrice' | translate }}</th>
+                    <th scope="col" class="numeric">{{ 'requests.fields.lineTotal' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (line of r.lines; track $index; let index = $index) {
+                    <tr>
+                      <td class="numeric tabular muted">{{ line.lineNo ?? index + 1 }}</td>
+                      <td>
+                        <span class="line-description">{{ line.description }}</span>
+                        @if (line.itemReference || line.requiredDate || line.deliveryLocation) {
+                          <span class="line-meta">
+                            @if (line.itemReference) {
+                              <span>{{ 'requests.fields.itemReference' | translate }}: {{ line.itemReference }}</span>
+                            }
+                            @if (line.requiredDate) {
+                              <span>{{ 'requests.fields.lineRequiredDate' | translate }}: {{ line.requiredDate | date: 'mediumDate' : undefined : locale() }}</span>
+                            }
+                            @if (line.deliveryLocation) {
+                              <span>{{ 'requests.fields.lineDeliveryLocation' | translate }}: {{ line.deliveryLocation }}</span>
+                            }
+                          </span>
+                        }
+                      </td>
+                      <td class="numeric tabular">{{ line.quantity }}</td>
+                      <td>{{ line.unit }}</td>
+                      <td class="numeric tabular">{{ money(line.estimatedUnitPrice) }}</td>
+                      <td class="numeric tabular">{{ money(line.lineTotal) }}</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colspan="5" class="numeric">{{ 'requests.detail.total' | translate }}</th>
+                    <td class="numeric tabular strong">{{ money(r.totalAmount) }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Phones: one card per line, every figure visible without scrolling sideways. -->
+            <ol class="line-cards">
+              @for (line of r.lines; track $index; let index = $index) {
+                <li class="line-card">
+                  <p class="line-card-title">
+                    <span class="muted tabular">{{ line.lineNo ?? index + 1 }}.</span> {{ line.description }}
+                  </p>
+                  <dl class="line-card-facts">
+                    <div><dt>{{ 'requests.fields.quantity' | translate }}</dt><dd class="tabular">{{ line.quantity }} {{ line.unit }}</dd></div>
+                    <div><dt>{{ 'requests.fields.unitPrice' | translate }}</dt><dd class="tabular">{{ money(line.estimatedUnitPrice) }}</dd></div>
+                    <div><dt>{{ 'requests.fields.lineTotal' | translate }}</dt><dd class="tabular strong">{{ money(line.lineTotal) }}</dd></div>
+                    @if (line.itemReference) {
+                      <div><dt>{{ 'requests.fields.itemReference' | translate }}</dt><dd>{{ line.itemReference }}</dd></div>
+                    }
+                  </dl>
+                </li>
+              }
+              <li class="line-card line-card-total">
+                <span>{{ 'requests.detail.total' | translate }}</span>
+                <span class="tabular strong">{{ money(r.totalAmount) }}</span>
+              </li>
+            </ol>
+          </section>
+
+          @if (r.justification || r.urgencyJustification || r.project || r.budgetLineRef || r.equipmentRef || r.maintenanceOrderRef) {
+            <section class="panel" aria-labelledby="detail-references">
+              <h2 class="panel-title" id="detail-references">{{ 'requests.form.sections.references' | translate }}</h2>
+              <dl class="facts">
+                @if (r.urgencyJustification) {
+                  <div class="facts-wide"><dt>{{ 'requests.fields.urgencyJustification' | translate }}</dt><dd class="prose">{{ r.urgencyJustification }}</dd></div>
+                }
+                @if (r.justification) {
+                  <div class="facts-wide"><dt>{{ 'requests.fields.justification' | translate }}</dt><dd class="prose">{{ r.justification }}</dd></div>
+                }
+                @if (r.project) {
+                  <div><dt>{{ 'requests.fields.project' | translate }}</dt><dd>{{ r.project }}</dd></div>
+                }
+                @if (r.budgetLineRef) {
+                  <div><dt>{{ 'requests.fields.budgetLineRef' | translate }}</dt><dd>{{ r.budgetLineRef }}</dd></div>
+                }
+                @if (r.equipmentRef) {
+                  <div><dt>{{ 'requests.fields.equipmentRef' | translate }}</dt><dd>{{ r.equipmentRef }}</dd></div>
+                }
+                @if (r.maintenanceOrderRef) {
+                  <div><dt>{{ 'requests.fields.maintenanceOrderRef' | translate }}</dt><dd>{{ r.maintenanceOrderRef }}</dd></div>
+                }
+              </dl>
+            </section>
+          }
+        </div>
+
+        <div class="side">
+          <section class="panel" aria-labelledby="detail-actors">
+            <h2 class="panel-title" id="detail-actors">{{ 'requests.detail.actors' | translate }}</h2>
+            <dl class="facts facts--stacked">
+              <div><dt>{{ 'requests.fields.requester' | translate }}</dt><dd>{{ r.requester.displayName }}</dd></div>
+              <div>
+                <dt>{{ 'requests.fields.enteredBy' | translate }}</dt>
+                <dd>
+                  {{ r.enteredBy.displayName }}
+                  @if (enteredOnBehalf()) {
+                    <span class="fact-sub">{{ 'requests.detail.onBehalf' | translate }}</span>
+                  }
+                </dd>
+              </div>
+              @if (r.beneficiary || r.beneficiarySite) {
+                <div>
+                  <dt>{{ 'requests.fields.beneficiary' | translate }}</dt>
+                  <dd>
+                    {{ r.beneficiary ?? '' }}
+                    @if (r.beneficiarySite) {
+                      <span class="fact-sub">{{ r.beneficiarySite.name }}</span>
+                    }
+                  </dd>
+                </div>
+              }
+              <div><dt>{{ 'requests.fields.requestingCompany' | translate }}</dt><dd>{{ r.requestingCompany.name }}</dd></div>
+              <div><dt>{{ 'requests.fields.chargedCompany' | translate }}</dt><dd>{{ r.chargedCompany?.name ?? '—' }}</dd></div>
+              <div>
+                <dt>{{ 'requests.fields.buyingCompany' | translate }}</dt>
+                <dd>
+                  {{ r.buyingCompany?.name ?? '—' }}
+                  @if (r.buyingCompanyProposed) {
+                    <span class="fact-sub">{{ 'requests.form.buyingProposed' | translate }}</span>
+                  }
+                </dd>
+              </div>
+              <div><dt>{{ 'requests.fields.department' | translate }}</dt><dd>{{ r.department?.name ?? '—' }}</dd></div>
+              @if (r.site) {
+                <div><dt>{{ 'requests.fields.site' | translate }}</dt><dd>{{ r.site.name }}</dd></div>
+              }
+              @if (r.costCenter) {
+                <div><dt>{{ 'requests.fields.costCenter' | translate }}</dt><dd>{{ r.costCenter.name }}</dd></div>
+              }
+            </dl>
+          </section>
+
+          <section class="panel" aria-labelledby="detail-classification">
+            <h2 class="panel-title" id="detail-classification">{{ 'requests.detail.classification' | translate }}</h2>
+            <dl class="facts facts--stacked">
+              <div><dt>{{ 'requests.fields.category' | translate }}</dt><dd>{{ label(r.category) || '—' }}</dd></div>
+              <div><dt>{{ 'requests.fields.priority' | translate }}</dt><dd>{{ 'requests.priority.' + r.priority | translate }}</dd></div>
+              <div><dt>{{ 'requests.fields.purchaseType' | translate }}</dt><dd>{{ 'requests.purchaseType.' + r.purchaseType | translate }}</dd></div>
+              <div><dt>{{ 'requests.fields.currency' | translate }}</dt><dd>{{ r.currency }}</dd></div>
+              @if (r.deliveryLocation) {
+                <div><dt>{{ 'requests.fields.deliveryLocation' | translate }}</dt><dd>{{ r.deliveryLocation }}</dd></div>
+              }
+            </dl>
+          </section>
+
+          <section class="panel" aria-labelledby="detail-history">
+            <h2 class="panel-title" id="detail-history">{{ 'requests.detail.history' | translate }}</h2>
+            @if (r.transitions?.length) {
+              <ol class="timeline">
+                @for (transition of r.transitions; track $index) {
+                  <li class="event">
+                    <span class="event-dot" aria-hidden="true"></span>
+                    <p class="event-title">
+                      @if (transition.fromStatus) {
+                        {{ 'requests.detail.transition' | translate: { from: translateStatus(transition.fromStatus), to: translateStatus(transition.toStatus) } }}
+                      } @else {
+                        {{ 'requests.detail.created' | translate: { to: translateStatus(transition.toStatus) } }}
+                      }
+                    </p>
+                    <p class="event-meta">
+                      <time [attr.datetime]="transition.occurredAt">{{ transition.occurredAt | date: 'medium' : undefined : locale() }}</time>
+                      @if (transition.actor) {
+                        · {{ 'requests.detail.by' | translate: { name: transition.actor.displayName } }}
+                      }
+                    </p>
+                    @if (transition.owner) {
+                      <p class="event-meta">{{ 'requests.detail.ownerAfter' | translate: { name: transition.owner.displayName } }}</p>
+                    }
+                    @if (transition.comment) {
+                      <p class="event-comment">{{ transition.comment }}</p>
+                    }
+                  </li>
+                }
+              </ol>
+            } @else {
+              <p class="muted">{{ 'requests.detail.noHistory' | translate }}</p>
+            }
+          </section>
+        </div>
+      </div>
+    }
+  }
+}

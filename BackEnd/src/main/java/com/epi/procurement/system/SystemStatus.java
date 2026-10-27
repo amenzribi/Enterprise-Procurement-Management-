@@ -13,7 +13,7 @@ public record SystemStatus(String application, String version, OffsetDateTime se
 
 	/**
 	 * Database connectivity. {@code productVersion} and {@code schemaVersion} are null when the database is down;
-	 * {@code productVersion} is also null unless {@code app.status.expose-details} is enabled.
+	 * {@code productVersion} is also null unless the caller is an administrator.
 	 */
 	public record DatabaseStatus(State status, String productVersion, String schemaVersion) {
 

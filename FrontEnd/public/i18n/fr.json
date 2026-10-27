@@ -9,7 +9,8 @@
       "en": "English",
       "fr": "Français"
     },
-    "loadFailed": "Impossible de charger la langue « {{language}} ». La langue précédente est conservée."
+    "loadFailed": "Impossible de charger la langue « {{language}} ». La langue précédente est conservée.",
+    "saveFailed": "Votre choix de langue n’a pas pu être enregistré dans votre compte. Il reste appliqué dans ce navigateur."
   },
   "shell": {
     "skipToContent": "Aller au contenu principal",
@@ -56,9 +57,12 @@
         "shell": "Espace de travail adapté à l’ordinateur, à la tablette et au téléphone",
         "languages": "Anglais et français, modifiables à tout moment",
         "statusCheck": "Vérification en direct de la connexion au serveur et à la base de données",
-        "schema": "Socle de données pour les sociétés, sites, départements, utilisateurs et une piste d’audit infalsifiable"
+        "signIn": "Connexion avec expiration de session et préférence de langue enregistrée",
+        "requests": "Création, enregistrement et soumission de demandes d’achat multi-lignes avec un numéro unique",
+        "isolation": "Chaque utilisateur ne voit que les demandes de sa société et de son rôle"
       },
-      "checkConnection": "Vérifier la connexion"
+      "checkConnection": "Vérifier la connexion",
+      "openRequests": "Ouvrir mes demandes"
     },
     "journey": {
       "title": "Prochaines étapes",
@@ -71,7 +75,8 @@
         "order": "Émettre la commande",
         "logistics": "Suivre les expéditions jusqu’au site",
         "receipt": "Enregistrer les réceptions et les anomalies"
-      }
+      },
+      "availableNow": "Disponible"
     },
     "demoNote": "Les sociétés et sites affichés en développement sont des données de démonstration. Leur nom se termine par « (Demo) »."
   },
@@ -171,5 +176,353 @@
     "heading": "Cette page n’existe pas",
     "message": "L’adresse est peut-être mal saisie, ou la page a été déplacée.",
     "backToOverview": "Aller à la vue d’ensemble"
+  },
+  "common": {
+    "dismiss": "Fermer",
+    "cancel": "Annuler",
+    "retry": "Réessayer"
+  },
+  "errors": {
+    "network-error": "Le serveur est injoignable. Vérifiez votre connexion puis réessayez.",
+    "unexpected-error": "Une erreur inattendue s’est produite. Réessayez.",
+    "internal-error": "Le serveur n’a pas pu traiter la demande. Réessayez dans un instant.",
+    "forbidden": "Vous n’êtes pas autorisé à effectuer cette action.",
+    "not-found": "Cet élément n’existe pas ou vous n’y avez pas accès.",
+    "conflict": "Cet élément a été modifié entre-temps. Rechargez-le puis réessayez.",
+    "validation-failed": "Certaines informations sont manquantes ou incorrectes.",
+    "unauthenticated": "Connectez-vous pour continuer.",
+    "session-expired": "Votre session a expiré. Reconnectez-vous.",
+    "stale-version": "Cette demande a été modifiée entre-temps. Rechargez-la puis réessayez.",
+    "invalid-state": "Cette demande ne peut plus être modifiée.",
+    "invalid-request": "La requête n’a pas pu être comprise. Rechargez la page puis réessayez.",
+    "invalid-parameter": "Une valeur de filtre ou de tri n’est pas valide. Réinitialisez les filtres puis réessayez.",
+    "csrf-invalid": "Votre jeton de sécurité a expiré. Réessayez."
+  },
+  "auth": {
+    "signOut": "Se déconnecter",
+    "company": "Société",
+    "department": "Département",
+    "roles": {
+      "label": "Rôles",
+      "REQUESTER": "Demandeur",
+      "ENTER_ON_BEHALF": "Saisie pour le compte d’autrui",
+      "DEPARTMENT_MANAGER": "Responsable de département",
+      "BUYER": "Acheteur",
+      "PURCHASING_MANAGER": "Responsable achats",
+      "GROUP_MANAGEMENT": "Direction du groupe",
+      "ADMIN": "Administrateur"
+    },
+    "sessionWarning": {
+      "title": "Votre session va expirer",
+      "message": "Pour votre sécurité, vous serez déconnecté dans {{minutes}} min {{seconds}} s. Les modifications non enregistrées sont conservées dans cet onglet.",
+      "stay": "Rester connecté"
+    },
+    "signIn": {
+      "title": "Connexion",
+      "heading": "Connexion",
+      "lead": "Utilisez votre adresse e-mail professionnelle.",
+      "principle": {
+        "one": "Une demande.",
+        "two": "Un numéro.",
+        "three": "Un responsable à chaque étape.",
+        "foot": "Toutes les demandes d’achat du groupe, du premier besoin à la livraison, au même endroit."
+      },
+      "expired": "Votre session a expiré. Reconnectez-vous pour reprendre là où vous en étiez.",
+      "signedOut": "Vous êtes déconnecté.",
+      "errors": {
+        "invalid-credentials": "L’adresse e-mail ou le mot de passe est incorrect.",
+        "network-error": "Le serveur est injoignable. Vérifiez votre connexion puis réessayez.",
+        "unexpected-error": "La connexion a échoué. Réessayez dans un instant."
+      },
+      "email": "Adresse e-mail",
+      "emailRequired": "Saisissez votre adresse e-mail.",
+      "emailInvalid": "Saisissez une adresse e-mail du type nom@societe.com.",
+      "password": "Mot de passe",
+      "passwordRequired": "Saisissez votre mot de passe.",
+      "showPassword": "Afficher le mot de passe",
+      "submit": "Se connecter",
+      "submitting": "Connexion…",
+      "demoNote": "Développement : les comptes de démonstration et la façon de définir leur mot de passe sont décrits dans le README."
+    }
+  },
+  "requests": {
+    "backToList": "Mes demandes",
+    "notFound": {
+      "title": "Demande introuvable",
+      "message": "Cette demande n’existe pas ou vous n’y avez pas accès."
+    },
+    "list": {
+      "title": "Mes demandes",
+      "description": "Les demandes d’achat que vous avez créées ou saisies pour le compte d’une autre personne.",
+      "new": "Nouvelle demande",
+      "filtersLabel": "Rechercher et filtrer les demandes",
+      "search": "Rechercher des demandes",
+      "searchPlaceholder": "Rechercher par numéro ou titre",
+      "statusFilter": "Statut",
+      "allStatuses": "Tous les statuts",
+      "sortBy": "Trier par",
+      "ascending": "croissant",
+      "descending": "décroissant",
+      "loading": "Chargement de vos demandes…",
+      "range": "{{from}}–{{to}} sur {{total}}",
+      "empty": {
+        "title": "Aucune demande pour le moment",
+        "message": "Créez votre première demande d’achat. Vous pouvez l’enregistrer en brouillon et la soumettre une fois complète.",
+        "messageNoCreate": "Votre rôle ne crée pas de demandes. Celles que vous pouvez suivre apparaissent sous « Visibles par moi »."
+      },
+      "noMatch": {
+        "title": "Aucune demande ne correspond à ces filtres",
+        "message": "Modifiez la recherche ou le statut, ou effacez les filtres."
+      },
+      "clearFilters": "Effacer les filtres",
+      "error": {
+        "title": "Vos demandes n’ont pas pu être chargées"
+      },
+      "draftNumber": "Brouillon",
+      "caption": "Mes demandes d’achat",
+      "columns": {
+        "number": "Numéro",
+        "title": "Titre",
+        "status": "Statut",
+        "total": "Total estimé",
+        "requiredDate": "Date requise",
+        "updatedAt": "Dernière modification"
+      },
+      "pagination": "Pages",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "visibleTitle": "Demandes visibles",
+      "visibleDescription": "Les demandes soumises de votre département ou de votre groupe que vous êtes autorisé à suivre.",
+      "scopeLabel": "Quelles demandes",
+      "scopes": {
+        "mine": "Mes demandes",
+        "visible": "Visibles par moi"
+      },
+      "emptyVisible": {
+        "title": "Aucune demande à suivre pour le moment",
+        "message": "Les demandes apparaissent ici une fois soumises dans votre périmètre."
+      }
+    },
+    "form": {
+      "newTitle": "Nouvelle demande d’achat",
+      "editTitle": "Modifier le brouillon",
+      "description": "Enregistrez un brouillon à tout moment. Les champs marqués * sont obligatoires pour soumettre.",
+      "loading": "Chargement du formulaire…",
+      "loadError": "Le formulaire n’a pas pu être chargé",
+      "notEditable": {
+        "title": "Cette demande ne peut plus être modifiée",
+        "message": "Seuls les brouillons peuvent être modifiés, par le demandeur ou la personne qui les a saisis."
+      },
+      "viewRequest": "Voir la demande",
+      "restore": {
+        "message": "Des modifications non enregistrées de votre session précédente sont disponibles dans cet onglet.",
+        "restore": "Restaurer les modifications",
+        "dismiss": "Les abandonner"
+      },
+      "errorSummary": "Corrigez {{count}} problème(s) pour continuer",
+      "sections": {
+        "request": "Demande",
+        "people": "Demandeur et livraison",
+        "lines": "Lignes",
+        "references": "Justification et références"
+      },
+      "choose": "Choisir…",
+      "none": "Aucun",
+      "urgencyHint": "Expliquez pourquoi le délai normal ne peut pas être respecté.",
+      "myself": "Moi-même ({{name}})",
+      "onBehalfHint": "Vous pouvez saisir cette demande pour un collègue de votre société. Vous serez enregistré comme auteur de la saisie.",
+      "beneficiaryHint": "Qui ou quoi recevra le bien ou le service, par exemple la ligne de production 2.",
+      "companiesDerived": "Définies automatiquement selon les règles d’achat de votre société. Les achats pourront les modifier.",
+      "lineCount": "Lignes : {{count}} sur {{max}}",
+      "lineLabel": "Ligne {{line}}",
+      "removeLine": "Supprimer la ligne {{line}}",
+      "addLine": "Ajouter une ligne",
+      "summaryLabel": "Total et actions",
+      "estimatedTotal": "Total estimé",
+      "totalHint": "Chaque ligne est arrondie à la plus petite unité de la devise, puis additionnée. Le serveur confirme le total à l’enregistrement.",
+      "submit": "Soumettre la demande",
+      "submitting": "Soumission…",
+      "saveDraft": "Enregistrer le brouillon",
+      "saving": "Enregistrement…",
+      "submitNote": "La soumission attribue son numéro à la demande. Elle ne peut plus être modifiée ensuite.",
+      "saved": "Brouillon enregistré",
+      "leave": {
+        "title": "Quitter sans enregistrer ?",
+        "message": "Vos modifications de cette demande n’ont pas été enregistrées.",
+        "confirm": "Quitter sans enregistrer",
+        "cancel": "Rester sur le formulaire"
+      },
+      "cannotCreate": {
+        "title": "Vous ne pouvez pas créer de demande",
+        "message": "Votre compte n’a aucune société pour laquelle il peut créer des demandes d’achat. Contactez un administrateur si c’est une erreur."
+      },
+      "buyingProposed": "Proposée. Les achats peuvent la modifier."
+    },
+    "fields": {
+      "title": "Titre",
+      "category": "Catégorie",
+      "priority": "Priorité",
+      "purchaseType": "Type d’achat",
+      "currency": "Devise",
+      "requester": "Demandeur",
+      "department": "Département",
+      "site": "Site",
+      "costCenter": "Centre de coûts",
+      "project": "Projet",
+      "justification": "Justification",
+      "urgencyJustification": "Motif de l’urgence",
+      "budgetLineRef": "Ligne budgétaire",
+      "equipmentRef": "Équipement",
+      "requiredDate": "Date requise",
+      "deliveryLocation": "Lieu de livraison",
+      "beneficiary": "Bénéficiaire",
+      "lines": "Lignes",
+      "lineDescription": "Description",
+      "itemReference": "Référence article",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "unitPrice": "Prix unitaire estimé",
+      "lineRequiredDate": "Date requise (ligne)",
+      "lineDeliveryLocation": "Lieu de livraison (ligne)",
+      "lineTotal": "Total de la ligne",
+      "requestingCompany": "Société demandeuse",
+      "chargedCompany": "Société d’imputation",
+      "buyingCompany": "Société acheteuse",
+      "enteredBy": "Saisi par",
+      "general": "Demande",
+      "lineSummary": {
+        "description": "Ligne {{line}}, description",
+        "itemReference": "Ligne {{line}}, référence article",
+        "quantity": "Ligne {{line}}, quantité",
+        "unit": "Ligne {{line}}, unité",
+        "unitPrice": "Ligne {{line}}, prix unitaire estimé",
+        "requiredDate": "Ligne {{line}}, date requise",
+        "deliveryLocation": "Ligne {{line}}, lieu de livraison",
+        "general": "Ligne {{line}}"
+      },
+      "maintenanceOrderRef": "Ordre de maintenance",
+      "beneficiarySite": "Site bénéficiaire"
+    },
+    "priority": {
+      "LOW": "Basse",
+      "NORMAL": "Normale",
+      "HIGH": "Haute",
+      "URGENT": "Urgente"
+    },
+    "purchaseType": {
+      "LOCAL": "Local",
+      "INTERNATIONAL": "International",
+      "hint": {
+        "LOCAL": "Fournisseur dans le pays de la société, devise locale.",
+        "INTERNATIONAL": "Importation avec transport et dédouanement."
+      }
+    },
+    "submit": {
+      "title": "Soumettre cette demande ?",
+      "message": "Elle recevra son numéro et ne pourra plus être modifiée.",
+      "confirm": "Soumettre la demande",
+      "done": "Demande {{number}} soumise",
+      "incomplete": "Complétez les champs obligatoires avant de soumettre."
+    },
+    "discard": {
+      "action": "Supprimer le brouillon",
+      "title": "Supprimer ce brouillon ?",
+      "message": "Le brouillon et ses lignes seront supprimés. Cette action est définitive.",
+      "confirm": "Supprimer le brouillon",
+      "done": "Brouillon supprimé"
+    },
+    "conflict": {
+      "reload": "Recharger la dernière version",
+      "reloadTitle": "Recharger la dernière version ?",
+      "reloadMessage": "Vos modifications sur cette page seront remplacées par la version enregistrée par une autre personne.",
+      "stale-version": {
+        "title": "Une autre personne a modifié cette demande",
+        "message": "Vos modifications n’ont pas été enregistrées. Rechargez la dernière version, puis refaites vos modifications."
+      },
+      "invalid-state": {
+        "title": "Cette demande a déjà été soumise",
+        "message": "Elle ne peut plus être modifiée. Ouvrez-la pour voir son statut actuel."
+      }
+    },
+    "errors": {
+      "required": "Obligatoire",
+      "too-long": "Au plus {{max}} caractères",
+      "max-decimals": "Utilisez au plus {{max}} décimales",
+      "quantity-positive": "Doit être supérieure à 0",
+      "too-large": "Valeur trop élevée",
+      "required-date-past": "Doit être aujourd’hui ou plus tard",
+      "min-lines": "Ajoutez au moins une ligne",
+      "not-in-company": "Ne fait pas partie de votre société",
+      "invalid-value": "Valeur non valide",
+      "price-not-negative": "Ne peut pas être négatif",
+      "too-many-lines": "Au plus {{max}} lignes par demande",
+      "requester-not-allowed": "Vous ne pouvez pas saisir de demande pour cette personne",
+      "company-not-allowed": "Vous ne pouvez pas créer de demande pour cette société",
+      "not-editable": "Cette valeur est définie par le système"
+    },
+    "detail": {
+      "title": "Demande d’achat",
+      "loading": "Chargement de la demande…",
+      "loadError": "La demande n’a pas pu être chargée",
+      "stage": "Étape actuelle",
+      "owner": "Responsable",
+      "since": "affectée {{elapsed}}",
+      "total": "Total estimé",
+      "edit": "Modifier le brouillon",
+      "actors": "Personnes et sociétés",
+      "onBehalf": "Saisie pour le compte du demandeur",
+      "classification": "Classement",
+      "history": "Historique",
+      "transition": "{{from}} → {{to}}",
+      "created": "Créée en {{to}}",
+      "by": "par {{name}}",
+      "ownerAfter": "Responsable ensuite : {{name}}",
+      "noHistory": "Aucun historique pour le moment."
+    },
+    "status": {
+      "DRAFT": "Brouillon",
+      "CREATED": "Demande créée",
+      "IN_APPROVAL": "En validation",
+      "REVISION_REQUESTED": "À réviser",
+      "REJECTED": "Rejetée",
+      "APPROVED": "Validée",
+      "IN_PURCHASING_REVIEW": "En revue achats",
+      "ASSIGNED_TO_BUYER": "Affectée à un acheteur",
+      "SOURCING": "Consultation en cours",
+      "QUOTES_RECEIVED": "Offres reçues",
+      "TECHNICAL_VALIDATION": "Validation technique",
+      "COMMERCIAL_VALIDATION": "Validation commerciale",
+      "MANAGEMENT_VALIDATION": "Validation de la direction",
+      "ORDERED": "Commande émise",
+      "CONTRACT_SIGNED": "Contrat signé",
+      "ORDER_CONFIRMED": "Commande confirmée",
+      "IN_PRODUCTION": "En fabrication",
+      "READY": "Prête",
+      "SHIPPED": "Expédiée",
+      "AT_PORT": "Au port",
+      "IN_CUSTOMS": "En douane",
+      "IN_WAREHOUSE": "En entrepôt",
+      "DELIVERED": "Livrée",
+      "PARTIALLY_RECEIVED": "Réception partielle",
+      "NON_CONFORMING": "Non conforme",
+      "ACCEPTED": "Réception acceptée",
+      "INVOICED": "Facturée",
+      "PAYMENT_PENDING": "Paiement en attente",
+      "PAID": "Payée",
+      "CLOSED": "Clôturée",
+      "CANCELLED": "Annulée"
+    },
+    "stages": {
+      "REQUEST": "Création",
+      "APPROVAL": "Validation interne",
+      "PURCHASING": "Centrale d’achat",
+      "SOURCING": "Consultation",
+      "EVALUATION": "Évaluation",
+      "COMMITMENT": "Engagement",
+      "SHIPMENT": "Expédition",
+      "RECEIPT": "Réception",
+      "FINANCE": "Finance",
+      "CLOSURE": "Clôture"
+    }
   }
 }

@@ -17,6 +17,8 @@ import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.epi.procurement.platform.persistence.TransactionLocks;
+
 /**
  * Appends events to the hash-chained audit trail and verifies its integrity. There is one chain per company
  * plus a global chain for events without a company (DR-03).
@@ -33,40 +35,46 @@ public class AuditLog {
 
 	private final Clock clock;
 
-	AuditLog(DataSource dataSource, ObjectProvider<Clock> clock) {
+	private final TransactionLocks locks;
+
+	AuditLog(DataSource dataSource, ObjectProvider<Clock> clock, TransactionLocks locks) {
 		this.jdbc = new JdbcTemplate(dataSource);
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
+		this.locks = locks;
 	}
 
 	/**
 	 * Appends an event inside the caller's transaction, so the audit row commits or rolls back with the
-	 * business change it describes. The chain head row is locked (UPDLOCK, HOLDLOCK) until commit, so
+	 * business change it describes. The chain head row is locked (UPDLOCK) until commit, so
 	 * concurrent appends to the same chain are serialised and the chain cannot fork.
 	 * @return the id of the new audit event
 	 */
 	@Transactional
 	public long record(AuditRecord record) {
 		String chainKey = AuditHasher.chainKey(record.companyId());
-		// UPDLOCK + HOLDLOCK takes an update (range) lock even when the head row does not exist yet, so a
-		// concurrent first append for the same chain waits here instead of inserting a duplicate head.
-		ChainHead head = jdbc.query(
-				"SELECT last_seq, last_hash FROM audit_chain_head WITH (UPDLOCK, HOLDLOCK) WHERE chain_key = ?",
-				rs -> rs.next() ? new ChainHead(rs.getLong("last_seq"), rs.getBytes("last_hash")) : null, chainKey);
+		ChainHead head = lockHead(chainKey);
 		if (head == null) {
-			jdbc.update("INSERT INTO audit_chain_head (chain_key, last_seq, last_hash) VALUES (?, 0, NULL)", chainKey);
-			head = new ChainHead(0, null);
+			// First event of this chain: created under an application lock (see TransactionLocks), then locked
+			// like any existing row.
+			createHeadIfMissing(chainKey);
+			head = lockHead(chainKey);
+			if (head == null) {
+				throw new IllegalStateException("Audit chain head could not be created: " + chainKey);
+			}
 		}
 
 		long chainSeq = head.lastSeq() + 1;
 		Instant occurredAt = clock.instant().truncatedTo(ChronoUnit.MILLIS);
 		byte[] hash = AuditHasher.hash(chainKey, chainSeq, head.lastHash(), occurredAt, record);
 
-		Long id = jdbc.queryForObject("""
-				INSERT INTO audit_event (chain_key, chain_seq, occurred_at, actor_user_id, actor_label, company_id,
+		// The id is drawn first and inserted explicitly: an OUTPUT clause without INTO is rejected by SQL Server as
+		// soon as any trigger exists on the table (QA1-D-06).
+		Long id = jdbc.queryForObject("SELECT NEXT VALUE FOR seq_audit_event", Long.class);
+		jdbc.update("""
+				INSERT INTO audit_event (id, chain_key, chain_seq, occurred_at, actor_user_id, actor_label, company_id,
 				                         entity_type, entity_id, action, from_status, to_status, comment,
 				                         payload_json, previous_hash, hash)
-				OUTPUT INSERTED.id
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", Long.class, chainKey, chainSeq,
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", id, chainKey, chainSeq,
 				LocalDateTime.ofInstant(occurredAt, ZoneOffset.UTC), typed(Types.BIGINT, record.actorUserId()),
 				record.actorLabel(), typed(Types.BIGINT, record.companyId()), record.entityType(), record.entityId(),
 				record.action(), typed(Types.VARCHAR, record.fromStatus()), typed(Types.VARCHAR, record.toStatus()),
@@ -140,8 +148,46 @@ public class AuditLog {
 				// Events were removed from the end of the chain (or the head was altered).
 				return new AuditChainVerification(false, state.checked, null);
 			}
+			Long hidden = eventBeyondHead(chainKey, head.lastSeq());
+			if (hidden != null) {
+				return new AuditChainVerification(false, state.checked, hidden);
+			}
 		}
 		return new AuditChainVerification(state.firstInvalid == null, state.checked, state.firstInvalid);
+	}
+
+	/**
+	 * Events positioned after the chain head are hidden from verification, e.g. after the head was rewound by someone
+	 * able to bypass the triggers (CR-25). Events appended concurrently are not a problem: an event commits together
+	 * with its head update, so reading the events first and the head afterwards always shows such a head at or beyond
+	 * them. Only events still beyond the re-read head are reported.
+	 * @return the id of the first event beyond the head, or null
+	 */
+	private Long eventBeyondHead(String chainKey, long verifiedSeq) {
+		List<long[]> beyond = jdbc.query(
+				"SELECT id, chain_seq FROM audit_event WHERE chain_key = ? AND chain_seq > ? ORDER BY chain_seq",
+				(rs, i) -> new long[] { rs.getLong(1), rs.getLong(2) }, chainKey, verifiedSeq);
+		if (beyond.isEmpty()) {
+			return null;
+		}
+		Long headNow = jdbc.query("SELECT last_seq FROM audit_chain_head WHERE chain_key = ?",
+				rs -> rs.next() ? rs.getLong(1) : null, chainKey);
+		long lastSeen = beyond.get(beyond.size() - 1)[1];
+		if (headNow != null && headNow >= lastSeen) {
+			return null;
+		}
+		return beyond.stream().filter(e -> headNow == null || e[1] > headNow).findFirst().map(e -> e[0]).orElse(null);
+	}
+
+	private ChainHead lockHead(String chainKey) {
+		return jdbc.query("SELECT last_seq, last_hash FROM audit_chain_head WITH (UPDLOCK, ROWLOCK) WHERE chain_key = ?",
+				rs -> rs.next() ? new ChainHead(rs.getLong("last_seq"), rs.getBytes("last_hash")) : null, chainKey);
+	}
+
+	private void createHeadIfMissing(String chainKey) {
+		locks.lockExclusively("audit-chain-head:" + chainKey);
+		jdbc.update("INSERT INTO audit_chain_head (chain_key, last_seq, last_hash) SELECT ?, 0, NULL "
+				+ "WHERE NOT EXISTS (SELECT 1 FROM audit_chain_head WHERE chain_key = ?)", chainKey, chainKey);
 	}
 
 	/**

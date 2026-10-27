@@ -1,0 +1,105 @@
+<div class="page">
+  <section class="brand-side" aria-hidden="true">
+    <div class="brand-row">
+      <span class="brand-mark">EP</span>
+      <span class="brand-product">{{ 'app.name' | translate }}</span>
+    </div>
+    <div class="principle">
+      <p class="principle-line">{{ 'auth.signIn.principle.one' | translate }}</p>
+      <p class="principle-line">{{ 'auth.signIn.principle.two' | translate }}</p>
+      <p class="principle-line">{{ 'auth.signIn.principle.three' | translate }}</p>
+    </div>
+    <p class="brand-foot">{{ 'auth.signIn.principle.foot' | translate }}</p>
+  </section>
+
+  <main class="form-side" id="main" tabindex="-1">
+    <div class="form-top">
+      <app-language-select />
+    </div>
+
+    <div class="form-wrap">
+      <h1 class="title" tabindex="-1">{{ 'auth.signIn.heading' | translate }}</h1>
+      <p class="lead">{{ 'auth.signIn.lead' | translate }}</p>
+
+      @if (reason === 'expired') {
+        <div class="notice notice--warning" role="status">
+          <app-icon name="clock" [size]="18" />
+          <p>{{ 'auth.signIn.expired' | translate }}</p>
+        </div>
+      } @else if (reason === 'signedOut') {
+        <div class="notice" role="status">
+          <app-icon name="circle-check" [size]="18" />
+          <p>{{ 'auth.signIn.signedOut' | translate }}</p>
+        </div>
+      }
+
+      @if (error(); as failure) {
+        <div class="notice notice--danger" role="alert">
+          <app-icon name="triangle-alert" [size]="18" />
+          <p>{{ 'auth.signIn.errors.' + failure | translate }}</p>
+        </div>
+      }
+
+      <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label for="sign-in-email">{{ 'auth.signIn.email' | translate }}</label>
+          <input
+            #emailInput
+            id="sign-in-email"
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            inputmode="email"
+            spellcheck="false"
+            [attr.aria-invalid]="fieldInvalid('email')"
+            [attr.aria-describedby]="fieldInvalid('email') ? 'sign-in-email-error' : null"
+          />
+          @if (fieldInvalid('email')) {
+            <p class="field-error" id="sign-in-email-error">
+              {{ (form.controls.email.hasError('required') ? 'auth.signIn.emailRequired' : 'auth.signIn.emailInvalid') | translate }}
+            </p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="sign-in-password">{{ 'auth.signIn.password' | translate }}</label>
+          <div class="password-row">
+            <input
+              #passwordInput
+              id="sign-in-password"
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              [attr.aria-invalid]="fieldInvalid('password')"
+              [attr.aria-describedby]="fieldInvalid('password') ? 'sign-in-password-error' : null"
+            />
+            <button
+              type="button"
+              class="reveal"
+              [attr.aria-pressed]="showPassword()"
+              (click)="showPassword.set(!showPassword())"
+            >
+              <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="16" />
+              <span class="visually-hidden">{{ 'auth.signIn.showPassword' | translate }}</span>
+            </button>
+          </div>
+          @if (fieldInvalid('password')) {
+            <p class="field-error" id="sign-in-password-error">{{ 'auth.signIn.passwordRequired' | translate }}</p>
+          }
+        </div>
+
+        <button appButton type="submit" class="submit" [attr.aria-disabled]="submitting()" [disabled]="submitting()">
+          <app-icon name="log-in" [size]="16" />
+          {{ (submitting() ? 'auth.signIn.submitting' : 'auth.signIn.submit') | translate }}
+        </button>
+      </form>
+
+      @if (isDevMode) {
+        <p class="dev-note">
+          <app-icon name="info" [size]="16" />
+          <span>{{ 'auth.signIn.demoNote' | translate }}</span>
+        </p>
+      }
+    </div>
+  </main>
+</div>

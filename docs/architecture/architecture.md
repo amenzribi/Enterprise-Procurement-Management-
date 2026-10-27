@@ -24,7 +24,7 @@ Status: Sprint 0 baseline. Decisions referenced: [decision log](../decisions/dec
 
 ## 2. Backend
 
-- Java 21, Spring Boot 4.1, Maven Wrapper. Root package `com.epi.procurement`.
+- Java 25 LTS, Spring Boot 4.1, Maven Wrapper. Root package `com.epi.procurement`.
 - Module = top-level package; `ApplicationModules.verify()` runs in the test suite (ADR-002).
 - Layering inside a module: `api` (REST controllers, DTOs) → application services (transactions, authorisation,
   audit) → domain (entities, state machines, rules) → persistence (Spring Data JPA repositories).

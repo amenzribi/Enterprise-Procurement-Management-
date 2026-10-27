@@ -1,0 +1,510 @@
+@switch (pageState()) {
+  @case ('loading') {
+    <app-page-header [heading]="(isNew() ? 'requests.form.newTitle' : 'requests.form.editTitle') | translate" />
+    <p class="visually-hidden" role="status">{{ 'requests.form.loading' | translate }}</p>
+    <div class="loading">
+      <app-skeleton height="2.5rem" />
+      <app-skeleton height="2.5rem" width="60%" />
+      <app-skeleton height="8rem" />
+    </div>
+  }
+
+  @case ('error') {
+    <app-page-header [heading]="(isNew() ? 'requests.form.newTitle' : 'requests.form.editTitle') | translate" />
+    <app-error-state
+      [heading]="'requests.form.loadError' | translate"
+      [message]="'errors.' + (loadError() ?? 'unexpected-error') | translate"
+      [retryLabel]="'common.retry' | translate"
+      (retry)="load()"
+    />
+  }
+
+  @case ('not-found') {
+    <app-page-header [heading]="'requests.notFound.title' | translate" />
+    <app-empty-state icon="search" [heading]="'requests.notFound.title' | translate" [message]="'requests.notFound.message' | translate">
+      <a appButton variant="secondary" routerLink="/requests">{{ 'requests.backToList' | translate }}</a>
+    </app-empty-state>
+  }
+
+  @case ('cannot-create') {
+    <app-page-header [heading]="'requests.form.newTitle' | translate" />
+    <app-empty-state icon="lock" [heading]="'requests.form.cannotCreate.title' | translate" [message]="'requests.form.cannotCreate.message' | translate">
+      <a appButton variant="secondary" routerLink="/requests">{{ 'requests.backToList' | translate }}</a>
+    </app-empty-state>
+  }
+
+  @case ('not-editable') {
+    <app-page-header [heading]="'requests.form.editTitle' | translate" />
+    <app-empty-state icon="lock" [heading]="'requests.form.notEditable.title' | translate" [message]="'requests.form.notEditable.message' | translate">
+      @if (request(); as current) {
+        <a appButton variant="secondary" [routerLink]="['/requests', current.id]">{{ 'requests.form.viewRequest' | translate }}</a>
+      }
+    </app-empty-state>
+  }
+
+  @case ('ready') {
+    <app-page-header
+      [heading]="(isNew() ? 'requests.form.newTitle' : 'requests.form.editTitle') | translate"
+      [description]="'requests.form.description' | translate"
+    >
+      <a appButton variant="ghost" [routerLink]="request() ? ['/requests', request()!.id] : '/requests'">
+        <app-icon name="arrow-left" [size]="16" />
+        {{ 'requests.backToList' | translate }}
+      </a>
+    </app-page-header>
+
+    @if (restoreOffer(); as offer) {
+      <div class="banner banner--info" role="status">
+        <app-icon name="history" [size]="18" />
+        <p class="banner-text">{{ 'requests.form.restore.message' | translate }}</p>
+        <div class="banner-actions">
+          <button appButton size="small" type="button" (click)="restore()">{{ 'requests.form.restore.restore' | translate }}</button>
+          <button appButton size="small" variant="ghost" type="button" (click)="dismissRestore()">
+            {{ 'requests.form.restore.dismiss' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (conflict(); as conflictCode) {
+      <div class="banner banner--warning" id="form-conflict" role="alert" tabindex="-1">
+        <app-icon name="triangle-alert" [size]="18" />
+        <div class="banner-text">
+          <p class="banner-title">{{ 'requests.conflict.' + conflictCode + '.title' | translate }}</p>
+          <p>{{ 'requests.conflict.' + conflictCode + '.message' | translate }}</p>
+        </div>
+        <div class="banner-actions">
+          @if (conflictCode === 'stale-version') {
+            <button appButton size="small" variant="secondary" type="button" (click)="reloadLatest()">
+              <app-icon name="refresh" [size]="16" />
+              {{ 'requests.conflict.reload' | translate }}
+            </button>
+          } @else if (request(); as current) {
+            <a appButton size="small" variant="secondary" [routerLink]="['/requests', current.id]">
+              {{ 'requests.form.viewRequest' | translate }}
+            </a>
+          }
+        </div>
+      </div>
+    }
+
+    @if (summaryErrors().length > 0) {
+      <div class="error-summary" id="form-error-summary" role="alert" tabindex="-1">
+        <h2 class="error-summary-title">{{ 'requests.form.errorSummary' | translate: { count: summaryErrors().length } }}</h2>
+        <ul>
+          @for (item of summaryErrors(); track item.id + item.code) {
+            <li>
+              <a [href]="'#' + item.id" (click)="$event.preventDefault(); focusById(item.id)">
+                {{ item.labelKey | translate: item.labelParams }}: {{ 'requests.errors.' + item.code | translate: item.params }}
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <form class="layout" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="sections">
+        <!-- Request -->
+        <section class="section" aria-labelledby="section-request">
+          <h2 class="section-title" id="section-request">{{ 'requests.form.sections.request' | translate }}</h2>
+          <div class="grid">
+            <div class="field span-2">
+              <label for="request-title">{{ 'requests.fields.title' | translate }} <span class="req" aria-hidden="true">*</span></label>
+              <input id="request-title" type="text" formControlName="title" maxlength="200"
+                [attr.aria-invalid]="!!errorFor(form.controls.title)"
+                [attr.aria-describedby]="errorFor(form.controls.title) ? 'request-title-error' : null" />
+              @if (errorFor(form.controls.title); as code) {
+                <p class="field-error" id="request-title-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-categoryId">{{ 'requests.fields.category' | translate }} <span class="req" aria-hidden="true">*</span></label>
+              <select id="request-categoryId" formControlName="categoryId"
+                [attr.aria-invalid]="!!errorFor(form.controls.categoryId)"
+                [attr.aria-describedby]="errorFor(form.controls.categoryId) ? 'request-categoryId-error' : null">
+                <option [ngValue]="null">{{ 'requests.form.choose' | translate }}</option>
+                @for (category of options()?.categories ?? []; track category.id) {
+                  <option [ngValue]="category.id">{{ optionLabel(category, language.current()) }}</option>
+                }
+              </select>
+              @if (errorFor(form.controls.categoryId); as code) {
+                <p class="field-error" id="request-categoryId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-priority">{{ 'requests.fields.priority' | translate }} <span class="req" aria-hidden="true">*</span></label>
+              <select id="request-priority" formControlName="priority">
+                @for (priority of priorities; track priority) {
+                  <option [ngValue]="priority">{{ 'requests.priority.' + priority | translate }}</option>
+                }
+              </select>
+            </div>
+
+            <fieldset class="field span-2 choice-group">
+              <legend>{{ 'requests.fields.purchaseType' | translate }} <span class="req" aria-hidden="true">*</span></legend>
+              <div class="choices">
+                @for (type of purchaseTypes; track type) {
+                  <label class="choice">
+                    <input type="radio" formControlName="purchaseType" [value]="type" [id]="'request-purchaseType-' + type" />
+                    <span class="choice-text">
+                      <span class="choice-title">{{ 'requests.purchaseType.' + type | translate }}</span>
+                      <span class="choice-hint">{{ 'requests.purchaseType.hint.' + type | translate }}</span>
+                    </span>
+                  </label>
+                }
+              </div>
+            </fieldset>
+
+            @if (isUrgent()) {
+              <div class="field span-2">
+                <label for="request-urgencyJustification">
+                  {{ 'requests.fields.urgencyJustification' | translate }} <span class="req" aria-hidden="true">*</span>
+                </label>
+                <textarea id="request-urgencyJustification" rows="2" formControlName="urgencyJustification" maxlength="2000"
+                  [attr.aria-invalid]="!!errorFor(form.controls.urgencyJustification)"
+                  [attr.aria-describedby]="errorFor(form.controls.urgencyJustification) ? 'request-urgencyJustification-error' : 'request-urgencyJustification-hint'"></textarea>
+                <p class="hint" id="request-urgencyJustification-hint">{{ 'requests.form.urgencyHint' | translate }}</p>
+                @if (errorFor(form.controls.urgencyJustification); as code) {
+                  <p class="field-error" id="request-urgencyJustification-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                }
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- People and delivery -->
+        <section class="section" aria-labelledby="section-people">
+          <h2 class="section-title" id="section-people">{{ 'requests.form.sections.people' | translate }}</h2>
+          <div class="grid">
+            @if (companies().length > 1) {
+              <div class="field span-2">
+                <label for="request-requestingCompanyId">{{ 'requests.fields.requestingCompany' | translate }} <span class="req" aria-hidden="true">*</span></label>
+                <select id="request-requestingCompanyId" formControlName="requestingCompanyId"
+                  [attr.aria-invalid]="!!errorFor(form.controls.requestingCompanyId)"
+                  [attr.aria-describedby]="errorFor(form.controls.requestingCompanyId) ? 'request-requestingCompanyId-error' : null">
+                  @for (option of companies(); track option.id) {
+                    <option [ngValue]="option.id">{{ option.name }}</option>
+                  }
+                </select>
+                @if (errorFor(form.controls.requestingCompanyId); as code) {
+                  <p class="field-error" id="request-requestingCompanyId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                }
+              </div>
+            }
+
+            @if (canEnterOnBehalf()) {
+              <div class="field">
+                <label for="request-requesterId">{{ 'requests.fields.requester' | translate }}</label>
+                <select id="request-requesterId" formControlName="requesterId"
+                  [attr.aria-invalid]="!!errorFor(form.controls.requesterId)"
+                  [attr.aria-describedby]="errorFor(form.controls.requesterId) ? 'request-requesterId-error' : 'request-requesterId-hint'">
+                  <option [ngValue]="auth.me()?.id ?? null">{{ 'requests.form.myself' | translate: { name: auth.me()?.displayName } }}</option>
+                  @for (person of company()?.requesters ?? []; track person.id) {
+                    @if (person.id !== auth.me()?.id) {
+                      <option [ngValue]="person.id">{{ person.displayName }}</option>
+                    }
+                  }
+                </select>
+                <p class="hint" id="request-requesterId-hint">{{ 'requests.form.onBehalfHint' | translate }}</p>
+                @if (errorFor(form.controls.requesterId); as code) {
+                  <p class="field-error" id="request-requesterId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                }
+              </div>
+            }
+
+            <div class="field">
+              <label for="request-departmentId">{{ 'requests.fields.department' | translate }} <span class="req" aria-hidden="true">*</span></label>
+              <select id="request-departmentId" formControlName="departmentId"
+                [attr.aria-invalid]="!!errorFor(form.controls.departmentId)"
+                [attr.aria-describedby]="errorFor(form.controls.departmentId) ? 'request-departmentId-error' : null">
+                <option [ngValue]="null">{{ 'requests.form.choose' | translate }}</option>
+                @for (department of company()?.departments ?? []; track department.id) {
+                  <option [ngValue]="department.id">{{ department.name }}</option>
+                }
+              </select>
+              @if (errorFor(form.controls.departmentId); as code) {
+                <p class="field-error" id="request-departmentId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-siteId">{{ 'requests.fields.site' | translate }}</label>
+              <select id="request-siteId" formControlName="siteId"
+                [attr.aria-invalid]="!!errorFor(form.controls.siteId)"
+                [attr.aria-describedby]="errorFor(form.controls.siteId) ? 'request-siteId-error' : null">
+                <option [ngValue]="null">{{ 'requests.form.none' | translate }}</option>
+                @for (site of company()?.sites ?? []; track site.id) {
+                  <option [ngValue]="site.id">{{ site.name }}</option>
+                }
+              </select>
+              @if (errorFor(form.controls.siteId); as code) {
+                <p class="field-error" id="request-siteId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-costCenterId">{{ 'requests.fields.costCenter' | translate }}</label>
+              <select id="request-costCenterId" formControlName="costCenterId"
+                [attr.aria-invalid]="!!errorFor(form.controls.costCenterId)"
+                [attr.aria-describedby]="errorFor(form.controls.costCenterId) ? 'request-costCenterId-error' : null">
+                <option [ngValue]="null">{{ 'requests.form.none' | translate }}</option>
+                @for (costCenter of company()?.costCenters ?? []; track costCenter.id) {
+                  <option [ngValue]="costCenter.id">{{ costCenter.name }}</option>
+                }
+              </select>
+              @if (errorFor(form.controls.costCenterId); as code) {
+                <p class="field-error" id="request-costCenterId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-beneficiary">{{ 'requests.fields.beneficiary' | translate }}</label>
+              <input id="request-beneficiary" type="text" formControlName="beneficiary" maxlength="200" aria-describedby="request-beneficiary-hint" />
+              <p class="hint" id="request-beneficiary-hint">{{ 'requests.form.beneficiaryHint' | translate }}</p>
+            </div>
+
+            <div class="field">
+              <label for="request-beneficiarySiteId">{{ 'requests.fields.beneficiarySite' | translate }}</label>
+              <select id="request-beneficiarySiteId" formControlName="beneficiarySiteId"
+                [attr.aria-invalid]="!!errorFor(form.controls.beneficiarySiteId)"
+                [attr.aria-describedby]="errorFor(form.controls.beneficiarySiteId) ? 'request-beneficiarySiteId-error' : null">
+                <option [ngValue]="null">{{ 'requests.form.none' | translate }}</option>
+                @for (site of company()?.sites ?? []; track site.id) {
+                  <option [ngValue]="site.id">{{ site.name }}</option>
+                }
+              </select>
+              @if (errorFor(form.controls.beneficiarySiteId); as code) {
+                <p class="field-error" id="request-beneficiarySiteId-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-requiredDate">{{ 'requests.fields.requiredDate' | translate }} <span class="req" aria-hidden="true">*</span></label>
+              <input id="request-requiredDate" type="date" formControlName="requiredDate"
+                [attr.aria-invalid]="!!errorFor(form.controls.requiredDate)"
+                [attr.aria-describedby]="errorFor(form.controls.requiredDate) ? 'request-requiredDate-error' : null" />
+              @if (errorFor(form.controls.requiredDate); as code) {
+                <p class="field-error" id="request-requiredDate-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="request-deliveryLocation">{{ 'requests.fields.deliveryLocation' | translate }}</label>
+              <input id="request-deliveryLocation" type="text" formControlName="deliveryLocation" maxlength="200" />
+            </div>
+          </div>
+
+          <dl class="companies">
+            <div>
+              <dt>{{ 'requests.fields.requestingCompany' | translate }}</dt>
+              <dd>{{ company()?.name ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'requests.fields.chargedCompany' | translate }}</dt>
+              <dd>{{ company()?.chargedCompany?.name ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'requests.fields.buyingCompany' | translate }}</dt>
+              <dd>
+                {{ company()?.buyingCompany?.name ?? '—' }}
+                @if (company()?.buyingCompanyProposed) {
+                  <span class="proposed">{{ 'requests.form.buyingProposed' | translate }}</span>
+                }
+              </dd>
+            </div>
+          </dl>
+          <p class="hint companies-hint">{{ 'requests.form.companiesDerived' | translate }}</p>
+        </section>
+
+        <!-- Lines -->
+        <section class="section" aria-labelledby="section-lines">
+          <div class="section-head">
+            <h2 class="section-title" id="section-lines">{{ 'requests.form.sections.lines' | translate }}</h2>
+            <p class="section-count tabular">{{ 'requests.form.lineCount' | translate: { count: lines.length, max: maxLines() } }}</p>
+          </div>
+
+          <div formArrayName="lines" class="lines">
+            @for (line of lines.controls; track line; let index = $index) {
+              <fieldset class="line" [formGroupName]="index">
+                <legend class="line-legend">
+                  <span class="line-number tabular">{{ 'requests.form.lineLabel' | translate: { line: index + 1 } }}</span>
+                </legend>
+                <button
+                  type="button"
+                  class="line-remove"
+                  [disabled]="lines.length <= 1"
+                  (click)="removeLine(index)"
+                >
+                  <app-icon name="trash" [size]="16" />
+                  <span class="visually-hidden">{{ 'requests.form.removeLine' | translate: { line: index + 1 } }}</span>
+                </button>
+
+                <div class="line-grid">
+                  <div class="field line-description">
+                    <label [for]="'line-' + index + '-description'">{{ 'requests.fields.lineDescription' | translate }} <span class="req" aria-hidden="true">*</span></label>
+                    <input [id]="'line-' + index + '-description'" type="text" formControlName="description" maxlength="500"
+                      [attr.aria-invalid]="!!errorFor(line.controls.description)"
+                      [attr.aria-describedby]="errorFor(line.controls.description) ? 'line-' + index + '-description-error' : null" />
+                    @if (errorFor(line.controls.description); as code) {
+                      <p class="field-error" [id]="'line-' + index + '-description-error'">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label [for]="'line-' + index + '-itemReference'">{{ 'requests.fields.itemReference' | translate }}</label>
+                    <input [id]="'line-' + index + '-itemReference'" type="text" formControlName="itemReference" maxlength="100" />
+                  </div>
+
+                  <div class="field">
+                    <label [for]="'line-' + index + '-quantity'">{{ 'requests.fields.quantity' | translate }} <span class="req" aria-hidden="true">*</span></label>
+                    <input [id]="'line-' + index + '-quantity'" type="text" inputmode="decimal" formControlName="quantity" class="tabular"
+                      [attr.aria-invalid]="!!errorFor(line.controls.quantity)"
+                      [attr.aria-describedby]="errorFor(line.controls.quantity) ? 'line-' + index + '-quantity-error' : null" />
+                    @if (errorFor(line.controls.quantity); as code) {
+                      <p class="field-error" [id]="'line-' + index + '-quantity-error'">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label [for]="'line-' + index + '-unit'">{{ 'requests.fields.unit' | translate }} <span class="req" aria-hidden="true">*</span></label>
+                    @if (options()?.units?.length) {
+                      <select [id]="'line-' + index + '-unit'" formControlName="unit"
+                        [attr.aria-invalid]="!!errorFor(line.controls.unit)"
+                        [attr.aria-describedby]="errorFor(line.controls.unit) ? 'line-' + index + '-unit-error' : null">
+                        <option value="">{{ 'requests.form.choose' | translate }}</option>
+                        @for (unit of options()?.units ?? []; track unit.code) {
+                          <option [value]="unit.code">{{ optionLabel(unit, language.current()) }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <input [id]="'line-' + index + '-unit'" type="text" formControlName="unit" maxlength="20"
+                        [attr.aria-invalid]="!!errorFor(line.controls.unit)"
+                        [attr.aria-describedby]="errorFor(line.controls.unit) ? 'line-' + index + '-unit-error' : null" />
+                    }
+                    @if (errorFor(line.controls.unit); as code) {
+                      <p class="field-error" [id]="'line-' + index + '-unit-error'">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label [for]="'line-' + index + '-estimatedUnitPrice'">
+                      {{ 'requests.fields.unitPrice' | translate }} <span class="req" aria-hidden="true">*</span>
+                    </label>
+                    <input [id]="'line-' + index + '-estimatedUnitPrice'" type="text" inputmode="decimal" formControlName="estimatedUnitPrice" class="tabular"
+                      [attr.aria-invalid]="!!errorFor(line.controls.estimatedUnitPrice)"
+                      [attr.aria-describedby]="errorFor(line.controls.estimatedUnitPrice) ? 'line-' + index + '-estimatedUnitPrice-error' : null" />
+                    @if (errorFor(line.controls.estimatedUnitPrice); as code) {
+                      <p class="field-error" [id]="'line-' + index + '-estimatedUnitPrice-error'">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label [for]="'line-' + index + '-requiredDate'">{{ 'requests.fields.lineRequiredDate' | translate }}</label>
+                    <input [id]="'line-' + index + '-requiredDate'" type="date" formControlName="requiredDate"
+                      [attr.aria-invalid]="!!errorFor(line.controls.requiredDate)"
+                      [attr.aria-describedby]="errorFor(line.controls.requiredDate) ? 'line-' + index + '-requiredDate-error' : null" />
+                    @if (errorFor(line.controls.requiredDate); as code) {
+                      <p class="field-error" [id]="'line-' + index + '-requiredDate-error'">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label [for]="'line-' + index + '-deliveryLocation'">{{ 'requests.fields.lineDeliveryLocation' | translate }}</label>
+                    <input [id]="'line-' + index + '-deliveryLocation'" type="text" formControlName="deliveryLocation" maxlength="200" />
+                  </div>
+
+                  <div class="line-total">
+                    <span class="line-total-label">{{ 'requests.fields.lineTotal' | translate }}</span>
+                    <span class="line-total-value tabular">{{ lineTotalText(index) }}</span>
+                  </div>
+                </div>
+              </fieldset>
+            }
+          </div>
+
+          @if (errorFor(form.controls.lines); as code) {
+            <p class="field-error">{{ 'requests.errors.' + (code.code === 'required' ? 'min-lines' : code.code) | translate: code.params }}</p>
+          }
+
+          <button appButton variant="secondary" type="button" id="add-line" class="add-line" [disabled]="lines.length >= maxLines()" (click)="addLine()">
+            <app-icon name="plus" [size]="16" />
+            {{ 'requests.form.addLine' | translate }}
+          </button>
+        </section>
+
+        <!-- Justification and references -->
+        <section class="section" aria-labelledby="section-references">
+          <h2 class="section-title" id="section-references">{{ 'requests.form.sections.references' | translate }}</h2>
+          <div class="grid">
+            <div class="field span-2">
+              <label for="request-justification">{{ 'requests.fields.justification' | translate }}</label>
+              <textarea id="request-justification" rows="3" formControlName="justification" maxlength="2000"></textarea>
+            </div>
+            <div class="field">
+              <label for="request-project">{{ 'requests.fields.project' | translate }}</label>
+              <input id="request-project" type="text" formControlName="project" maxlength="100" />
+            </div>
+            <div class="field">
+              <label for="request-budgetLineRef">{{ 'requests.fields.budgetLineRef' | translate }}</label>
+              <input id="request-budgetLineRef" type="text" formControlName="budgetLineRef" maxlength="100" />
+            </div>
+            <div class="field">
+              <label for="request-equipmentRef">{{ 'requests.fields.equipmentRef' | translate }}</label>
+              <input id="request-equipmentRef" type="text" formControlName="equipmentRef" maxlength="100" />
+            </div>
+            <div class="field">
+              <label for="request-maintenanceOrderRef">{{ 'requests.fields.maintenanceOrderRef' | translate }}</label>
+              <input id="request-maintenanceOrderRef" type="text" formControlName="maintenanceOrderRef" maxlength="100" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Summary and actions -->
+      <aside class="summary" [attr.aria-label]="'requests.form.summaryLabel' | translate">
+        <div class="summary-card">
+          <div class="field">
+            <label for="request-currency">{{ 'requests.fields.currency' | translate }} <span class="req" aria-hidden="true">*</span></label>
+            <select id="request-currency" formControlName="currency"
+              [attr.aria-invalid]="!!errorFor(form.controls.currency)"
+              [attr.aria-describedby]="errorFor(form.controls.currency) ? 'request-currency-error' : null">
+              @for (currency of options()?.currencies ?? []; track currency.code) {
+                <option [ngValue]="currency.code">{{ currency.code }} — {{ optionLabel(currency, language.current()) }}</option>
+              }
+            </select>
+            @if (errorFor(form.controls.currency); as code) {
+              <p class="field-error" id="request-currency-error">{{ 'requests.errors.' + code.code | translate: code.params }}</p>
+            }
+          </div>
+
+          <div class="summary-total">
+            <span class="summary-total-label">{{ 'requests.form.estimatedTotal' | translate }}</span>
+            <output class="summary-total-value tabular" for="request-currency" aria-live="polite">{{ totalText() }}</output>
+            <span class="summary-total-hint">{{ 'requests.form.totalHint' | translate }}</span>
+          </div>
+
+          <div class="summary-actions">
+            <button appButton type="submit" [disabled]="busy() !== 'idle'">
+              <app-icon name="send" [size]="16" />
+              {{ (busy() === 'submitting' ? 'requests.form.submitting' : 'requests.form.submit') | translate }}
+            </button>
+            <button appButton variant="secondary" type="button" [disabled]="busy() !== 'idle'" (click)="saveDraft()">
+              <app-icon name="save" [size]="16" />
+              {{ (busy() === 'saving' ? 'requests.form.saving' : 'requests.form.saveDraft') | translate }}
+            </button>
+            @if (canDiscard()) {
+              <button appButton variant="ghost" type="button" class="discard" [disabled]="busy() !== 'idle'" (click)="discard()">
+                <app-icon name="trash" [size]="16" />
+                {{ 'requests.discard.action' | translate }}
+              </button>
+            }
+          </div>
+          <p class="summary-note">{{ 'requests.form.submitNote' | translate }}</p>
+        </div>
+      </aside>
+    </form>
+  }
+}

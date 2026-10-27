@@ -1,0 +1,229 @@
+:host {
+  display: block;
+}
+
+// Two panes: the product's promise on the harbour-ink surface, the form on paper. On phones only the form remains.
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  min-block-size: 100dvh;
+}
+
+.brand-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-10);
+  padding: var(--space-10) clamp(var(--space-8), 5vw, var(--space-12));
+  background: var(--color-nav);
+  color: var(--color-nav-text);
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: #ffffff;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.brand-product {
+  color: var(--color-nav-text-strong);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+// The one memorable element: the product promise set as three stacked lines, the last carried by the accent rule.
+.principle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.principle-line {
+  color: var(--color-nav-text-strong);
+  font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+  font-weight: var(--weight-semibold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  // Measured in the line's own large type, so each statement keeps to one or two lines.
+  max-inline-size: 16ch;
+}
+
+.principle-line:last-child {
+  padding-inline-start: var(--space-4);
+  border-inline-start: 3px solid var(--color-accent-on-dark);
+  color: var(--color-accent-on-dark);
+}
+
+.brand-foot {
+  max-inline-size: 42ch;
+  color: var(--color-nav-muted);
+  font-size: var(--text-sm);
+}
+
+.form-side {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6) clamp(var(--space-4), 5vw, var(--space-12));
+  background: var(--color-surface);
+}
+
+.form-side:focus {
+  outline: none;
+}
+
+.form-top {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form-wrap {
+  inline-size: 100%;
+  max-inline-size: 24rem;
+  margin: auto;
+  padding-block: var(--space-10);
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.title:focus {
+  outline: none;
+}
+
+.lead {
+  margin-block-start: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+}
+
+.notice {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-block-start: var(--space-5);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.notice p {
+  color: var(--color-text);
+}
+
+.notice--warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.notice--danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-block-start: var(--space-6);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+label {
+  font-weight: var(--weight-medium);
+}
+
+input {
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--text-md);
+}
+
+input:focus-visible {
+  outline-offset: 0;
+  border-color: var(--color-focus);
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.password-row {
+  position: relative;
+}
+
+.password-row input {
+  padding-inline-end: 3rem;
+}
+
+.reveal {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.reveal:hover {
+  color: var(--color-text);
+}
+
+.field-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.submit {
+  min-block-size: 2.75rem;
+  margin-block-start: var(--space-1);
+}
+
+.dev-note {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-block-start: var(--space-8);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 52rem) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .brand-side {
+    display: none;
+  }
+
+  .form-wrap {
+    padding-block: var(--space-6);
+  }
+}

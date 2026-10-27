@@ -9,7 +9,8 @@
       "en": "English",
       "fr": "Français"
     },
-    "loadFailed": "{{language}} could not be loaded. The previous language is kept."
+    "loadFailed": "{{language}} could not be loaded. The previous language is kept.",
+    "saveFailed": "Your language choice could not be saved to your account. It still applies in this browser."
   },
   "shell": {
     "skipToContent": "Skip to main content",
@@ -56,9 +57,12 @@
         "shell": "Responsive workspace for desktop, tablet and phone",
         "languages": "English and French, switchable at any time",
         "statusCheck": "Live check of the connection to the server and database",
-        "schema": "Database foundation for companies, sites, departments, users and a tamper-evident audit trail"
+        "signIn": "Sign-in with session expiry and a saved language preference",
+        "requests": "Create, save and submit multi-line purchase requests with a unique number",
+        "isolation": "Each user sees only the requests of their company and role"
       },
-      "checkConnection": "Check the connection"
+      "checkConnection": "Check the connection",
+      "openRequests": "Open my requests"
     },
     "journey": {
       "title": "What comes next",
@@ -71,7 +75,8 @@
         "order": "Issue the purchase order",
         "logistics": "Track shipments to the site",
         "receipt": "Record receipts and exceptions"
-      }
+      },
+      "availableNow": "Available"
     },
     "demoNote": "Companies and sites shown in development are demonstration data. Their names end in “(Demo)”."
   },
@@ -171,5 +176,353 @@
     "heading": "This page does not exist",
     "message": "The address may be mistyped, or the page may have moved.",
     "backToOverview": "Go to overview"
+  },
+  "common": {
+    "dismiss": "Dismiss",
+    "cancel": "Cancel",
+    "retry": "Try again"
+  },
+  "errors": {
+    "network-error": "The server could not be reached. Check your connection and try again.",
+    "unexpected-error": "Something unexpected happened. Try again.",
+    "internal-error": "The server could not complete the request. Try again in a moment.",
+    "forbidden": "You are not allowed to do this.",
+    "not-found": "This item does not exist or you do not have access to it.",
+    "conflict": "This item was changed in the meantime. Reload it and try again.",
+    "validation-failed": "Some information is missing or incorrect.",
+    "unauthenticated": "Sign in to continue.",
+    "session-expired": "Your session has expired. Sign in again.",
+    "stale-version": "This request was changed in the meantime. Reload it and try again.",
+    "invalid-state": "This request can no longer be changed.",
+    "invalid-request": "The request could not be understood. Reload the page and try again.",
+    "invalid-parameter": "A filter or sort value is not valid. Reset the filters and try again.",
+    "csrf-invalid": "Your security token expired. Try again."
+  },
+  "auth": {
+    "signOut": "Sign out",
+    "company": "Company",
+    "department": "Department",
+    "roles": {
+      "label": "Roles",
+      "REQUESTER": "Requester",
+      "ENTER_ON_BEHALF": "Enters on behalf of others",
+      "DEPARTMENT_MANAGER": "Department manager",
+      "BUYER": "Buyer",
+      "PURCHASING_MANAGER": "Purchasing manager",
+      "GROUP_MANAGEMENT": "Group management",
+      "ADMIN": "Administrator"
+    },
+    "sessionWarning": {
+      "title": "Your session is about to expire",
+      "message": "For your security you will be signed out in {{minutes}} min {{seconds}} s. Unsaved changes are kept in this tab.",
+      "stay": "Stay signed in"
+    },
+    "signIn": {
+      "title": "Sign in",
+      "heading": "Sign in",
+      "lead": "Use your company e-mail address.",
+      "principle": {
+        "one": "One request.",
+        "two": "One number.",
+        "three": "One owner at every step.",
+        "foot": "Every purchase request of the group, from the first need to delivery, in one place."
+      },
+      "expired": "Your session expired. Sign in again to continue where you left off.",
+      "signedOut": "You are signed out.",
+      "errors": {
+        "invalid-credentials": "The e-mail address or password is incorrect.",
+        "network-error": "The server could not be reached. Check your connection and try again.",
+        "unexpected-error": "Signing in failed. Try again in a moment."
+      },
+      "email": "E-mail address",
+      "emailRequired": "Enter your e-mail address.",
+      "emailInvalid": "Enter an e-mail address like name@company.com.",
+      "password": "Password",
+      "passwordRequired": "Enter your password.",
+      "showPassword": "Show password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "demoNote": "Development: demonstration accounts and how to set their password are described in the README."
+    }
+  },
+  "requests": {
+    "backToList": "My requests",
+    "notFound": {
+      "title": "Request not found",
+      "message": "This request does not exist or you do not have access to it."
+    },
+    "list": {
+      "title": "My requests",
+      "description": "Purchase requests you created or entered on behalf of someone.",
+      "new": "New request",
+      "filtersLabel": "Search and filter requests",
+      "search": "Search requests",
+      "searchPlaceholder": "Search by number or title",
+      "statusFilter": "Status",
+      "allStatuses": "All statuses",
+      "sortBy": "Sort by",
+      "ascending": "ascending",
+      "descending": "descending",
+      "loading": "Loading your requests…",
+      "range": "{{from}}–{{to}} of {{total}}",
+      "empty": {
+        "title": "No requests yet",
+        "message": "Create your first purchase request. You can save it as a draft and submit it when it is complete.",
+        "messageNoCreate": "Your role does not create requests. Requests you are allowed to follow appear under “Visible to me”."
+      },
+      "noMatch": {
+        "title": "No request matches these filters",
+        "message": "Change the search or status, or clear the filters."
+      },
+      "clearFilters": "Clear filters",
+      "error": {
+        "title": "Your requests could not be loaded"
+      },
+      "draftNumber": "Draft",
+      "caption": "My purchase requests",
+      "columns": {
+        "number": "Number",
+        "title": "Title",
+        "status": "Status",
+        "total": "Estimated total",
+        "requiredDate": "Required by",
+        "updatedAt": "Last updated"
+      },
+      "pagination": "Pages",
+      "previous": "Previous",
+      "next": "Next",
+      "visibleTitle": "Requests visible to me",
+      "visibleDescription": "Submitted requests of your department or company group that you are allowed to follow.",
+      "scopeLabel": "Which requests",
+      "scopes": {
+        "mine": "My requests",
+        "visible": "Visible to me"
+      },
+      "emptyVisible": {
+        "title": "No requests to follow yet",
+        "message": "Requests appear here once they are submitted in your scope."
+      }
+    },
+    "form": {
+      "newTitle": "New purchase request",
+      "editTitle": "Edit draft request",
+      "description": "Save a draft at any time. Fields marked * are required to submit.",
+      "loading": "Loading the form…",
+      "loadError": "The form could not be loaded",
+      "notEditable": {
+        "title": "This request can no longer be edited",
+        "message": "Only drafts can be edited, by the requester or the person who entered them."
+      },
+      "viewRequest": "View the request",
+      "restore": {
+        "message": "You have unsaved changes from your previous session in this tab.",
+        "restore": "Restore changes",
+        "dismiss": "Discard them"
+      },
+      "errorSummary": "Correct {{count}} problem(s) to continue",
+      "sections": {
+        "request": "Request",
+        "people": "Requester and delivery",
+        "lines": "Lines",
+        "references": "Justification and references"
+      },
+      "choose": "Choose…",
+      "none": "None",
+      "urgencyHint": "Explain why this cannot follow the normal timeline.",
+      "myself": "Myself ({{name}})",
+      "onBehalfHint": "You can enter this request for a colleague of your company. You will be recorded as the person who entered it.",
+      "beneficiaryHint": "Who or what will receive the goods or service, e.g. production line 2.",
+      "companiesDerived": "Set automatically from your company’s purchasing rules. Purchasing can change them later.",
+      "lineCount": "Lines: {{count}} of {{max}}",
+      "lineLabel": "Line {{line}}",
+      "removeLine": "Remove line {{line}}",
+      "addLine": "Add a line",
+      "summaryLabel": "Total and actions",
+      "estimatedTotal": "Estimated total",
+      "totalHint": "Each line is rounded to the currency’s smallest unit, then added up. The server confirms the total when saving.",
+      "submit": "Submit request",
+      "submitting": "Submitting…",
+      "saveDraft": "Save draft",
+      "saving": "Saving…",
+      "submitNote": "Submitting gives the request its number. It can no longer be edited afterwards.",
+      "saved": "Draft saved",
+      "leave": {
+        "title": "Leave without saving?",
+        "message": "Your changes to this request have not been saved.",
+        "confirm": "Leave without saving",
+        "cancel": "Stay on the form"
+      },
+      "cannotCreate": {
+        "title": "You cannot create requests",
+        "message": "Your account has no company for which it may create purchase requests. Ask an administrator if this is wrong."
+      },
+      "buyingProposed": "Proposed. The purchasing team may change it."
+    },
+    "fields": {
+      "title": "Title",
+      "category": "Category",
+      "priority": "Priority",
+      "purchaseType": "Purchase type",
+      "currency": "Currency",
+      "requester": "Requester",
+      "department": "Department",
+      "site": "Site",
+      "costCenter": "Cost centre",
+      "project": "Project",
+      "justification": "Justification",
+      "urgencyJustification": "Reason for urgency",
+      "budgetLineRef": "Budget line",
+      "equipmentRef": "Equipment",
+      "requiredDate": "Required by",
+      "deliveryLocation": "Delivery location",
+      "beneficiary": "Beneficiary",
+      "lines": "Lines",
+      "lineDescription": "Description",
+      "itemReference": "Item reference",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitPrice": "Estimated unit price",
+      "lineRequiredDate": "Required by (line)",
+      "lineDeliveryLocation": "Delivery location (line)",
+      "lineTotal": "Line total",
+      "requestingCompany": "Requesting company",
+      "chargedCompany": "Charged company",
+      "buyingCompany": "Buying company",
+      "enteredBy": "Entered by",
+      "general": "Request",
+      "lineSummary": {
+        "description": "Line {{line}}, description",
+        "itemReference": "Line {{line}}, item reference",
+        "quantity": "Line {{line}}, quantity",
+        "unit": "Line {{line}}, unit",
+        "unitPrice": "Line {{line}}, estimated unit price",
+        "requiredDate": "Line {{line}}, required by",
+        "deliveryLocation": "Line {{line}}, delivery location",
+        "general": "Line {{line}}"
+      },
+      "maintenanceOrderRef": "Maintenance order",
+      "beneficiarySite": "Beneficiary site"
+    },
+    "priority": {
+      "LOW": "Low",
+      "NORMAL": "Normal",
+      "HIGH": "High",
+      "URGENT": "Urgent"
+    },
+    "purchaseType": {
+      "LOCAL": "Local",
+      "INTERNATIONAL": "International",
+      "hint": {
+        "LOCAL": "Supplier in the company’s country, local currency.",
+        "INTERNATIONAL": "Import with transport and customs clearance."
+      }
+    },
+    "submit": {
+      "title": "Submit this request?",
+      "message": "It will receive its number and can no longer be edited.",
+      "confirm": "Submit request",
+      "done": "Request {{number}} submitted",
+      "incomplete": "Complete the required fields before submitting."
+    },
+    "discard": {
+      "action": "Discard draft",
+      "title": "Discard this draft?",
+      "message": "The draft and its lines will be deleted. This cannot be undone.",
+      "confirm": "Discard draft",
+      "done": "Draft discarded"
+    },
+    "conflict": {
+      "reload": "Reload the latest version",
+      "reloadTitle": "Reload the latest version?",
+      "reloadMessage": "Your changes on this page will be replaced by the version saved by someone else.",
+      "stale-version": {
+        "title": "Someone else changed this request",
+        "message": "Your changes were not saved. Reload the latest version, then make your changes again."
+      },
+      "invalid-state": {
+        "title": "This request has already been submitted",
+        "message": "It can no longer be edited. Open it to see its current status."
+      }
+    },
+    "errors": {
+      "required": "Required",
+      "too-long": "At most {{max}} characters",
+      "max-decimals": "Use at most {{max}} decimals",
+      "quantity-positive": "Must be greater than 0",
+      "too-large": "Value too large",
+      "required-date-past": "Must be today or later",
+      "min-lines": "Add at least one line",
+      "not-in-company": "Not part of your company",
+      "invalid-value": "Invalid value",
+      "price-not-negative": "Cannot be negative",
+      "too-many-lines": "At most {{max}} lines per request",
+      "requester-not-allowed": "You cannot enter a request for this person",
+      "company-not-allowed": "You cannot create requests for this company",
+      "not-editable": "This value is set by the system"
+    },
+    "detail": {
+      "title": "Purchase request",
+      "loading": "Loading the request…",
+      "loadError": "The request could not be loaded",
+      "stage": "Current stage",
+      "owner": "Responsible",
+      "since": "assigned {{elapsed}}",
+      "total": "Estimated total",
+      "edit": "Edit draft",
+      "actors": "People and companies",
+      "onBehalf": "Entered on behalf of the requester",
+      "classification": "Classification",
+      "history": "History",
+      "transition": "{{from}} → {{to}}",
+      "created": "Created as {{to}}",
+      "by": "by {{name}}",
+      "ownerAfter": "Responsible afterwards: {{name}}",
+      "noHistory": "No history yet."
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "CREATED": "Created",
+      "IN_APPROVAL": "In approval",
+      "REVISION_REQUESTED": "Returned for revision",
+      "REJECTED": "Rejected",
+      "APPROVED": "Approved",
+      "IN_PURCHASING_REVIEW": "In purchasing review",
+      "ASSIGNED_TO_BUYER": "Assigned to a buyer",
+      "SOURCING": "Sourcing in progress",
+      "QUOTES_RECEIVED": "Quotations received",
+      "TECHNICAL_VALIDATION": "Technical validation",
+      "COMMERCIAL_VALIDATION": "Commercial validation",
+      "MANAGEMENT_VALIDATION": "Management validation",
+      "ORDERED": "Order issued",
+      "CONTRACT_SIGNED": "Contract signed",
+      "ORDER_CONFIRMED": "Order confirmed",
+      "IN_PRODUCTION": "In production",
+      "READY": "Ready to ship",
+      "SHIPPED": "Shipped",
+      "AT_PORT": "At port",
+      "IN_CUSTOMS": "In customs",
+      "IN_WAREHOUSE": "In warehouse",
+      "DELIVERED": "Delivered",
+      "PARTIALLY_RECEIVED": "Partially received",
+      "NON_CONFORMING": "Non-conforming",
+      "ACCEPTED": "Accepted",
+      "INVOICED": "Invoiced",
+      "PAYMENT_PENDING": "Payment pending",
+      "PAID": "Paid",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "stages": {
+      "REQUEST": "Creation",
+      "APPROVAL": "Internal approval",
+      "PURCHASING": "Purchasing",
+      "SOURCING": "Sourcing",
+      "EVALUATION": "Evaluation",
+      "COMMITMENT": "Commitment",
+      "SHIPMENT": "Shipping",
+      "RECEIPT": "Receipt",
+      "FINANCE": "Finance",
+      "CLOSURE": "Closure"
+    }
   }
 }

@@ -1,13 +1,13 @@
 # Tooling and Resource Evaluation
 
-Evaluated 2026-10-24 on the development laptop (Windows 11, VS Code). Only Angular-compatible resources are used in
+Evaluated 2026-10-25 on the development laptop (Windows 11, VS Code). Only Angular-compatible resources are used in
 the product; nothing React-based is installed.
 
 ## Development environment (verified)
 
 | Tool | Version | Notes |
 |---|---|---|
-| JDK | OpenJDK 21.0.12 LTS | Spring Boot 4.1 supports 17–27 |
+| JDK | Eclipse Temurin 25.0.4.1 LTS | Spring Boot 4.1 supports Java 25; JDK 25 is the project target |
 | Maven | via Maven Wrapper in `BackEnd/` | No global Maven needed |
 | Node.js / npm | 24.20.0 / 11.19.0 | Angular CLI 22 requires Node ^22.22.3 or ^24.15.0 |
 | Angular CLI | via `npx` / project dependency | No global install needed |

@@ -4,7 +4,11 @@ spring:
     url: ${DB_TEST_URL:jdbc:sqlserver://localhost:1433;databaseName=procurement_test;integratedSecurity=true;encrypt=true;trustServerCertificate=true}
   flyway:
     clean-disabled: false
+    ignore-migration-patterns: "*:future,repeatable:missing"
 
 app:
-  status:
-    expose-details: true
+  security:
+    cookie-secure: false
+  demo:
+    # Test-only password for the demo accounts created by DemoUserSeeder (not a secret).
+    user-password: Test-Only-Demo-Password-1

@@ -35,9 +35,11 @@ FrontEnd/coverage/
 FrontEnd/*.log
 
 # Runtime files
-logs/
+/logs/
+BackEnd/logs/
 *.log
-storage/
+/storage/
+BackEnd/storage/
 
 # IDE-generated (VS Code Java tooling)
 /build/

@@ -11,3 +11,7 @@ spring:
     url: jdbc:sqlserver://localhost:1433;databaseName=procurement_dev;encrypt=true;trustServerCertificate=true
     username: procurement_app
     password: change-me   # placeholder only - never commit a real password
+
+# Production hardening (CR-27): add a socket timeout to the JDBC URL so a query blocked by a network failure cannot
+# hold a pooled connection forever, e.g. ...;encrypt=true;socketTimeout=30000 (milliseconds). Choose a value above
+# your longest legitimate query (reports, imports).

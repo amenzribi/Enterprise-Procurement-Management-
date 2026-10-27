@@ -22,10 +22,10 @@ class JdbcDatabaseProbeTests {
 	}
 
 	@Test
-	void hidesTheProductVersionByDefault() {
+	void hidesTheProductVersionUnlessDetailsAreRequested() {
 		databaseAnswers(List.of("3"));
 
-		SystemStatus.DatabaseStatus status = new JdbcDatabaseProbe(jdbc, false).probe();
+		SystemStatus.DatabaseStatus status = new JdbcDatabaseProbe(jdbc).probe(false);
 
 		assertThat(status.status()).isEqualTo(SystemStatus.State.UP);
 		assertThat(status.productVersion()).isNull();
@@ -33,17 +33,17 @@ class JdbcDatabaseProbeTests {
 	}
 
 	@Test
-	void exposesTheProductVersionWhenEnabled() {
+	void exposesTheProductVersionWhenDetailsAreRequested() {
 		databaseAnswers(List.of("3"));
 
-		assertThat(new JdbcDatabaseProbe(jdbc, true).probe().productVersion()).isEqualTo("17.0.1000.7");
+		assertThat(new JdbcDatabaseProbe(jdbc).probe(true).productVersion()).isEqualTo("17.0.1000.7");
 	}
 
 	@Test
 	void reportsNoSchemaVersionWhenNothingIsMigrated() {
 		databaseAnswers(List.of());
 
-		SystemStatus.DatabaseStatus status = new JdbcDatabaseProbe(jdbc, true).probe();
+		SystemStatus.DatabaseStatus status = new JdbcDatabaseProbe(jdbc).probe(true);
 
 		assertThat(status.status()).isEqualTo(SystemStatus.State.UP);
 		assertThat(status.schemaVersion()).isNull();
@@ -54,7 +54,7 @@ class JdbcDatabaseProbeTests {
 		given(jdbc.queryForObject(anyString(), eq(String.class)))
 			.willThrow(new DataAccessResourceFailureException("Login failed for jdbc:sqlserver://secret"));
 
-		SystemStatus.DatabaseStatus status = new JdbcDatabaseProbe(jdbc, true).probe();
+		SystemStatus.DatabaseStatus status = new JdbcDatabaseProbe(jdbc).probe(true);
 
 		assertThat(status.status()).isEqualTo(SystemStatus.State.DOWN);
 		assertThat(status.productVersion()).isNull();

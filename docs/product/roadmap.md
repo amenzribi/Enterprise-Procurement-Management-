@@ -11,8 +11,8 @@ re-validated if the team differs.
 | Sprint | Objective | Main content | Stories |
 |---|---|---|---|
 | S0 | Foundation | Spring Boot modular monolith, Angular shell and design system, SQL Server + Flyway schema, health/connectivity check, EN/FR, test baseline | — |
-| S1 | Identity, company scope, request drafting | Login (local dev accounts, OIDC-ready), roles and scopes, company isolation, organisation admin (read + edit), create/edit/submit multi-line request with unique number, "my requests" list | US-01 (without attachments) |
-| S2 | Approval circuits | Currencies and exchange rates (admin entry), staged circuits (ALL/ANY) per company/category/amount compared in company currency, approver inbox, approve/reject/revise/request info/delegate, absence delegation, idempotent actions, attachments, e-mail notifications via outbox, decision history view | US-03, US-04, US-01, US-11 (partial) |
+| S1 | Identity, company scope, request drafting | Login (local dev accounts, OIDC-ready), roles and scopes, company isolation, create/edit/submit multi-line request with unique number, "my requests" list | US-01 (without attachments) |
+| S2 | Approval circuits | Organisation admin (companies, sites, departments, cost centres; read + edit), Currencies and exchange rates (admin entry), staged circuits (ALL/ANY) per company/category/amount compared in company currency, approver inbox, approve/reject/revise/request info/delegate, absence delegation, idempotent actions, attachments, e-mail notifications via outbox, decision history view | US-03, US-04, US-01, US-11 (partial) |
 | S3 | Central purchasing | Central inbox with filters, completeness check, return, assignment rules, accept/decline, purchase mode, SLA reminders/escalation (outbox + scheduler), in-app notifications | US-05, US-15 |
 | S4 | Sourcing and comparison | Supplier registry, RFQ local/international, manual quotation entry, conversion with stored rates, landed cost, comparison table | US-06 |
 | S5 | Evaluation, order, shipment milestones | Technical/commercial/management validation with thresholds, award decision, PO record and status tracking, shipment milestones local/international with planned vs actual dates and late flags | US-07, US-08 (milestones) |
@@ -66,3 +66,20 @@ in "My requests"; nobody can see another company's data.
 | purchasing.manager | Central purchasing company | Purchasing manager |
 | ceo.group | Holding | Group management |
 | admin | Holding | Administrator |
+
+## Sprint 2 — proposed objective and acceptance criteria
+
+**Objective:** a submitted request follows its company's configured approval circuit; approvers act from any device,
+and every decision is recorded and visible in the request's history.
+
+| ID | Criterion |
+|---|---|
+| S2-AC-01 | Administrators maintain organisation data (companies, sites, departments, cost centres) and currencies with exchange rates by date. |
+| S2-AC-02 | Administrators configure circuits per company × category × purchase type × amount band (in company currency at the submission-date rate) as ordered stages with ALL/ANY approvers, SLA per stage; versioned, activated without code. |
+| S2-AC-03 | Submission moves `CREATED → IN_APPROVAL` and assigns the first stage; approvers see an inbox of pending tasks. |
+| S2-AC-04 | Approve, reject (reason required), return for revision, request information (flag; SLA paused) and delegate, each recorded with user, time, comment, previous and new status; idempotent against double taps. |
+| S2-AC-05 | Absence delegation by date range with authority-limit checks. |
+| S2-AC-06 | Attachments per request and per line (versioned, size/type limits, antivirus hook point). |
+| S2-AC-07 | E-mail notifications via a transactional outbox in the recipient's language, with deep links. |
+| S2-AC-08 | Request detail shows the decision timeline, current stage, owner and since when. |
+| S2-AC-09 | Approval works at 360 px; EN/FR complete; axe clean; cross-company and role tests for every new endpoint. |

@@ -1,7 +1,7 @@
 # Enterprise Procurement Intelligence
 
 Procurement request platform for multi-company groups: one entry point for every purchase request, from need to
-closure. Spring Boot (Java 21) + Angular 22 + Microsoft SQL Server. English and French.
+closure. Spring Boot (Java 25) + Angular 22 + Microsoft SQL Server. English and French.
 
 **Current state: Sprint 0 (foundation).** No procurement features yet. The app runs, connects to SQL Server,
 migrates the schema, and shows a bilingual application shell with a live system-status check. See
@@ -15,7 +15,7 @@ migrates the schema, and shows a bilingual application shell with a live system-
 
 ## Prerequisites (Windows + VS Code)
 
-- JDK 21 (`java -version`)
+- JDK 25 LTS (`java -version`)
 - Node.js 24.15+ or 22.22+ with npm (`node -v`)
 - SQL Server 2019+ running locally (developed on SQL Server 2025 Developer Edition), TCP on port 1433, with
   `sqlcmd` available
@@ -58,8 +58,33 @@ cd BackEnd
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev,demo"
 ```
 
-- `demo` loads clearly labelled demonstration data (a sample group whose company names end in "(Demo)").
-  Omit it for an empty organisation.
+- `demo` loads clearly labelled demonstration data (a sample group whose company names end in "(Demo)")
+  and eight demo users. Omit it for an empty organisation.
+
+### Demo sign-in (local only)
+
+No demo password is stored in the repository. Choose one for your machine before starting the backend:
+
+```powershell
+$env:DEMO_USER_PASSWORD = "<choose a local password>"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev,demo"
+```
+
+If `DEMO_USER_PASSWORD` is not set, a random password is generated at each start and printed once in the backend
+console. Demo accounts can only sign in while the `demo` profile is active.
+
+| E-mail | Company | Can |
+|---|---|---|
+| requester.tn@demo.local | Atlas Mechanical Sfax (Demo) | Create and submit own requests |
+| assistant.tn@demo.local | Atlas Mechanical Sfax (Demo) | Also enter requests on behalf of colleagues |
+| manager.tn@demo.local | Atlas Mechanical Sfax (Demo) | View submitted requests of the Maintenance department |
+| requester.fr@demo.local | Atlas Composites Lyon (Demo) | Create and submit own requests (cannot see Sfax data) |
+| buyer@demo.local, purchasing.manager@demo.local | Atlas Sourcing & Trading (Demo) | Sign in only (purchasing screens arrive in later sprints) |
+| ceo@demo.local | Atlas Holding (Demo) | View submitted requests of all group companies |
+| admin@demo.local | Atlas Holding (Demo) | System diagnostics and API docs |
+
+Sessions end after 30 minutes of inactivity or 8 hours. Five failed sign-ins for the same e-mail from the same
+address block further attempts for 15 minutes.
 - API: http://localhost:8080/api/v1/system/status · Health: http://localhost:8080/actuator/health
 - API docs (dev): http://localhost:8080/api/v1/docs
 
@@ -81,6 +106,17 @@ npm start                    # http://localhost:4200 (proxies /api and /actuator
 ```
 
 Checks: `npm run lint`, `npm test`, `npm run build`.
+
+End-to-end tests (Playwright, uses the installed Microsoft Edge) run against started servers:
+
+```powershell
+$env:DEMO_USER_PASSWORD = "<the same value the backend uses>"
+npm run e2e
+```
+
+**If ports 8080/4200 are taken** by another project, start the backend with `$env:SERVER_PORT = "8081"`, copy
+`proxy.conf.json` to a git-ignored file pointing at 8081, run `npx ng serve --port 4300 --proxy-config <file>`, and set
+`$env:E2E_BASE_URL = "http://localhost:4300"` before `npm run e2e`.
 
 Open **System status** in the sidebar to verify the chain browser → backend → database.
 

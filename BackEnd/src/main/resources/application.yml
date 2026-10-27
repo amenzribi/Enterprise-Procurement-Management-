@@ -9,8 +9,9 @@ spring:
     password: ${DB_PASSWORD:}
     hikari:
       pool-name: procurement-db
-      # Fail fast when the database is unreachable: status/health answer DOWN in under 2 s (QA-D-06).
-      connection-timeout: 1500
+      # Pool-wide wait for a connection. Kept moderate so ordinary requests do not fail under short load peaks
+      # (CR-26); the status probe has its own 1.5 s deadline, so the status page still answers DOWN quickly.
+      connection-timeout: 5000
   jpa:
     open-in-view: false
     hibernate:
@@ -21,10 +22,9 @@ spring:
       hibernate.jdbc.time_zone: UTC
   flyway:
     locations: classpath:db/migration
-    # The demo data is a repeatable migration loaded only with the "demo" profile. Ignoring missing repeatables
-    # lets a database seeded with demo data start without that profile (QA-D-02). The demo rows then remain in
-    # the database: switching the profile off does not remove data that was already loaded.
-    ignore-migration-patterns: "*:future,repeatable:missing"
+    # Missing repeatable (demo) migrations are tolerated only by the dev/local/test profiles (CR-28): outside
+    # development, a migration recorded in the database but absent from the build is an error.
+    ignore-migration-patterns: "*:future"
     # Schema changes must never be destroyed by tooling outside tests.
     clean-disabled: true
   mvc:
@@ -36,11 +36,30 @@ server:
   error:
     include-stacktrace: never
     include-message: never
+  servlet:
+    session:
+      # Backstop only: the application enforces the idle and absolute timeouts itself (app.security.session).
+      timeout: 31m
+      cookie:
+        name: EPI_SESSION
+        http-only: true
+        same-site: lax
+        secure: ${app.security.cookie-secure:true}
 
 app:
-  status:
-    # Exposes the database product version on /api/v1/system/status (DR-15). Enabled in dev/demo only.
-    expose-details: false
+  security:
+    # Secure cookies (HTTPS only). Disabled by the dev/local/test profiles, which run over plain HTTP.
+    cookie-secure: true
+    session:
+      idle-timeout: 30m
+      absolute-timeout: 8h
+    login:
+      max-failures-per-account: 5
+      max-failures-per-address: 50
+      window: 15m
+      block-duration: 15m
+  request:
+    max-lines: 100
 
 management:
   endpoints:
@@ -49,14 +68,19 @@ management:
         include: health,info
   endpoint:
     health:
-      show-components: always
-      show-details: never
+      # Anonymous callers get only {"status":"UP"|"DOWN"}; administrators see the components (S1-AC-13).
+      show-components: when-authorized
+      show-details: when-authorized
+      roles: ADMIN
+      # Kubernetes liveness/readiness groups are not used yet (single node, ADR-003); enable them with the first
+      # container deployment.
+      probes:
+        enabled: false
   info:
     env:
       enabled: false
 
-# API documentation is off by default and enabled only by the dev profile (QA-D-07); from Sprint 1 it is
-# restricted to administrators.
+# API documentation is off by default, enabled only by the dev profile (QA-D-07) and restricted to administrators.
 springdoc:
   api-docs:
     enabled: false

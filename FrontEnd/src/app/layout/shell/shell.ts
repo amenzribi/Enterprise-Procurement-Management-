@@ -20,6 +20,7 @@ import { Icon } from '../../shared/ui/icon';
 import { LanguageSelect } from '../../shared/ui/language-select';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { NAVIGATION } from '../navigation';
+import { UserMenu } from '../user-menu';
 
 const COLLAPSED_KEY = 'epi.sidebar.collapsed';
 /** Below this width the sidebar becomes an off-canvas drawer. */
@@ -37,6 +38,7 @@ export const DRAWER_QUERY = '(max-width: 63.99rem)';
     RouterOutlet,
     StatusBadge,
     TranslatePipe,
+    UserMenu,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',

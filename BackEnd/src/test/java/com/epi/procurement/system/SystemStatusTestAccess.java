@@ -10,8 +10,8 @@ public final class SystemStatusTestAccess {
 	private SystemStatusTestAccess() {
 	}
 
-	public static SystemStatus.DatabaseStatus probe(JdbcOperations jdbc, boolean exposeDetails) {
-		return new JdbcDatabaseProbe(jdbc, exposeDetails).probe();
+	public static SystemStatus.DatabaseStatus probe(JdbcOperations jdbc, boolean includeDetails) {
+		return new JdbcDatabaseProbe(jdbc).probe(includeDetails);
 	}
 
 }

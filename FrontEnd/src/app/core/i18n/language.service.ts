@@ -1,13 +1,35 @@
 import { DOCUMENT } from '@angular/common';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable, Subject, catchError, map, of, tap } from 'rxjs';
 
-export const SUPPORTED_LANGUAGES = ['en', 'fr'] as const;
+export const SUPPORTED_LANGUAGES = ['ar', 'fr', 'en'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
 export const DEFAULT_LANGUAGE: Language = 'en';
 const STORAGE_KEY = 'epi.language';
+
+/** Right-to-left languages. The document direction follows the current language (S2-AC-01). */
+const RTL_LANGUAGES: readonly Language[] = ['ar'];
+
+export function isRtl(language: Language): boolean {
+  return RTL_LANGUAGES.includes(language);
+}
+
+/**
+ * Locale used for dates, numbers and relative times. Arabic uses ar-TN: Arabic texts with Latin digits, as used in
+ * Maghreb business documents. English uses en-GB (day/month order).
+ */
+export function localeOf(language: string): string {
+  switch (language) {
+    case 'ar':
+      return 'ar-TN';
+    case 'fr':
+      return 'fr-FR';
+    default:
+      return 'en-GB';
+  }
+}
 
 export function isSupportedLanguage(value: unknown): value is Language {
   return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
@@ -15,7 +37,7 @@ export function isSupportedLanguage(value: unknown): value is Language {
 
 /**
  * Owns the user's display language: initial choice (saved preference, then browser language, then English),
- * switching at runtime without reload, persistence, and the document `lang` attribute.
+ * switching at runtime without reload, persistence, and the document `lang` and `dir` attributes.
  *
  * A language only becomes current once its texts have loaded, so the selector, `<html lang>` and the visible
  * texts never disagree. Start-up never fails because of translations: it falls back to English, then to keys.
@@ -27,6 +49,9 @@ export class LanguageService {
 
   private readonly currentLanguage = signal<Language>(DEFAULT_LANGUAGE);
   readonly current = this.currentLanguage.asReadonly();
+  /** Locale of the current language for DatePipe, Intl and money formatting. */
+  readonly locale = computed(() => localeOf(this.currentLanguage()));
+  readonly rtl = computed(() => isRtl(this.currentLanguage()));
 
   private readonly failedLanguage = signal<Language | null>(null);
   /** The language whose texts last failed to load during a switch, until the next successful switch. */
@@ -84,6 +109,7 @@ export class LanguageService {
   private commit(language: Language): void {
     this.currentLanguage.set(language);
     this.document.documentElement.lang = language;
+    this.document.documentElement.dir = isRtl(language) ? 'rtl' : 'ltr';
   }
 
   private resolveInitialLanguage(): Language {

@@ -53,6 +53,26 @@ public class CurrentUserProvider {
 		return user;
 	}
 
+	/**
+	 * The signed-in user, or empty for anonymous callers (endpoints open to both, e.g. one-tap approval links).
+	 */
+	public java.util.Optional<CurrentUser> current() {
+		try {
+			return java.util.Optional.of(require());
+		}
+		catch (ApiProblemException ex) {
+			return java.util.Optional.empty();
+		}
+	}
+
+	/**
+	 * Loads a user to act on their behalf without a session (one-tap approval link): active accounts only, and demo
+	 * accounts only while the demo profile is active (S1DR-05).
+	 */
+	public java.util.Optional<CurrentUser> loadActingUser(long userId) {
+		return users.loadCurrentUser(userId).filter(u -> !u.demo() || demoActive);
+	}
+
 	private static ApiProblemException unauthenticated() {
 		return new ApiProblemException(HttpStatus.UNAUTHORIZED, "unauthenticated", "Authentication is required.");
 	}

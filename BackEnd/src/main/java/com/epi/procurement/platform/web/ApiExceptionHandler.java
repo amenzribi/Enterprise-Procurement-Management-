@@ -119,6 +119,18 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return handleExceptionInternal(ex, problem, headers, HttpStatus.BAD_REQUEST, request);
 	}
 
+	/**
+	 * An upload above the multipart limit (S2-AC-12): 413 with the translatable code.
+	 */
+	@Override
+	protected ResponseEntity<Object> handleMaxUploadSizeExceededException(
+			org.springframework.web.multipart.MaxUploadSizeExceededException ex, HttpHeaders headers,
+			HttpStatusCode status, WebRequest request) {
+		return handleExceptionInternal(ex,
+				problem(HttpStatus.CONTENT_TOO_LARGE, "file-too-large", "The file is too large."), headers,
+				HttpStatus.CONTENT_TOO_LARGE, request);
+	}
+
 	private static ProblemDetail problem(HttpStatus status, String code, String detail) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
 		problem.setTitle(status.getReasonPhrase());

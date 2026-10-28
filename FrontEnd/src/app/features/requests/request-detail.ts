@@ -7,42 +7,27 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { LanguageService } from '../../core/i18n/language.service';
 import { NotificationService } from '../../core/notifications/notification.service';
 import { Button } from '../../shared/ui/button';
-import { openConfirm } from '../../shared/ui/confirm-dialog';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
 import { Skeleton } from '../../shared/ui/skeleton';
 import { StatusBadge } from '../../shared/ui/status-badge';
+import { elapsedText } from '../../shared/relative-time';
+import { ApprovalActions } from '../approvals/approval-actions';
+import { ApprovalCountService } from '../approvals/approval-count.service';
+import { ApprovalTracker } from '../approvals/approval-tracker';
+import { ApprovalView } from '../approvals/approval.models';
+import { ApprovalsApi } from '../approvals/approvals.api';
+import { openSubmitPreview } from '../approvals/submit-preview-dialog';
+import { Attachments } from '../documents/attachments';
 import { formatMoney } from './money';
 import { PurchaseRequest, RequestAction, optionLabel } from './request.models';
-import { stageOf, statusKey, statusTone } from './request-status';
+import { stageOf, statusKey, userStatusKey, userStatusOf, userStatusTone } from './request-status';
 import { RequestsApi } from './requests.api';
 
 type PageState = 'loading' | 'ready' | 'not-found' | 'error';
 
-/**
- * Human-readable elapsed time ("3 hours", "2 days") for "owner since", in the current language.
- * Exported for tests.
- */
-export function elapsedText(fromIso: string, now: number, locale: string): string {
-  const from = Date.parse(fromIso);
-  if (!Number.isFinite(from)) {
-    return '';
-  }
-  const seconds = Math.max(0, Math.round((now - from) / 1000));
-  const units: [Intl.RelativeTimeFormatUnit, number][] = [
-    ['day', 86400],
-    ['hour', 3600],
-    ['minute', 60],
-  ];
-  const format = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'long' });
-  for (const [unit, size] of units) {
-    if (seconds >= size) {
-      return format.format(-Math.floor(seconds / size), unit);
-    }
-  }
-  return format.format(0, 'minute');
-}
+export { elapsedText } from '../../shared/relative-time';
 
 /**
  * One request as a dossier: number, status, current stage, who owns it and since when (S1-AC-11), actors, lines and
@@ -51,12 +36,14 @@ export function elapsedText(fromIso: string, now: number, locale: string): strin
 @Component({
   selector: 'app-request-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, DatePipe, EmptyState, ErrorState, Icon, RouterLink, Skeleton, StatusBadge, TranslatePipe],
+  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, RouterLink, Skeleton, StatusBadge, TranslatePipe],
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
 })
 export class RequestDetailPage {
   private readonly api = inject(RequestsApi);
+  private readonly approvalsApi = inject(ApprovalsApi);
+  private readonly approvalCount = inject(ApprovalCountService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
@@ -68,8 +55,16 @@ export class RequestDetailPage {
   protected readonly loadError = signal<string | null>(null);
   protected readonly request = signal<PurchaseRequest | null>(null);
   protected readonly submitting = signal(false);
+  /** Approval rounds, stages and tasks for the tracker; null while loading or for drafts never submitted. */
+  protected readonly approval = signal<ApprovalView | null>(null);
   /** Ticks every minute so "owner since" stays current without reloading. */
-  private readonly now = signal(Date.now());
+  protected readonly now = signal(Date.now());
+
+  /** The user-facing status (Solution Guide v3.0 §8). */
+  protected readonly userStatus = computed(() => {
+    const request = this.request();
+    return request ? userStatusOf(request) : null;
+  });
 
   /** Exactly the actions the server allows (S1DR-18); the UI never re-derives permissions. */
   protected readonly actions = computed<RequestAction[]>(() => this.request()?.actions ?? []);
@@ -104,11 +99,14 @@ export class RequestDetailPage {
       this.pageState.set('not-found');
       return;
     }
-    this.pageState.set('loading');
+    if (!this.request()) {
+      this.pageState.set('loading');
+    }
     this.api.get(this.id).subscribe({
       next: (request) => {
         this.request.set(request);
         this.pageState.set('ready');
+        this.loadApproval(request);
       },
       error: (error: unknown) => {
         const problem = toApiProblem(error);
@@ -122,16 +120,21 @@ export class RequestDetailPage {
     });
   }
 
+  /** Reloads after an approval action: the request status, owner and tracker all change together. */
+  protected onApprovalChanged(view: ApprovalView | null): void {
+    if (view) {
+      this.approval.set(view);
+    }
+    this.approvalCount.refresh();
+    this.load();
+  }
+
   protected submit(): void {
     const request = this.request();
     if (!request) {
       return;
     }
-    openConfirm(this.dialog, {
-      titleKey: 'requests.submit.title',
-      messageKey: 'requests.submit.message',
-      confirmKey: 'requests.submit.confirm',
-    }).subscribe((confirmed) => {
+    openSubmitPreview(this.dialog, request.id).subscribe((confirmed) => {
       if (!confirmed) {
         return;
       }
@@ -140,6 +143,7 @@ export class RequestDetailPage {
         next: (submitted) => {
           this.submitting.set(false);
           this.request.set(submitted);
+          this.loadApproval(submitted);
           this.notifications.success('requests.submit.done', { number: submitted.number ?? '' });
         },
         error: (error: unknown) => {
@@ -148,7 +152,7 @@ export class RequestDetailPage {
           if (problem.status === 401) {
             return;
           }
-          if (problem.status === 422) {
+          if (problem.status === 422 && problem.errors.length > 0) {
             // Required fields are missing: the form shows them field by field.
             this.notifications.error('requests.submit.incomplete');
             void this.router.navigate(['/requests', request.id, 'edit']);
@@ -159,18 +163,32 @@ export class RequestDetailPage {
             this.load();
             return;
           }
+          // Approval configuration problems (missing-exchange-rate, no-approval-rule, no-eligible-approver) and others.
           this.notifications.error(`errors.${problem.code}`);
         },
       });
     });
   }
 
-  protected tone(status: string) {
-    return statusTone(status);
+  private loadApproval(request: PurchaseRequest): void {
+    if (request.status === 'DRAFT' && !request.number) {
+      this.approval.set(null);
+      return;
+    }
+    this.approvalsApi.approval(request.id).subscribe({
+      next: (view) => this.approval.set(view),
+      // The tracker still shows the step line without approval details.
+      error: () => this.approval.set(null),
+    });
   }
 
-  protected statusLabel(status: string): string {
-    return statusKey(status);
+  protected tone(): ReturnType<typeof userStatusTone> {
+    return userStatusTone(this.userStatus());
+  }
+
+  protected statusLabel(): string {
+    const status = this.userStatus();
+    return status ? userStatusKey(status) : statusKey(this.request()?.status ?? '');
   }
 
   protected money(amount: string | number | null | undefined): string {
@@ -183,7 +201,7 @@ export class RequestDetailPage {
   }
 
   protected locale(): string {
-    return this.language.current() === 'fr' ? 'fr-FR' : 'en-GB';
+    return this.language.locale();
   }
 
   protected translateStatus(status: string | null | undefined): string {

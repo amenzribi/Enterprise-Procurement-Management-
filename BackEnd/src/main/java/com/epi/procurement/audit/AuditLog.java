@@ -188,6 +188,7 @@ public class AuditLog {
 		locks.lockExclusively("audit-chain-head:" + chainKey);
 		jdbc.update("INSERT INTO audit_chain_head (chain_key, last_seq, last_hash) SELECT ?, 0, NULL "
 				+ "WHERE NOT EXISTS (SELECT 1 FROM audit_chain_head WHERE chain_key = ?)", chainKey, chainKey);
+		locks.release("audit-chain-head:" + chainKey);
 	}
 
 	/**

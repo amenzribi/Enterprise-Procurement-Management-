@@ -27,6 +27,17 @@ spring:
     ignore-migration-patterns: "*:future"
     # Schema changes must never be destroyed by tooling outside tests.
     clean-disabled: true
+  servlet:
+    multipart:
+      # Attachments (S2-AC-12): 20 MB per file; the service re-checks the size and the per-request limits.
+      max-file-size: 20MB
+      max-request-size: 21MB
+  mail:
+    # Only used with app.mail.mode=smtp (production). Never commit credentials.
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:25}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
   mvc:
     problemdetails:
       enabled: true
@@ -60,8 +71,31 @@ app:
       block-duration: 15m
   request:
     max-lines: 100
+  # Base URL of the Angular application, used in e-mail links (one-tap approval, request pages).
+  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:4200}
+  mail:
+    # file (default: .eml files in app.mail.directory, no external service) | smtp (production) | failing (tests)
+    mode: ${MAIL_MODE:file}
+    directory: ${MAIL_DIRECTORY:storage/mail}
+    from: ${MAIL_FROM:no-reply@procurement.local}
+  storage:
+    directory: ${STORAGE_DIRECTORY:storage/files}
+  approval:
+    # One-tap approval link lifetime (S2-AC-07).
+    link-ttl: PT72H
+    # Minutes per SLA "hour" of an approval rule stage; tests may shorten it (QA hook A1).
+    sla-unit-minutes: 60
+    link-rate-limit-per-minute: 30
+  jobs:
+    enabled: true
+    outbox-delay: PT15S
+    reminder-delay: PT1M
 
 management:
+  health:
+    # The SMTP server is not a dependency of the application's health (the outbox retries).
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:

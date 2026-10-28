@@ -3,7 +3,7 @@
 > `AGENTS.md` (read by other coding agents) mirrors `CLAUDE.md`. Change both together.
 
 Enterprise Procurement Intelligence — procurement request platform for multi-company groups.
-Spec (French, unchanged): `docs/specification/`. Plan: `docs/product/roadmap.md`. Decisions: `docs/decisions/`.
+Functional reference: Solution Guide v3.0 (`docs/specification/…_Solution_Guide_EN_v3.0.md`, reviewed in `docs/analysis/solution-guide-v3-review.md`); detailed rules: French spec v2.1 in the same folder (both unchanged). Plan: `docs/product/roadmap.md`. Decisions: `docs/decisions/`.
 
 ## Stack (fixed — do not substitute)
 
@@ -31,7 +31,7 @@ Use `mvnw.cmd`, not `./mvnw` from Git Bash (certificate revocation check fails).
 - Types: instants `DATETIME2(3)` UTC ↔ `Instant`; dates `DATE` ↔ `LocalDate`; money `DECIMAL(19,4)` + ISO-4217; quantity `DECIMAL(19,4)`; FX `DECIMAL(19,8)`; rounding HALF_UP to currency minor units; text `NVARCHAR`; keys `BIGINT` from sequences.
 - Company scope enforced centrally (ADR-007): out of scope → 404, forbidden action → 403. Every endpoint gets a cross-company test.
 - Every state change writes an audit event in the same transaction (ADR-006).
-- Every user-visible string goes in both `FrontEnd/public/i18n/en.json` and `fr.json` (key parity is enforced by a unit test). Use logical CSS properties (RTL-ready), design tokens, shared UI components; handle loading/empty/error states; respect `prefers-reduced-motion`.
+- Every user-visible string goes in `FrontEnd/public/i18n/en.json`, `fr.json` and `ar.json` (Arabic from Sprint 2; key parity is enforced by a unit test). Use logical CSS properties (Arabic is right to left), design tokens, shared UI components; handle loading/empty/error states; respect `prefers-reduced-motion`.
 - No secrets in the repository. Configuration via `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`; local overrides in git-ignored files.
 
 ## Delivery rules

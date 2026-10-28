@@ -1,5 +1,6 @@
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../core/auth/auth.service';
 import { Icon } from '../shared/ui/icon';
@@ -8,7 +9,7 @@ import { Icon } from '../shared/ui/icon';
 @Component({
   selector: 'app-user-menu',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CdkMenu, CdkMenuItem, CdkMenuTrigger, Icon, TranslatePipe],
+  imports: [CdkMenu, CdkMenuItem, CdkMenuTrigger, Icon, RouterLink, TranslatePipe],
   template: `
     @if (auth.me(); as me) {
       <button type="button" class="trigger" [cdkMenuTriggerFor]="menu">
@@ -40,6 +41,10 @@ import { Icon } from '../shared/ui/icon';
               </dd>
             </dl>
           </div>
+          <a class="menu-item" cdkMenuItem routerLink="/absences">
+            <app-icon name="calendar" [size]="16" />
+            {{ 'absences.menu' | translate }}
+          </a>
           <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="signOut()">
             <app-icon name="log-out" [size]="16" />
             {{ 'auth.signOut' | translate }}
@@ -162,6 +167,9 @@ import { Icon } from '../shared/ui/icon';
       border: 0;
       border-radius: var(--radius-sm);
       background: transparent;
+      color: inherit;
+      font-size: var(--text-base);
+      text-decoration: none;
       cursor: pointer;
       text-align: start;
     }

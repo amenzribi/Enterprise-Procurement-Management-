@@ -68,7 +68,7 @@ class RequestSubmissionIntegrationTests extends SqlServerTestSupport {
 		Set<Integer> sequences = new HashSet<>();
 		String prefix = "DEMO-TN-PLT-PR-" + today.getYear() + "-";
 		for (RequestViews.Detail detail : submitted) {
-			assertThat(detail.status()).isEqualTo("CREATED");
+			assertThat(detail.status()).isEqualTo("IN_APPROVAL");
 			assertThat(detail.number()).startsWith(prefix);
 			numbers.add(detail.number());
 			sequences.add(Integer.parseInt(detail.number().substring(prefix.length())));

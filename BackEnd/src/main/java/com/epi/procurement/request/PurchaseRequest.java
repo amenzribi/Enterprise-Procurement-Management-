@@ -146,6 +146,25 @@ class PurchaseRequest {
 	@Column(name = "total_amount", nullable = false, precision = 19, scale = 4)
 	private BigDecimal totalAmount = BigDecimal.ZERO;
 
+	@Column(name = "approval_amount", precision = 19, scale = 4)
+	private BigDecimal approvalAmount;
+
+	@JdbcTypeCode(SqlTypes.CHAR)
+	@Column(name = "approval_currency", length = 3)
+	private String approvalCurrency;
+
+	@Column(name = "approval_rate", precision = 19, scale = 8)
+	private BigDecimal approvalRate;
+
+	@Column(name = "approval_rate_date")
+	private LocalDate approvalRateDate;
+
+	@Column(name = "approval_rule_id")
+	private Long approvalRuleId;
+
+	@Column(name = "round_no", nullable = false)
+	private int roundNo;
+
 	@Column(name = "current_owner_user_id", nullable = false)
 	private Long currentOwnerUserId;
 
@@ -208,6 +227,33 @@ class PurchaseRequest {
 	void markSubmitted(String number, Instant now) {
 		this.number = number;
 		this.submittedAt = now;
+	}
+
+	/**
+	 * Starts a new approval round (submission or resubmission after a return).
+	 */
+	int nextRound() {
+		return ++roundNo;
+	}
+
+	void recordApprovalBasis(BigDecimal amount, String currency, BigDecimal rate, LocalDate rateDate, long ruleId) {
+		this.approvalAmount = amount;
+		this.approvalCurrency = currency;
+		this.approvalRate = rate;
+		this.approvalRateDate = rateDate;
+		this.approvalRuleId = ruleId;
+	}
+
+	int getRoundNo() {
+		return roundNo;
+	}
+
+	BigDecimal getApprovalAmount() {
+		return approvalAmount;
+	}
+
+	String getApprovalCurrency() {
+		return approvalCurrency;
 	}
 
 	void touch(long userId, Instant now) {

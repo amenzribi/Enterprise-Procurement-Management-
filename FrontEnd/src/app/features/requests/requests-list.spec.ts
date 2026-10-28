@@ -126,8 +126,8 @@ describe('queryFromParams', () => {
   });
 
   it('reads valid filters, sort and page from the URL', () => {
-    const query = queryFromParams(convertToParamMap({ scope: 'visible', sort: 'totalAmount', dir: 'asc', status: 'DRAFT', page: '2', q: ' pump ' }));
+    const query = queryFromParams(convertToParamMap({ scope: 'visible', sort: 'totalAmount', dir: 'asc', status: 'SUBMITTED', page: '2', q: ' pump ' }));
 
-    expect(query).toEqual({ scope: 'visible', status: 'DRAFT', q: 'pump', sort: 'totalAmount', direction: 'asc', page: 2, size: 20 });
+    expect(query).toEqual({ scope: 'visible', status: 'SUBMITTED', q: 'pump', sort: 'totalAmount', direction: 'asc', page: 2, size: 20 });
   });
 });

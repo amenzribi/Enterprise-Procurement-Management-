@@ -16,6 +16,7 @@ export type RequestAction = 'EDIT' | 'SUBMIT' | 'DISCARD';
 export type Amount = number | string;
 
 export interface NamedOption {
+  nameAr?: string;
   id: number;
   code?: string;
   name?: string;
@@ -24,6 +25,7 @@ export interface NamedOption {
 }
 
 export interface CurrencyOption {
+  nameAr?: string;
   code: string;
   minorUnits: number;
   name?: string;
@@ -32,6 +34,7 @@ export interface CurrencyOption {
 }
 
 export interface UnitOption {
+  nameAr?: string;
   code: string;
   name?: string;
   nameEn?: string;
@@ -116,6 +119,8 @@ export interface PurchaseRequest {
   id: number;
   number?: string | null;
   status: string;
+  /** User-facing status of Solution Guide v3.0 §8, computed by the server. */
+  userStatus?: string | null;
   stage?: string | null;
   title: string;
   category?: NamedOption | null;
@@ -156,6 +161,8 @@ export interface PurchaseRequest {
   submittedAt?: string | null;
   /** Actions the server allows the current user (S1DR-18). The UI offers exactly these. */
   actions: RequestAction[];
+  /** Round number of the approval circuit (S2DR-04); increases at each resubmission after a return. */
+  roundNo?: number | null;
 }
 
 /**
@@ -203,6 +210,7 @@ export interface RequestListItem {
   number?: string | null;
   title: string;
   status: string;
+  userStatus?: string | null;
   stage?: string | null;
   totalAmount?: Amount | null;
   currency: string;
@@ -240,10 +248,13 @@ export interface RequestQuery {
 }
 
 /** Display name of an option in the current language. */
-export function optionLabel(option: { name?: string; nameEn?: string; nameFr?: string; code?: string } | null | undefined, language: string): string {
+export function optionLabel(
+  option: { name?: string; nameEn?: string; nameFr?: string; nameAr?: string; code?: string } | null | undefined,
+  language: string,
+): string {
   if (!option) {
     return '';
   }
-  const localised = language === 'fr' ? option.nameFr : option.nameEn;
+  const localised = language === 'fr' ? option.nameFr : language === 'ar' ? option.nameAr : option.nameEn;
   return localised || option.name || option.nameEn || option.code || '';
 }

@@ -7,6 +7,7 @@ import {
   DestroyRef,
   Injector,
   afterNextRender,
+  computed,
   effect,
   inject,
   isDevMode,
@@ -19,7 +20,12 @@ import { filter, map, skip } from 'rxjs';
 import { Icon } from '../../shared/ui/icon';
 import { LanguageSelect } from '../../shared/ui/language-select';
 import { StatusBadge } from '../../shared/ui/status-badge';
-import { NAVIGATION } from '../navigation';
+import { hasPermission } from '../../core/auth/auth.models';
+import { AuthService } from '../../core/auth/auth.service';
+import { ApprovalCountService } from '../../features/approvals/approval-count.service';
+import { InAppNotifications } from '../../features/notifications/in-app-notifications';
+import { NAVIGATION, NavGroup } from '../navigation';
+import { NotificationBell } from '../notification-bell';
 import { UserMenu } from '../user-menu';
 
 const COLLAPSED_KEY = 'epi.sidebar.collapsed';
@@ -33,6 +39,7 @@ export const DRAWER_QUERY = '(max-width: 63.99rem)';
     CdkTrapFocus,
     Icon,
     LanguageSelect,
+    NotificationBell,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
@@ -48,7 +55,18 @@ export class Shell {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
 
-  protected readonly navigation = NAVIGATION;
+  private readonly auth = inject(AuthService);
+  protected readonly approvalCount = inject(ApprovalCountService);
+  private readonly inAppNotifications = inject(InAppNotifications);
+
+  /** Navigation filtered by the user's permissions; empty groups are hidden. */
+  protected readonly navigation = computed<NavGroup[]>(() => {
+    const me = this.auth.me();
+    return NAVIGATION.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.permission || hasPermission(me, item.permission)),
+    })).filter((group) => group.items.length > 0);
+  });
   protected readonly isDevMode = isDevMode();
 
   protected readonly isDrawerMode = toSignal(
@@ -61,11 +79,21 @@ export class Shell {
   protected readonly collapsed = signal(this.readCollapsed());
 
   constructor() {
+    const destroyRef = inject(DestroyRef);
+    // Counts are refreshed on navigation (including the first one), never by background polling (S1DR-11).
+    inject(Router)
+      .events.pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(destroyRef),
+      )
+      .subscribe(() => this.refreshCounts());
+    this.refreshCounts();
+
     inject(Router)
       .events.pipe(
         filter((event) => event instanceof NavigationEnd),
         skip(1),
-        takeUntilDestroyed(inject(DestroyRef)),
+        takeUntilDestroyed(destroyRef),
       )
       .subscribe(() => {
         this.drawerOpen.set(false);
@@ -80,6 +108,13 @@ export class Shell {
         this.drawerOpen.set(false);
       }
     });
+  }
+
+  private refreshCounts(): void {
+    if (this.auth.isAuthenticated()) {
+      this.approvalCount.refresh();
+      this.inAppNotifications.refreshCount();
+    }
   }
 
   /**

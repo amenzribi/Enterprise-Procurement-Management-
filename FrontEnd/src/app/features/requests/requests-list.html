@@ -142,7 +142,7 @@
                       <span class="row-sub">{{ item.requester.displayName }}</span>
                     }
                   </a>
-                  <app-status-badge [tone]="tone(item.status)">{{ statusLabel(item.status) | translate }}</app-status-badge>
+                  <app-status-badge [tone]="tone(item)">{{ statusLabel(item) | translate }}</app-status-badge>
                 </div>
                 <dl class="card-facts">
                   <div>
@@ -190,7 +190,7 @@
                         <span class="row-sub">{{ item.requester.displayName }} · {{ item.requestingCompany?.name }}</span>
                       }
                     </td>
-                    <td><app-status-badge [tone]="tone(item.status)">{{ statusLabel(item.status) | translate }}</app-status-badge></td>
+                    <td><app-status-badge [tone]="tone(item)">{{ statusLabel(item) | translate }}</app-status-badge></td>
                     <td class="numeric tabular">{{ total(item) || '—' }}</td>
                     <td class="tabular">{{ item.requiredDate ? (item.requiredDate | date: 'mediumDate' : undefined : locale()) : '—' }}</td>
                     <td class="tabular muted">{{ item.updatedAt ? (item.updatedAt | date: 'short' : undefined : locale()) : '—' }}</td>

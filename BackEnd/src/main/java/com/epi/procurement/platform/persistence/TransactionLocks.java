@@ -35,6 +35,12 @@ public class TransactionLocks {
 
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void lockExclusively(String resource) {
+		// S1CR-09: the explicit BEGIN below is only safe on the connection bound to the Spring transaction; on an
+		// auto-commit connection it would leave an open transaction (and its lock) in the pool.
+		Boolean autoCommit = jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<Boolean>) c -> c.getAutoCommit());
+		if (Boolean.TRUE.equals(autoCommit)) {
+			throw new IllegalStateException("Application locks require a transaction-bound connection");
+		}
 		// With auto-commit off the driver uses implicit transactions, which only start at the first statement touching
 		// a table; sp_getapplock does not, so as the first statement it would run with @@TRANCOUNT = 0 and fail (-999).
 		// Opening the transaction explicitly is safe: the driver's commit/rollback act while @@TRANCOUNT > 0.
@@ -47,6 +53,19 @@ public class TransactionLocks {
 		if (result == null || result < 0) {
 			throw busy();
 		}
+	}
+
+	/**
+	 * Releases the lock before the transaction ends, once the protected singleton row exists: the new row's own
+	 * lock then serialises the other writers, so first-of-year submissions no longer queue on the application lock
+	 * for the whole transaction (Sprint 2: submissions also build the approval circuit).
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void release(String resource) {
+		jdbc.queryForObject("""
+				DECLARE @result INT;
+				EXEC @result = sp_releaseapplock @Resource = ?, @LockOwner = 'Transaction';
+				SELECT @result;""", Integer.class, resource);
 	}
 
 	/**

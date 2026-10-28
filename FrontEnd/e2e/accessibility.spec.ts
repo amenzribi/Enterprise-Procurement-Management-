@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { Page, expect, test } from '@playwright/test';
 import { Lang, USERS, fillHeader, fillLine, signIn, t, uniqueTitle } from './support';
 
-/** S1-AC-10: no axe violations (WCAG 2.2 A/AA rules) on sign-in, list, form and detail, in EN and FR, at 1280 and 360 px. */
+/** S1-AC-10, S2-AC-01: no axe violations (WCAG 2.2 A/AA rules) on sign-in, list, form and detail, in EN, FR and AR (right to left), at 1280 and 360 px. */
 const WIDTHS = [
   { name: 'desktop', width: 1280, height: 900 },
   { name: 'phone', width: 360, height: 780 },
@@ -21,7 +21,7 @@ async function noHorizontalScroll(page: Page, label: string): Promise<void> {
   expect(overflow, `${label}: horizontal scroll`).toBeLessThanOrEqual(0);
 }
 
-for (const lang of ['en', 'fr'] as Lang[]) {
+for (const lang of ['en', 'fr', 'ar'] as Lang[]) {
   for (const size of WIDTHS) {
     test(`accessibility ${lang.toUpperCase()} ${size.name}`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: size.height });

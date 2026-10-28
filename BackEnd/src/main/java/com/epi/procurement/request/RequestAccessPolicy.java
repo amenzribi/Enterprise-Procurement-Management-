@@ -11,8 +11,10 @@ import com.epi.procurement.identity.Role;
 import com.epi.procurement.identity.RoleGrant;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 
 /**
  * Who may see and change purchase requests in Sprint 1 (docs/product/sprint-1.md, visibility table; ADR-007).
@@ -22,9 +24,11 @@ import jakarta.persistence.criteria.Root;
  * <li>DEPARTMENT_MANAGER: non-draft requests of the granted department (or their own department) in the granted
  * company.</li>
  * <li>GROUP_MANAGEMENT: non-draft requests of every company of their group (or of the granted company).</li>
+ * <li>Participants (approvers and delegates with a task on the request, Sprint 2): the request, once submitted.</li>
  * <li>Everyone else, including BUYER, PURCHASING_MANAGER and ADMIN: nothing yet.</li>
  * </ul>
- * Drafts are never visible to anyone but their requester and entered-by user.
+ * Drafts are never visible to anyone but their requester and entered-by user. Authors edit drafts and requests
+ * returned for revision (S2DR-04); only drafts can be discarded.
  */
 @Component
 class RequestAccessPolicy {
@@ -33,7 +37,7 @@ class RequestAccessPolicy {
 	 * The visibility rule as a query predicate, so lists, counts and single lookups apply the same rule.
 	 */
 	Specification<PurchaseRequest> visibleTo(CurrentUser user) {
-		return (root, query, cb) -> visiblePredicate(user, root, cb);
+		return (root, query, cb) -> visiblePredicate(user, root, query, cb);
 	}
 
 	boolean canCreateIn(CurrentUser user, long companyId) {
@@ -54,25 +58,40 @@ class RequestAccessPolicy {
 	}
 
 	/**
-	 * Edit, submit and discard: a draft, by an editor.
+	 * Edit and submit: a draft or a request returned for revision, by an editor.
 	 */
 	boolean canEdit(CurrentUser user, PurchaseRequest request) {
-		return request.getStatus() == RequestStatus.DRAFT && isEditor(user, request);
+		return isEditableStatus(request.getStatus()) && isEditor(user, request);
+	}
+
+	static boolean isEditableStatus(RequestStatus status) {
+		return status == RequestStatus.DRAFT || status == RequestStatus.REVISION_REQUESTED;
 	}
 
 	List<String> actions(CurrentUser user, PurchaseRequest request) {
-		return canEdit(user, request) ? List.of("EDIT", "SUBMIT", "DISCARD") : List.of();
+		if (!canEdit(user, request)) {
+			return List.of();
+		}
+		return request.getStatus() == RequestStatus.DRAFT ? List.of("EDIT", "SUBMIT", "DISCARD")
+				: List.of("EDIT", "SUBMIT");
 	}
 
 	private static boolean isAuthor(CurrentUser user, PurchaseRequest request) {
 		return request.getRequesterUserId() == user.id() || request.getEnteredByUserId() == user.id();
 	}
 
-	private static Predicate visiblePredicate(CurrentUser user, Root<PurchaseRequest> root, CriteriaBuilder cb) {
+	private static Predicate visiblePredicate(CurrentUser user, Root<PurchaseRequest> root, CriteriaQuery<?> query,
+			CriteriaBuilder cb) {
 		List<Predicate> any = new ArrayList<>();
 		any.add(cb.equal(root.get("requesterUserId"), user.id()));
 		any.add(cb.equal(root.get("enteredByUserId"), user.id()));
 		Predicate notDraft = cb.notEqual(root.get("status"), RequestStatus.DRAFT);
+
+		Subquery<Long> participation = query.subquery(Long.class);
+		Root<RequestParticipant> participant = participation.from(RequestParticipant.class);
+		participation.select(participant.get("requestId"))
+			.where(cb.equal(participant.get("userId"), user.id()), cb.equal(participant.get("requestId"), root.get("id")));
+		any.add(cb.and(notDraft, cb.exists(participation)));
 
 		for (RoleGrant grant : user.grants(Role.DEPARTMENT_MANAGER)) {
 			Long department = grant.departmentId() != null ? grant.departmentId() : user.departmentId();

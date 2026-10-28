@@ -92,3 +92,16 @@ export function formatMoney(amount: string | number | null | undefined, currency
     return `${amount} ${currency}`;
   }
 }
+
+/**
+ * ISO 4217 minor units for currencies whose minor unit is not 2. Used where an API response gives an amount without
+ * its currency's minor units; the form options remain the reference for the currencies a company uses.
+ */
+const NON_DEFAULT_MINOR_UNITS: Record<string, number> = {
+  BHD: 3, IQD: 3, JOD: 3, KWD: 3, LYD: 3, OMR: 3, TND: 3,
+  CLP: 0, ISK: 0, JPY: 0, KRW: 0, VND: 0, XAF: 0, XOF: 0,
+};
+
+export function minorUnitsOf(currency: string | null | undefined): number {
+  return currency ? (NON_DEFAULT_MINOR_UNITS[currency.toUpperCase()] ?? 2) : 2;
+}

@@ -3,6 +3,8 @@
 | Area | Document |
 |---|---|
 | Original specification (French, unchanged) | [specification/Enterprise_Procurement_Intelligence_Specification_FR.md](specification/Enterprise_Procurement_Intelligence_Specification_FR.md) |
+| Solution Guide v3.0 (English, unchanged) — primary functional reference | [specification/Enterprise_Procurement_Intelligence_Solution_Guide_EN_v3.0.md](specification/Enterprise_Procurement_Intelligence_Solution_Guide_EN_v3.0.md) |
+| Review of the Solution Guide v3.0 (gaps, decisions, use-case traceability) | [analysis/solution-guide-v3-review.md](analysis/solution-guide-v3-review.md) |
 | Specification review | [analysis/specification-review.md](analysis/specification-review.md) |
 | Recommended changes to the spec | [analysis/recommended-changes.md](analysis/recommended-changes.md) |
 | MVP definition and release criteria | [product/mvp.md](product/mvp.md) |

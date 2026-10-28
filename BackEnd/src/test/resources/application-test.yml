@@ -9,6 +9,14 @@ spring:
 app:
   security:
     cookie-secure: false
+  # Jobs are run explicitly by the tests (QA hook A2).
+  jobs:
+    enabled: false
+  mail:
+    mode: file
+    directory: target/test-mail
+  storage:
+    directory: target/test-files
   demo:
     # Test-only password for the demo accounts created by DemoUserSeeder (not a secret).
     user-password: Test-Only-Demo-Password-1

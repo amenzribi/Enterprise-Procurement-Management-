@@ -147,4 +147,30 @@ describe('LanguageService', () => {
     await firstValueFrom(service.use('fr'));
     expect(service.switchFailure()).toBeNull();
   });
+
+  it('switches to Arabic right to left with ar-TN formatting, and back to left to right (S2-AC-01)', async () => {
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-US');
+    const service = setup();
+    await firstValueFrom(service.init());
+    const root = TestBed.inject(DOCUMENT).documentElement;
+
+    await firstValueFrom(service.use('ar'));
+    expect(root.dir).toBe('rtl');
+    expect(documentLang()).toBe('ar');
+    expect(service.rtl()).toBe(true);
+    expect(service.locale()).toBe('ar-TN');
+    expect(greeting()).toBe('hello-ar');
+
+    await firstValueFrom(service.use('fr'));
+    expect(root.dir).toBe('ltr');
+    expect(service.locale()).toBe('fr-FR');
+  });
+
+  it('uses Arabic when the browser language is Arabic and nothing is saved', async () => {
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('ar-TN');
+    const service = setup();
+    await firstValueFrom(service.init());
+    expect(service.current()).toBe('ar');
+    expect(TestBed.inject(DOCUMENT).documentElement.dir).toBe('rtl');
+  });
 });

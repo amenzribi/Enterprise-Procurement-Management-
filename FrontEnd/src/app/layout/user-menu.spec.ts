@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { Me } from '../core/auth/auth.models';
@@ -20,7 +21,7 @@ describe('UserMenu', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
       imports: [UserMenu],
-      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: auth }],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: auth }],
     });
     fixture = TestBed.createComponent(UserMenu);
     await fixture.whenStable();
@@ -39,7 +40,8 @@ describe('UserMenu', () => {
 
     const menu = document.querySelector('[role="menu"]');
     expect(menu?.textContent).toContain('auth.roles.DEPARTMENT_MANAGER');
-    menu?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.click();
+    expect(menu?.querySelector('a[href="/absences"]')?.textContent).toContain('absences.menu');
+    menu?.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.click();
     expect(auth.signOut).toHaveBeenCalled();
   });
 

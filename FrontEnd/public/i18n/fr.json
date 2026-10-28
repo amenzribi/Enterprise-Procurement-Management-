@@ -7,7 +7,8 @@
     "label": "Langue d’affichage",
     "names": {
       "en": "English",
-      "fr": "Français"
+      "fr": "Français",
+      "ar": "العربية"
     },
     "loadFailed": "Impossible de charger la langue « {{language}} ». La langue précédente est conservée.",
     "saveFailed": "Votre choix de langue n’a pas pu être enregistré dans votre compte. Il reste appliqué dans ce navigateur."
@@ -44,9 +45,12 @@
       "organization": "Organisation",
       "suppliers": "Fournisseurs",
       "logistics": "Logistique",
-      "dashboards": "Tableaux de bord"
+      "dashboards": "Tableaux de bord",
+      "approvalRules": "Règles de validation",
+      "exchangeRates": "Taux de change"
     },
-    "plannedSprint": "Sprint {{sprint}}"
+    "plannedSprint": "Sprint {{sprint}}",
+    "pendingCount": "{{count}} en attente de votre décision"
   },
   "overview": {
     "title": "Procurement Intelligence",
@@ -55,11 +59,12 @@
       "title": "Disponible dans cette version",
       "items": {
         "shell": "Espace de travail adapté à l’ordinateur, à la tablette et au téléphone",
-        "languages": "Anglais et français, modifiables à tout moment",
+        "languages": "Arabe, français et anglais, au choix à tout moment",
         "statusCheck": "Vérification en direct de la connexion au serveur et à la base de données",
         "signIn": "Connexion avec expiration de session et préférence de langue enregistrée",
         "requests": "Création, enregistrement et soumission de demandes d’achat multi-lignes avec un numéro unique",
-        "isolation": "Chaque utilisateur ne voit que les demandes de sa société et de son rôle"
+        "isolation": "Chaque utilisateur ne voit que les demandes de sa société et de son rôle",
+        "approvals": "Circuits de validation par société, validation en un geste depuis l’e-mail et suivi de la demande"
       },
       "checkConnection": "Vérifier la connexion",
       "openRequests": "Ouvrir mes demandes"
@@ -196,7 +201,26 @@
     "invalid-state": "Cette demande ne peut plus être modifiée.",
     "invalid-request": "La requête n’a pas pu être comprise. Rechargez la page puis réessayez.",
     "invalid-parameter": "Une valeur de filtre ou de tri n’est pas valide. Réinitialisez les filtres puis réessayez.",
-    "csrf-invalid": "Votre jeton de sécurité a expiré. Réessayez."
+    "csrf-invalid": "Votre jeton de sécurité a expiré. Réessayez.",
+    "missing-exchange-rate": "Aucun taux de change n’est enregistré pour cette devise à cette date. Demandez à un administrateur de l’ajouter.",
+    "no-approval-rule": "Aucune règle de validation ne s’applique à cette demande. Demandez à un administrateur d’en configurer une.",
+    "ambiguous-approval-rule": "Plusieurs règles de validation se chevauchent. Un administrateur doit les corriger.",
+    "no-eligible-approver": "Personne n’est disponible pour valider cette demande. Les administrateurs de la société ont été prévenus.",
+    "task-not-pending": "Cette décision a déjà été prise ou réaffectée.",
+    "reason-required": "Indiquez un motif.",
+    "delegate-not-eligible": "Cette personne ne peut pas recevoir la validation.",
+    "absence-overlap": "Cette période chevauche une autre absence.",
+    "link-invalid": "Ce lien n’est plus valide.",
+    "file-too-large": "Le fichier dépasse 20 Mo.",
+    "file-type-not-allowed": "Ce type de fichier n’est pas accepté.",
+    "too-many-files": "Cette demande a déjà le nombre maximal de fichiers.",
+    "busy": "Le système traite une autre opération. Réessayez dans un instant.",
+    "question-already-open": "Une question attend déjà la réponse du demandeur.",
+    "no-open-question": "Aucune question n’attend de réponse.",
+    "too-many-requests": "Trop de tentatives. Patientez un instant puis réessayez.",
+    "idempotency-key-reused": "Cette action a déjà été envoyée avec un contenu différent. Rechargez la page et réessayez.",
+    "attachment-limit-reached": "Cette demande a atteint la limite de 30 fichiers ou 100 Mo.",
+    "file-infected": "L’antivirus a refusé ce fichier."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -210,7 +234,9 @@
       "BUYER": "Acheteur",
       "PURCHASING_MANAGER": "Responsable achats",
       "GROUP_MANAGEMENT": "Direction du groupe",
-      "ADMIN": "Administrateur"
+      "ADMIN": "Administrateur",
+      "BUDGET_APPROVER": "Valideur budget",
+      "MANAGEMENT_APPROVER": "Valideur direction"
     },
     "sessionWarning": {
       "title": "Votre session va expirer",
@@ -305,13 +331,13 @@
     },
     "form": {
       "newTitle": "Nouvelle demande d’achat",
-      "editTitle": "Modifier le brouillon",
+      "editTitle": "Modifier la demande",
       "description": "Enregistrez un brouillon à tout moment. Les champs marqués * sont obligatoires pour soumettre.",
       "loading": "Chargement du formulaire…",
       "loadError": "Le formulaire n’a pas pu être chargé",
       "notEditable": {
         "title": "Cette demande ne peut plus être modifiée",
-        "message": "Seuls les brouillons peuvent être modifiés, par le demandeur ou la personne qui les a saisis."
+        "message": "Seuls les brouillons et les demandes renvoyées pour révision peuvent être modifiés, par le demandeur ou la personne qui les a saisis."
       },
       "viewRequest": "Voir la demande",
       "restore": {
@@ -344,7 +370,7 @@
       "submitting": "Soumission…",
       "saveDraft": "Enregistrer le brouillon",
       "saving": "Enregistrement…",
-      "submitNote": "La soumission attribue son numéro à la demande. Elle ne peut plus être modifiée ensuite.",
+      "submitNote": "La soumission donne son numéro à la demande et lance sa validation. Elle ne peut être modifiée à nouveau que si un valideur la renvoie.",
       "saved": "Brouillon enregistré",
       "leave": {
         "title": "Quitter sans enregistrer ?",
@@ -419,7 +445,7 @@
     },
     "submit": {
       "title": "Soumettre cette demande ?",
-      "message": "Elle recevra son numéro et ne pourra plus être modifiée.",
+      "message": "Elle recevra son numéro et partira dans le circuit de validation de votre société.",
       "confirm": "Soumettre la demande",
       "done": "Demande {{number}} soumise",
       "incomplete": "Complétez les champs obligatoires avant de soumettre."
@@ -477,7 +503,9 @@
       "created": "Créée en {{to}}",
       "by": "par {{name}}",
       "ownerAfter": "Responsable ensuite : {{name}}",
-      "noHistory": "Aucun historique pour le moment."
+      "noHistory": "Aucun historique pour le moment.",
+      "resubmit": "Soumettre à nouveau",
+      "editReturned": "Corriger la demande"
     },
     "status": {
       "DRAFT": "Brouillon",
@@ -510,7 +538,8 @@
       "PAYMENT_PENDING": "Paiement en attente",
       "PAID": "Payée",
       "CLOSED": "Clôturée",
-      "CANCELLED": "Annulée"
+      "CANCELLED": "Annulée",
+      "AWARDED": "Attribuée"
     },
     "stages": {
       "REQUEST": "Création",
@@ -523,6 +552,376 @@
       "RECEIPT": "Réception",
       "FINANCE": "Finance",
       "CLOSURE": "Clôture"
+    },
+    "userStatus": {
+      "DRAFT": "Brouillon",
+      "SUBMITTED": "Soumise",
+      "RETURNED": "Renvoyée pour révision",
+      "REJECTED": "Rejetée",
+      "APPROVED": "Validée",
+      "ASSIGNED": "Affectée",
+      "QUOTING": "Consultation",
+      "AWARDED": "Attribuée",
+      "ORDERED": "Commandée",
+      "IN_TRANSIT": "En transit",
+      "RECEIVED": "Réceptionnée",
+      "CLOSED": "Clôturée",
+      "CANCELLED": "Annulée"
     }
+  },
+  "tracker": {
+    "title": "Où en est cette demande ?",
+    "stepState": {
+      "done": "terminée",
+      "current": "étape en cours",
+      "upcoming": "pas encore atteinte",
+      "returned": "renvoyée pour révision",
+      "rejected": "rejetée"
+    },
+    "waitingFor": "En attente de {{names}}",
+    "since": "depuis {{elapsed}}",
+    "due": "Échéance {{when}}",
+    "overdue": "En retard — échéance {{when}}",
+    "approvalCircuit": "Circuit de validation",
+    "round": "Tour {{round}}",
+    "amountForApproval": "Montant retenu pour la validation :",
+    "rate": "taux {{rate}} du {{date}}",
+    "earlierRounds": "Tours de validation précédents ({{count}})",
+    "outcome": {
+      "APPROVED": "Validée",
+      "REJECTED": "Rejetée",
+      "RETURNED": "Renvoyée pour révision",
+      "CANCELLED": "Annulée",
+      "ACTIVE": "En cours"
+    },
+    "approverType": {
+      "DEPARTMENT_MANAGER": "Responsable de département",
+      "BUDGET_APPROVER": "Valideur budget",
+      "MANAGEMENT_APPROVER": "Validation de la direction",
+      "NAMED_USER": "Valideur désigné"
+    },
+    "policy": {
+      "ANY": "Une validation suffit",
+      "ALL": "Tous doivent valider"
+    },
+    "stageStatus": {
+      "WAITING": "Pas commencée",
+      "APPROVED": "Validée",
+      "REJECTED": "Rejetée",
+      "RETURNED": "Renvoyée",
+      "SKIPPED": "Non nécessaire",
+      "CANCELLED": "Annulée",
+      "IN_PROGRESS": "En cours"
+    },
+    "taskStatus": {
+      "PENDING": "en attente",
+      "APPROVED": "a validé",
+      "REJECTED": "a rejeté",
+      "RETURNED": "a renvoyé pour révision",
+      "DELEGATED": "a délégué",
+      "CANCELLED": "annulée",
+      "SUPERSEDED": "plus nécessaire"
+    },
+    "onBehalfOf": "pour le compte de {{name}}",
+    "delegatedTo": "à {{name}}",
+    "viaLink": "validé depuis l’e-mail",
+    "question": "Question",
+    "answer": "Réponse",
+    "questionSuperseded": "Close par la décision.",
+    "awaitingAnswer": "En attente de la réponse du demandeur.",
+    "by": "par {{name}}",
+    "stepOf": "Étape {{step}} sur {{total}} : {{label}}"
+  },
+  "approvals": {
+    "inbox": {
+      "title": "À valider",
+      "description": "Les demandes qui attendent votre décision, les plus urgentes d’abord.",
+      "filtersLabel": "Rechercher et trier les validations",
+      "viewLabel": "Quelles validations",
+      "views": {
+        "pending": "En attente de moi",
+        "decided": "Décidées par moi"
+      },
+      "search": "Rechercher une validation",
+      "searchPlaceholder": "Rechercher par numéro, titre ou demandeur",
+      "sorts": {
+        "dueAt": "Échéance",
+        "amount": "Montant",
+        "waitingSince": "En attente depuis le plus longtemps",
+        "number": "Numéro de demande",
+        "requiredDate": "Date requise"
+      },
+      "loading": "Chargement de vos validations…",
+      "resultCount": "{{count}} validation(s)",
+      "loadError": "Vos validations n’ont pas pu être chargées",
+      "noMatch": {
+        "title": "Aucune validation ne correspond à cette recherche",
+        "message": "Modifiez ou effacez la recherche."
+      },
+      "empty": {
+        "pending": {
+          "title": "Rien à valider",
+          "message": "Les demandes apparaissent ici dès que votre décision est nécessaire. Vous êtes aussi prévenu par e-mail."
+        },
+        "decided": {
+          "title": "Aucune décision pour l’instant",
+          "message": "Les demandes que vous validez, renvoyez ou rejetez apparaissent ici."
+        }
+      },
+      "informationRequested": "Question posée",
+      "waiting": "En attente {{elapsed}}",
+      "review": "Examiner et décider"
+    },
+    "decide": {
+      "title": "Votre décision",
+      "delegateTo": "Déléguer à",
+      "loadingDelegates": "Chargement des personnes à qui déléguer…",
+      "noDelegates": "Personne ne peut recevoir cette validation.",
+      "questionLabel": "Votre question au demandeur",
+      "reasonLabel": "Motif",
+      "commentLabel": "Commentaire (facultatif)",
+      "questionRequired": "Rédigez votre question.",
+      "reasonRequired": "Indiquez un motif. Le demandeur le verra.",
+      "delegateRequired": "Choisissez qui reçoit la validation.",
+      "sending": "Envoi…"
+    },
+    "actions": {
+      "APPROVE": "Valider",
+      "QUESTION": "Poser une question",
+      "RETURN": "Renvoyer pour révision",
+      "REJECT": "Rejeter",
+      "DELEGATE": "Déléguer"
+    },
+    "confirm": {
+      "APPROVE": "Confirmer la validation",
+      "QUESTION": "Envoyer la question",
+      "RETURN": "Renvoyer la demande",
+      "REJECT": "Rejeter la demande",
+      "DELEGATE": "Déléguer la validation"
+    },
+    "hints": {
+      "APPROVE": "La demande passe au valideur suivant, ou à la centrale d’achat si vous êtes le dernier.",
+      "QUESTION": "La demande reste chez vous. Son délai est suspendu jusqu’à la réponse du demandeur.",
+      "RETURN": "Le demandeur corrige la demande et la soumet à nouveau. La validation reprend depuis la première étape.",
+      "REJECT": "Le rejet est définitif. La demande est close.",
+      "DELEGATE": "La validation passe à cette personne et est enregistrée comme déléguée par vous."
+    },
+    "done": {
+      "APPROVE": "Validée",
+      "QUESTION": "Question envoyée au demandeur",
+      "RETURN": "Renvoyée au demandeur",
+      "REJECT": "Demande rejetée",
+      "DELEGATE": "Validation déléguée"
+    },
+    "errors": {
+      "task-not-pending": "Cette décision a déjà été prise ou réaffectée. La page a été actualisée.",
+      "reason-required": "Indiquez un motif.",
+      "delegate-not-eligible": "Cette personne ne peut pas recevoir la validation. Choisissez quelqu’un d’autre.",
+      "stale-version": "Cette demande a changé entre-temps. La page a été actualisée.",
+      "invalid-state": "Cette demande n’attend plus cette décision.",
+      "forbidden": "Vous n’êtes pas autorisé à prendre cette décision.",
+      "not-found": "Cette validation n’existe plus ou vous n’y avez pas accès.",
+      "question-already-open": "Une question attend déjà la réponse du demandeur.",
+      "no-open-question": "Aucune question n’attend de réponse. La page a été actualisée."
+    },
+    "answer": {
+      "title": "{{name}} a posé une question",
+      "label": "Votre réponse",
+      "required": "Rédigez votre réponse.",
+      "send": "Envoyer la réponse",
+      "sent": "Réponse envoyée"
+    },
+    "preview": {
+      "loading": "Vérification des valideurs…",
+      "title": "Circuit de validation"
+    }
+  },
+  "oneTap": {
+    "title": "Demande de validation",
+    "loading": "Ouverture de la validation…",
+    "invalid": {
+      "title": "Ce lien n’est plus valide",
+      "message": "La décision a peut-être déjà été prise, le lien a peut-être expiré, ou il ne vous était pas destiné. Ouvrez l’application pour voir vos validations."
+    },
+    "unavailable": {
+      "title": "Le service est injoignable",
+      "message": "Vérifiez votre connexion et rouvrez le lien dans un instant."
+    },
+    "approved": {
+      "title": "Validée",
+      "message": "La demande {{number}} a été validée. Merci."
+    },
+    "openApp": "Ouvrir l’application",
+    "stage": "Étape de validation",
+    "approve": "Valider",
+    "review": "Examiner dans l’application",
+    "reviewHint": "Pour rejeter, renvoyer, poser une question ou déléguer, examinez la demande dans l’application.",
+    "expires": "Ce lien expire le",
+    "moreLines": "+{{count}} autre(s) ligne(s)"
+  },
+  "notifications": {
+    "open": "Notifications, {{count}} non lue(s)",
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "loading": "Chargement des notifications…",
+    "loadError": "Les notifications n’ont pas pu être chargées.",
+    "empty": "Aucune notification pour l’instant.",
+    "unread": "non lue",
+    "exactCount": "{{count}} notification(s) non lue(s)"
+  },
+  "absences": {
+    "menu": "Mes absences",
+    "title": "Mes absences",
+    "description": "Pendant votre absence, les nouvelles validations vont à votre délégué et sont signalées comme décidées pour votre compte.",
+    "new": "Prévoir une absence",
+    "delegate": "Délégué",
+    "startDate": "Du",
+    "endDate": "Au (inclus)",
+    "reason": "Motif (facultatif)",
+    "datesRequired": "Indiquez le premier et le dernier jour de l’absence.",
+    "endBeforeStart": "Le dernier jour ne peut pas précéder le premier.",
+    "save": "Enregistrer l’absence",
+    "planned": "Absences prévues",
+    "loadError": "Vos absences n’ont pas pu être chargées",
+    "empty": {
+      "title": "Aucune absence prévue",
+      "message": "Prévoyez une absence pour que vos validations ne soient pas retardées pendant votre absence."
+    },
+    "delegatedTo": "Les validations vont à {{name}}",
+    "remove": "Supprimer",
+    "removeTitle": "Supprimer cette absence ?",
+    "removeMessage": "Les nouvelles validations vous reviendront pour cette période.",
+    "saved": "Absence enregistrée",
+    "removed": "Absence supprimée",
+    "errors": {
+      "absence-overlap": "Cette période chevauche une autre absence.",
+      "delegate-not-eligible": "Cette personne ne peut pas valider à votre place. Choisissez quelqu’un ayant le même rôle de validation.",
+      "self-delegation": "Vous ne pouvez pas vous déléguer à vous-même.",
+      "invalid-period": "Vérifiez les dates de l’absence.",
+      "save-failed": "L’absence n’a pas pu être enregistrée. Réessayez."
+    },
+    "byAdmin": "Enregistrée par {{name}}"
+  },
+  "rules": {
+    "title": "Règles de validation",
+    "description": "Qui valide quelle demande, par société, catégorie, type d’achat et montant dans la devise de la société.",
+    "new": "Nouvelle règle",
+    "newTitle": "Nouvelle règle de validation",
+    "editTitle": "Nouvelle version de « {{name}} »",
+    "newVersionNote": "L’enregistrement crée une nouvelle version. La version active reste en vigueur jusqu’à l’activation de la nouvelle. Les demandes déjà en validation conservent leur version.",
+    "fields": {
+      "name": "Nom de la règle",
+      "company": "Société",
+      "minAmount": "À partir de (inclus)",
+      "maxAmount": "Jusqu’à (exclu)",
+      "approverType": "Valideur",
+      "policy": "Décision",
+      "slaHours": "Délai (heures ouvrées)",
+      "escalationRole": "Escalader vers",
+      "stageName": "Nom de l’étape (facultatif)",
+      "stageMinAmount": "S’applique à partir de (facultatif)",
+      "approverSearch": "Rechercher le valideur",
+      "approverUser": "Valideur désigné"
+    },
+    "anyCategory": "Toute catégorie",
+    "anyPurchaseType": "Local ou international",
+    "bandHint": "Montants dans la devise de la société. Laissez « Jusqu’à » vide pour ne pas fixer de plafond.",
+    "stages": "Étapes de validation, dans l’ordre",
+    "stageNumber": "Étape {{number}}",
+    "removeStage": "Supprimer l’étape {{number}}",
+    "addStage": "Ajouter une étape",
+    "save": "Enregistrer la version",
+    "saved": "Version de la règle enregistrée",
+    "loadError": "Les règles de validation n’ont pas pu être chargées",
+    "empty": {
+      "title": "Aucune règle de validation",
+      "message": "Les demandes ne peuvent pas être soumises tant que chaque société n’a pas de règle."
+    },
+    "band": "de {{min}} à {{max}} {{currency}}",
+    "bandOpen": "{{min}} {{currency}} et plus",
+    "status": {
+      "DRAFT": "Brouillon",
+      "ACTIVE": "Active",
+      "RETIRED": "Retirée"
+    },
+    "version": "Version {{version}}",
+    "sla": "{{hours}} h",
+    "activate": "Activer",
+    "activateTitle": "Activer cette version ?",
+    "activateMessage": "La version {{version}} de « {{name}} » s’appliquera aux nouvelles soumissions. Les demandes déjà en validation conservent leur version.",
+    "activated": "« {{name}} » est active",
+    "newVersion": "Nouvelle version",
+    "versions": "Versions",
+    "errors": {
+      "ambiguous-approval-rule": "Cette règle chevauche une autre règle active pour la même société, catégorie et type d’achat. Ajustez les montants.",
+      "band": "Saisissez une tranche valide : le montant supérieur doit dépasser le montant inférieur.",
+      "invalid-value": "Une valeur n’est pas valide. Vérifiez les étapes.",
+      "required": "Remplissez les champs obligatoires.",
+      "not-in-company": "Le valideur désigné doit appartenir à ce groupe.",
+      "save-failed": "La règle n’a pas pu être enregistrée. Vérifiez les champs et réessayez."
+    },
+    "approverUserHint": "Seuls les utilisateurs de cette société sont proposés.",
+    "used": "utilisée par des demandes",
+    "retire": "Retirer",
+    "retireTitle": "Retirer cette version ?",
+    "retireMessage": "La version {{version}} de « {{name}} » ne s’appliquera plus aux nouvelles soumissions. Les demandes déjà en validation la conservent.",
+    "retired": "« {{name}} » est retirée",
+    "approverSearchPlaceholder": "Nom ou e-mail",
+    "chooseCompanyFirst": "Choisissez d’abord la société."
+  },
+  "rates": {
+    "title": "Taux de change",
+    "description": "Servent à comparer les montants des demandes aux seuils de validation dans la devise de chaque société. Un taux enregistré n’est jamais modifié : ajoutez-en un nouveau pour le corriger.",
+    "new": "Ajouter un taux",
+    "base": "Devise de base",
+    "quote": "Devise de cotation",
+    "rate": "Taux",
+    "date": "Date",
+    "source": "Source (facultatif)",
+    "meaning": "1 {{base}} = {{rate}} {{quote}}",
+    "hint": "Un taux indique combien d’unités de la devise de cotation valent une unité de la devise de base.",
+    "errors": {
+      "same-currency": "Choisissez deux devises différentes.",
+      "invalid": "Vérifiez les devises, le taux et la date."
+    },
+    "add": "Ajouter le taux",
+    "recorded": "Taux enregistrés",
+    "loadError": "Les taux de change n’ont pas pu être chargés",
+    "empty": {
+      "title": "Aucun taux de change",
+      "message": "Les demandes en devise étrangère ont besoin d’un taux pour être soumises."
+    },
+    "pair": "Paire",
+    "saved": "Taux ajouté"
+  },
+  "attachments": {
+    "title": "Pièces jointes",
+    "uploading": "Envoi…",
+    "add": "Ajouter un fichier",
+    "hint": "PDF, images, Word, Excel ou PowerPoint (.docx, .xlsx, .pptx), texte ou CSV, {{max}} Mo maximum chacun.",
+    "loading": "Chargement des pièces jointes…",
+    "loadError": "Les pièces jointes n’ont pas pu être chargées.",
+    "empty": "Aucune pièce jointe.",
+    "version": "version {{version}}",
+    "scanning": "analyse antivirus en cours",
+    "remove": "Supprimer {{name}}",
+    "removeTitle": "Supprimer ce fichier ?",
+    "removeMessage": "« {{name}} » sera retiré de la demande.",
+    "removeConfirm": "Supprimer le fichier",
+    "uploaded": "« {{name}} » ajouté",
+    "removed": "« {{name}} » supprimé",
+    "saveFirst": "Enregistrez le brouillon pour ajouter fiches techniques, photos ou devis.",
+    "errors": {
+      "file-too-large": "Le fichier dépasse 20 Mo.",
+      "file-type-not-allowed": "Ce type de fichier n’est pas accepté. Utilisez des fichiers PDF, images, Word, Excel ou PowerPoint (.docx, .xlsx, .pptx), texte ou CSV.",
+      "too-many-files": "Cette demande a déjà le nombre maximal de fichiers.",
+      "file-empty": "Le fichier est vide.",
+      "invalid-state": "Les fichiers de cette demande ne peuvent plus être modifiés.",
+      "forbidden": "Vous ne pouvez pas modifier les fichiers de cette demande.",
+      "upload-failed": "Le fichier n’a pas pu être envoyé. Réessayez.",
+      "attachment-limit-reached": "Cette demande a atteint la limite de 30 fichiers ou 100 Mo.",
+      "file-infected": "L’antivirus a refusé ce fichier."
+    },
+    "infected": "bloqué par l’antivirus"
   }
 }

@@ -48,6 +48,27 @@ class ScopedRequests {
 		return repository.findOne(policy.visibleTo(user).and(hasId(id)));
 	}
 
+	/**
+	 * System access without the caller's visibility, for workflow steps authorised by other means (an approval task
+	 * assigned to the actor, a background job). Never exposed to a controller directly.
+	 */
+	Optional<PurchaseRequest> findForSystem(long id) {
+		return repository.findById(id);
+	}
+
+	PurchaseRequest getForSystemUpdate(long id) {
+		return repository.findByIdForUpdate(id).orElseThrow(ApiProblemException::notFound);
+	}
+
+	java.util.List<PurchaseRequest> findAllForSystem(java.util.Collection<Long> ids) {
+		return repository.findAllById(ids);
+	}
+
+	java.util.List<Long> idsWithStatus(RequestStatus status) {
+		Specification<PurchaseRequest> withStatus = (root, query, cb) -> cb.equal(root.get("status"), status);
+		return repository.findAll(withStatus).stream().map(PurchaseRequest::getId).toList();
+	}
+
 	PurchaseRequest saveAndFlush(PurchaseRequest request) {
 		return repository.saveAndFlush(request);
 	}

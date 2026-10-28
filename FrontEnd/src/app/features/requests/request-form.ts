@@ -32,6 +32,8 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { NotificationService } from '../../core/notifications/notification.service';
 import { Button } from '../../shared/ui/button';
 import { openConfirm } from '../../shared/ui/confirm-dialog';
+import { Attachments } from '../documents/attachments';
+import { openSubmitPreview } from '../approvals/submit-preview-dialog';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
@@ -119,7 +121,7 @@ const LINE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-request-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, EmptyState, ErrorState, Icon, PageHeader, ReactiveFormsModule, RouterLink, Skeleton, TranslatePipe],
+  imports: [Attachments, Button, EmptyState, ErrorState, Icon, PageHeader, ReactiveFormsModule, RouterLink, Skeleton, TranslatePipe],
   templateUrl: './request-form.html',
   styleUrl: './request-form.scss',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
@@ -191,7 +193,7 @@ export class RequestFormPage implements HasUnsavedChanges {
   protected readonly summaryErrors = signal<SummaryError[]>([]);
   protected readonly restoreOffer = signal<FormSnapshot<unknown> | null>(null);
 
-  private readonly requestId = signal<number | null>(null);
+  protected readonly requestId = signal<number | null>(null);
   protected readonly isNew = computed(() => this.requestId() === null);
   protected readonly canDiscard = computed(() => !!this.request()?.actions?.includes('DISCARD'));
 
@@ -342,33 +344,44 @@ export class RequestFormPage implements HasUnsavedChanges {
     });
   }
 
+  /**
+   * Saves the draft, shows who will approve it (S2DR-17), then submits on confirmation. Saving first is required:
+   * the approval preview is computed by the server from the saved request.
+   */
   protected submit(): void {
     this.mode = 'submit';
     if (!this.validate()) {
       return;
     }
-    openConfirm(this.dialog, {
-      titleKey: 'requests.submit.title',
-      messageKey: 'requests.submit.message',
-      confirmKey: 'requests.submit.confirm',
-    }).subscribe((confirmed) => {
-      if (!confirmed) {
-        return;
-      }
-      this.busy.set('submitting');
-      this.persist()
-        .pipe(switchMap((saved) => this.api.submit(saved.id, saved.version)))
-        .subscribe({
-          next: (submitted) => {
-            this.clearSnapshot();
-            this.form.markAsPristine();
-            this.busy.set('idle');
-            this.notifications.success('requests.submit.done', { number: submitted.number ?? '' });
-            void this.router.navigate(['/requests', submitted.id]);
-          },
-          error: (error: unknown) => this.handleFailure(error),
-        });
-    });
+    this.busy.set('submitting');
+    this.persist()
+      .pipe(
+        switchMap((saved) => {
+          this.busy.set('idle');
+          return openSubmitPreview(this.dialog, saved.id).pipe(map((confirmed) => ({ confirmed, saved })));
+        }),
+      )
+      .subscribe({
+        next: ({ confirmed, saved }) => {
+          if (!confirmed) {
+            // The draft is saved; the user stays on the form.
+            this.notifications.info('requests.form.saved');
+            return;
+          }
+          this.busy.set('submitting');
+          this.api.submit(saved.id, saved.version).subscribe({
+            next: (submitted) => {
+              this.clearSnapshot();
+              this.form.markAsPristine();
+              this.busy.set('idle');
+              this.notifications.success('requests.submit.done', { number: submitted.number ?? '' });
+              void this.router.navigate(['/requests', submitted.id]);
+            },
+            error: (error: unknown) => this.handleFailure(error),
+          });
+        },
+        error: (error: unknown) => this.handleFailure(error),
+      });
   }
 
   protected discard(): void {
@@ -448,7 +461,7 @@ export class RequestFormPage implements HasUnsavedChanges {
   }
 
   protected locale(): string {
-    return this.language.current() === 'fr' ? 'fr-FR' : 'en-GB';
+    return this.language.locale();
   }
 
   private money(minor: bigint): string {
@@ -722,6 +735,7 @@ export class RequestFormPage implements HasUnsavedChanges {
       this.pageState.set('not-found');
       return;
     }
+    // Includes the approval configuration problems at submission (missing-exchange-rate, no-approval-rule, ...).
     this.notifications.error(`errors.${problem.code}`);
   }
 

@@ -96,18 +96,62 @@ public final class ApiClient {
 	}
 
 	public Response send(String method, String path, String json) {
+		return send(method, path, json, java.util.Map.of());
+	}
+
+	/** POST with extra headers, e.g. {@code Idempotency-Key}. */
+	public Response post(String path, String json, java.util.Map<String, String> headers) {
+		return send("POST", path, json, headers);
+	}
+
+	/** Multipart upload of one file (and an optional lineId), like the browser's FormData. */
+	public Response upload(String path, String fileName, String contentType, byte[] content, Long lineId) {
+		String boundary = "----test" + System.nanoTime();
+		java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+		java.nio.charset.Charset utf8 = java.nio.charset.StandardCharsets.UTF_8;
+		String crlf = "\r\n";
+		try {
+			if (lineId != null) {
+				body.write(("--" + boundary + crlf + "Content-Disposition: form-data; name=\"lineId\"" + crlf + crlf + lineId
+						+ crlf).getBytes(utf8));
+			}
+			body.write(("--" + boundary + crlf + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName
+					+ "\"" + crlf + "Content-Type: " + contentType + crlf + crlf).getBytes(utf8));
+			body.write(content);
+			body.write((crlf + "--" + boundary + "--" + crlf).getBytes(utf8));
+		}
+		catch (IOException ex) {
+			throw new IllegalStateException(ex);
+		}
+		HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(base + path))
+			.POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray()))
+			.header("Accept", "application/json")
+			.header("Content-Type", "multipart/form-data; boundary=" + boundary);
+		if (sendCsrf) {
+			cookie("XSRF-TOKEN").ifPresent(token -> request.header("X-XSRF-TOKEN", token));
+		}
+		return execute(request);
+	}
+
+	public Response send(String method, String path, String json, java.util.Map<String, String> headers) {
 		HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(base + path))
 			.method(method, json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json))
 			.header("Accept", "application/json");
+		headers.forEach(request::header);
 		if (json != null) {
 			request.header("Content-Type", "application/json");
 		}
 		if (sendCsrf && !method.equals("GET")) {
 			cookie("XSRF-TOKEN").ifPresent(token -> request.header("X-XSRF-TOKEN", token));
 		}
+		return execute(request);
+	}
+
+	private Response execute(HttpRequest.Builder request) {
 		try {
 			HttpResponse<String> response = http.send(request.build(), HttpResponse.BodyHandlers.ofString());
-			return new Response(response.statusCode(), response.body(), response.headers().allValues("Set-Cookie"));
+			return new Response(response.statusCode(), response.body(), response.headers().allValues("Set-Cookie"),
+					response.headers().map());
 		}
 		catch (IOException ex) {
 			throw new IllegalStateException(ex);
@@ -122,7 +166,17 @@ public final class ApiClient {
 		return value == null ? "null" : "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
 	}
 
-	public record Response(int status, String body, List<String> setCookies) {
+	public record Response(int status, String body, List<String> setCookies,
+			java.util.Map<String, List<String>> headers) {
+
+		public String header(String name) {
+			return headers.entrySet()
+				.stream()
+				.filter(e -> e.getKey().equalsIgnoreCase(name))
+				.map(e -> String.join(",", e.getValue()))
+				.findFirst()
+				.orElse(null);
+		}
 
 		public Response expectStatus(int expected) {
 			assertThat(status).as("HTTP status; body: %s", body).isEqualTo(expected);

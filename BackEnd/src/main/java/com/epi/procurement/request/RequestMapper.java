@@ -49,7 +49,7 @@ class RequestMapper {
 		Map<String, Integer> minorUnits = minorUnits();
 		return requests.stream()
 			.map(r -> new RequestViews.Summary(r.getId(), r.getNumber(), r.getTitle(), r.getStatus().name(),
-					r.getStage().name(), money(r.getTotalAmount(), r.getCurrencyCode(), minorUnits), r.getCurrencyCode(),
+					r.getStatus().userStatus().name(), r.getStage().name(), money(r.getTotalAmount(), r.getCurrencyCode(), minorUnits), r.getCurrencyCode(),
 					r.getRequiredDate(), r.getUpdatedAt(), r.getSubmittedAt(), userRef(people, r.getRequesterUserId()),
 					companies.computeIfAbsent(r.getRequestingCompanyId(), this::company), policy.actions(user, r)))
 			.toList();
@@ -88,8 +88,8 @@ class RequestMapper {
 					userRef(people, t.getActorUserId()), t.getOccurredAt()))
 			.toList();
 
-		return new RequestViews.Detail(r.getId(), r.getNumber(), r.getStatus().name(), r.getStage().name(),
-				r.getVersion(), r.getOrigin().name(), r.getTitle(), category, name(r.getPriority()),
+		return new RequestViews.Detail(r.getId(), r.getNumber(), r.getStatus().name(),
+				r.getStatus().userStatus().name(), r.getStage().name(), r.getVersion(), r.getRoundNo(), r.getOrigin().name(), r.getTitle(), category, name(r.getPriority()),
 				name(r.getPurchaseType()), r.getCurrencyCode(), minorUnits.getOrDefault(r.getCurrencyCode(), 2),
 				companyRef.apply(r.getRequestingCompanyId()), companyRef.apply(r.getChargedCompanyId()),
 				companyRef.apply(r.getBuyingCompanyId()), r.isBuyingCompanyProposed(),

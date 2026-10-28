@@ -19,8 +19,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.StringUtils;
 
 /**
- * DEMONSTRATION DATA ONLY. Creates the eight demo users of Sprint 1 (docs/product/sprint-1.md) when the
- * {@code demo} profile is active.
+ * DEMONSTRATION DATA ONLY. Creates the demo users of Sprints 1-2 (docs/product/sprint-1.md, sprint-2.md) when the
+ * {@code demo} profile is active. Display names follow the Solution Guide v3.0 story.
  * <ul>
  * <li>No password is stored in the repository. Every start sets all demo passwords to {@code DEMO_USER_PASSWORD}
  * (stable, e.g. for QA), or to a random password printed once to the console when it is not set.</li>
@@ -32,6 +32,8 @@ import org.springframework.util.StringUtils;
  */
 @Component
 @Profile("demo")
+// Before every other startup job (e.g. the approval job for Sprint 1 requests, which needs the demo approvers).
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 class DemoUserSeeder implements ApplicationRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(DemoUserSeeder.class);
@@ -41,18 +43,26 @@ class DemoUserSeeder implements ApplicationRunner {
 	static final List<DemoUser> USERS = List.of(
 			new DemoUser("requester.tn@demo.local", "Sami Ben Ali (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", "DEMO-MAINT", "fr",
 					List.of(new Grant(Role.REQUESTER, true, false))),
-			new DemoUser("assistant.tn@demo.local", "Leila Trabelsi (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", "DEMO-MAINT", "fr",
+			new DemoUser("assistant.tn@demo.local", "Amel Trabelsi (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", "DEMO-MAINT", "fr",
 					List.of(new Grant(Role.REQUESTER, true, false), new Grant(Role.ENTER_ON_BEHALF, true, false))),
 			new DemoUser("manager.tn@demo.local", "Karim Haddad (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", "DEMO-MAINT", "en",
 					List.of(new Grant(Role.DEPARTMENT_MANAGER, true, true))),
+			new DemoUser("manager2.tn@demo.local", "Hichem Gharbi (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", "DEMO-MAINT", "fr",
+					List.of(new Grant(Role.DEPARTMENT_MANAGER, true, true))),
+			new DemoUser("budget.tn@demo.local", "Leila Mejri (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", null, "ar",
+					List.of(new Grant(Role.BUDGET_APPROVER, true, false))),
 			new DemoUser("requester.fr@demo.local", "Claire Martin (Demo)", "DEMO-FR-PLT", "DEMO-LYON", "DEMO-MAINT", "fr",
 					List.of(new Grant(Role.REQUESTER, true, false))),
-			new DemoUser("buyer@demo.local", "Youssef Gharbi (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH", "en",
+			new DemoUser("manager.fr@demo.local", "Julien Moreau (Demo)", "DEMO-FR-PLT", "DEMO-LYON", "DEMO-MAINT", "fr",
+					List.of(new Grant(Role.DEPARTMENT_MANAGER, true, true))),
+			new DemoUser("buyer@demo.local", "Ines Jaziri (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH", "en",
 					List.of(new Grant(Role.BUYER, true, false))),
-			new DemoUser("purchasing.manager@demo.local", "Nadia Mansour (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH",
+			new DemoUser("purchasing.manager@demo.local", "Mehdi Khelifi (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH",
 					"en", List.of(new Grant(Role.PURCHASING_MANAGER, true, false))),
 			new DemoUser("ceo@demo.local", "Hedi Ferchichi (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
-					List.of(new Grant(Role.GROUP_MANAGEMENT, false, false))),
+					List.of(new Grant(Role.GROUP_MANAGEMENT, false, false),
+							new Grant(Role.MANAGEMENT_APPROVER, "DEMO-TN-PLT"),
+							new Grant(Role.MANAGEMENT_APPROVER, "DEMO-FR-PLT"))),
 			new DemoUser("admin@demo.local", "Platform Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
 					List.of(new Grant(Role.ADMIN, false, false))));
 
@@ -136,9 +146,11 @@ class DemoUserSeeder implements ApplicationRunner {
 		credentials.savePasswordHash(userId, passwordHash);
 		jdbc.update("DELETE FROM user_role WHERE user_id = ?", userId);
 		for (Grant grant : user.grants()) {
+			Long grantCompany = grant.companyCode() != null
+					? jdbc.queryForObject("SELECT id FROM company WHERE code = ?", Long.class, grant.companyCode())
+					: grant.companyScoped() ? companyId : null;
 			jdbc.update("INSERT INTO user_role (user_id, role, company_id, department_id) VALUES (?, ?, ?, ?)", userId,
-					grant.role().name(), grant.companyScoped() ? companyId : null,
-					grant.departmentScoped() ? departmentId : null);
+					grant.role().name(), grantCompany, grant.departmentScoped() ? departmentId : null);
 		}
 	}
 
@@ -155,7 +167,20 @@ class DemoUserSeeder implements ApplicationRunner {
 			String language, List<Grant> grants) {
 	}
 
-	record Grant(Role role, boolean companyScoped, boolean departmentScoped) {
+	/**
+	 * A grant in the user's own company ({@code companyScoped}), or in another company of the group when
+	 * {@code companyCode} is set (e.g. management approval for a subsidiary).
+	 */
+	record Grant(Role role, boolean companyScoped, boolean departmentScoped, String companyCode) {
+
+		Grant(Role role, boolean companyScoped, boolean departmentScoped) {
+			this(role, companyScoped, departmentScoped, null);
+		}
+
+		Grant(Role role, String companyCode) {
+			this(role, true, false, companyCode);
+		}
+
 	}
 
 }

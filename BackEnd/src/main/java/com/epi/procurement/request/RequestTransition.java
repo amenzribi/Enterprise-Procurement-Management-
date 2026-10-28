@@ -62,6 +62,12 @@ class RequestTransition {
 	}
 
 	RequestTransition(long requestId, RequestStatus fromStatus, RequestStatus toStatus, Long ownerUserId,
+			long actorUserId, Instant occurredAt, String comment) {
+		this(requestId, fromStatus, toStatus, ownerUserId, actorUserId, occurredAt);
+		this.comment = comment;
+	}
+
+	RequestTransition(long requestId, RequestStatus fromStatus, RequestStatus toStatus, Long ownerUserId,
 			long actorUserId, Instant occurredAt) {
 		this.requestId = requestId;
 		this.fromStatus = fromStatus;

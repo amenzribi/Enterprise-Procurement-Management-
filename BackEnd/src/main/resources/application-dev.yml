@@ -10,6 +10,10 @@ spring:
 app:
   security:
     cookie-secure: false
+  # QA hooks (A1, A2): on-demand jobs and an adjustable clock via /api/v1/testing (administrators only).
+  testing:
+    endpoints: true
+    adjustable-clock: true
 
 springdoc:
   api-docs:

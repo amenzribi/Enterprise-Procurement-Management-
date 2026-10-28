@@ -85,6 +85,21 @@ public class OrganizationDirectory {
 	}
 
 	/**
+	 * The company's working week in its time zone (approval SLAs). Defaults to Mon-Fri 08:00-17:00 UTC when the
+	 * company is unknown.
+	 */
+	public WorkingCalendar workingCalendar(long companyId) {
+		return jdbc.query("SELECT time_zone, work_days, work_start, work_end FROM company WHERE id = ?",
+				(rs, i) -> WorkingCalendar.of(rs.getString("time_zone"), rs.getString("work_days"),
+						rs.getObject("work_start", java.time.LocalTime.class),
+						rs.getObject("work_end", java.time.LocalTime.class)), companyId)
+			.stream()
+			.findFirst()
+			.orElse(WorkingCalendar.of("UTC", "MON,TUE,WED,THU,FRI", java.time.LocalTime.of(8, 0),
+					java.time.LocalTime.of(17, 0)));
+	}
+
+	/**
 	 * A company of the group as seen by other modules.
 	 */
 	public record CompanyRef(long id, long groupId, String code, String name, CompanyType type, String currencyCode,

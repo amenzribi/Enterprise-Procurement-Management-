@@ -19,7 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/api/v1/me")
 class MeController {
 
-	private static final Set<String> LANGUAGES = Set.of("en", "fr");
+	private static final Set<String> LANGUAGES = Set.of("en", "fr", "ar");
 
 	private final CurrentUserProvider currentUser;
 

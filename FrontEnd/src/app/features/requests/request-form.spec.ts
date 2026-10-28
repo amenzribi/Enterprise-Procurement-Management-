@@ -1,4 +1,5 @@
 import { Dialog } from '@angular/cdk/dialog';
+import { SubmitPreviewDialog } from '../approvals/submit-preview-dialog';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
@@ -121,7 +122,11 @@ describe('RequestFormPage', () => {
     page.form.markAsDirty();
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The attachments panel of a saved request loads its list on its own (S2-AC-12).
+    http.match((request) => request.url.endsWith('/attachments')).forEach((request) => request.flush([]));
+    http.verify();
+  });
 
   it('starts a new request with the user, their department and the company currency', async () => {
     await create();
@@ -214,6 +219,8 @@ describe('RequestFormPage', () => {
     expect(put.request.body.version).toBe(3);
     put.flush(saved({ version: 4 }));
 
+    // The approval preview is shown for the saved request before submitting (S2DR-17).
+    expect(confirm).toHaveBeenCalledWith(SubmitPreviewDialog, expect.objectContaining({ data: { requestId: 101 } }));
     const submit = http.expectOne('/api/v1/requests/101/submit');
     expect(submit.request.body).toEqual({ version: 4 });
     submit.flush(saved({ status: 'CREATED', number: 'DEMO-TN-PLT-PR-2026-000001', version: 5, actions: [] }));

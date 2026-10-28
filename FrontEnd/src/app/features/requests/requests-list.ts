@@ -16,7 +16,7 @@ import { Icon } from '../../shared/ui/icon';
 import { PageHeader } from '../../shared/ui/page-header';
 import { Skeleton } from '../../shared/ui/skeleton';
 import { StatusBadge } from '../../shared/ui/status-badge';
-import { formatMoney } from './money';
+import { formatMoney, minorUnitsOf } from './money';
 import {
   Page,
   RequestListItem,
@@ -25,7 +25,7 @@ import {
   SortColumn,
   SortDirection,
 } from './request.models';
-import { REQUEST_STATUSES, statusKey, statusTone } from './request-status';
+import { USER_STATUSES, statusKey, userStatusKey, userStatusOf, userStatusTone } from './request-status';
 import { RequestsApi } from './requests.api';
 
 export const PAGE_SIZE = 20;
@@ -38,7 +38,6 @@ type ListState =
   | { kind: 'loaded'; page: Page<RequestListItem> };
 
 /** Minor units of the currencies seen in demo data; others fall back to 2 for list display. */
-const MINOR_UNITS: Record<string, number> = { TND: 3, EUR: 2, USD: 2, JPY: 0, GBP: 2 };
 
 /** Reads list state from the URL so filters, sorting and paging survive reload and back navigation. */
 export function queryFromParams(params: ParamMap): RequestQuery {
@@ -48,7 +47,7 @@ export function queryFromParams(params: ParamMap): RequestQuery {
   const status = params.get('status');
   return {
     scope: params.get('scope') === 'visible' ? 'visible' : 'mine',
-    status: status && (REQUEST_STATUSES as readonly string[]).includes(status) ? status : null,
+    status: status && (USER_STATUSES as readonly string[]).includes(status) ? status : null,
     q: params.get('q')?.trim().slice(0, MAX_SEARCH_LENGTH) || null,
     sort: (SORTABLE_COLUMNS as readonly string[]).includes(sort ?? '') ? (sort as SortColumn) : 'updatedAt',
     direction: direction === 'asc' ? 'asc' : 'desc',
@@ -77,7 +76,8 @@ export class RequestsListPage {
     () => hasPermission(this.auth.me(), 'REQUEST_VIEW_DEPARTMENT') || hasPermission(this.auth.me(), 'REQUEST_VIEW_GROUP'),
   );
 
-  protected readonly statuses = REQUEST_STATUSES;
+  /** The filter offers the twelve user-facing statuses (Solution Guide v3.0 §8). */
+  protected readonly statuses = USER_STATUSES;
   protected readonly maxSearchLength = MAX_SEARCH_LENGTH;
   protected readonly columns: { key: SortColumn; label: string; numeric?: boolean }[] = [
     { key: 'number', label: 'requests.list.columns.number' },
@@ -204,20 +204,25 @@ export class RequestsListPage {
     return query.direction === 'asc' ? 'ascending' : 'descending';
   }
 
-  protected tone(status: string) {
-    return statusTone(status);
+  protected tone(item: RequestListItem) {
+    return userStatusTone(userStatusOf(item));
   }
 
-  protected statusLabel(status: string): string {
-    return statusKey(status);
+  /** Label of a request's user-facing status (or of a filter value). */
+  protected statusLabel(item: RequestListItem | string): string {
+    if (typeof item === 'string') {
+      return userStatusKey(item);
+    }
+    const status = userStatusOf(item);
+    return status ? userStatusKey(status) : statusKey(item.status);
   }
 
   protected total(item: RequestListItem): string {
-    return formatMoney(item.totalAmount ?? null, item.currency, MINOR_UNITS[item.currency] ?? 2, this.locale());
+    return formatMoney(item.totalAmount ?? null, item.currency, minorUnitsOf(item.currency), this.locale());
   }
 
   protected locale(): string {
-    return this.language.current() === 'fr' ? 'fr-FR' : 'en-GB';
+    return this.language.locale();
   }
 
   private effectiveQuery(): RequestQuery {

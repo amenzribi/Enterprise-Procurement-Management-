@@ -4,7 +4,8 @@ import { Language, LanguageService, SUPPORTED_LANGUAGES } from '../../core/i18n/
 import { Icon } from './icon';
 
 /**
- * Language switcher. Each language is labelled in its own language so users can always find theirs.
+ * Language switcher (العربية / Français / English). Each language is labelled in its own language so users can always
+ * find theirs.
  */
 @Component({
   selector: 'app-language-select',
@@ -21,7 +22,7 @@ import { Icon } from './icon';
           [attr.aria-pressed]="language === languageService.current()"
           (click)="select(language)"
         >
-          <span aria-hidden="true">{{ language.toUpperCase() }}</span>
+          <span aria-hidden="true">{{ shortLabels[language] }}</span>
           <span class="visually-hidden">{{ 'language.names.' + language | translate }}</span>
         </button>
       }
@@ -78,6 +79,17 @@ import { Icon } from './icon';
       color: var(--color-text-inverse);
     }
 
+    @media (max-width: 29.99rem) {
+      .globe {
+        display: none;
+      }
+
+      .option {
+        min-inline-size: 2.25rem;
+        padding-inline: var(--space-1);
+      }
+    }
+
     .switch-error {
       position: absolute;
       inset-block-start: calc(100% + var(--space-1));
@@ -97,6 +109,8 @@ import { Icon } from './icon';
 export class LanguageSelect {
   protected readonly languageService = inject(LanguageService);
   protected readonly languages = SUPPORTED_LANGUAGES;
+  /** Visible short labels, each written in its own language; the full name is announced to screen readers. */
+  protected readonly shortLabels: Record<Language, string> = { ar: 'عربي', fr: 'FR', en: 'EN' };
 
   protected select(language: Language): void {
     if (language !== this.languageService.current()) {

@@ -47,7 +47,7 @@ class RequestApiIntegrationTests extends SqlServerTestSupport {
 		long id = created.id();
 		assertThat((String) created.json("$.status")).isEqualTo("DRAFT");
 		assertThat((Object) created.json("$.number")).isNull();
-		assertThat((String) created.json("$.enteredBy.displayName")).isEqualTo("Leila Trabelsi (Demo)");
+		assertThat((String) created.json("$.enteredBy.displayName")).isEqualTo("Amel Trabelsi (Demo)");
 		assertThat(((Number) created.json("$.requester.id")).longValue()).isEqualTo(requesterId);
 		assertThat(((Number) created.json("$.currentOwner.id")).longValue()).isEqualTo(requesterId);
 		assertThat((String) created.json("$.chargedCompany.code")).isEqualTo("DEMO-TN-PLT");
@@ -75,12 +75,14 @@ class RequestApiIntegrationTests extends SqlServerTestSupport {
 		ApiClient.Response submitted = requester
 			.post("/api/v1/requests/" + id + "/submit", "{\"version\":" + edited.version() + "}")
 			.expectStatus(200);
-		assertThat((String) submitted.json("$.status")).isEqualTo("CREATED");
+		// Sprint 2: a submission enters the approval circuit (shown to users as "Submitted").
+		assertThat((String) submitted.json("$.status")).isEqualTo("IN_APPROVAL");
+		assertThat((String) submitted.json("$.userStatus")).isEqualTo("SUBMITTED");
 		assertThat((String) submitted.json("$.number")).matches("DEMO-TN-PLT-PR-\\d{4}-\\d{6}");
 		assertThat((String) submitted.json("$.submittedAt")).isNotBlank();
-		assertThat((String) submitted.json("$.stage")).isEqualTo("REQUEST");
+		assertThat((String) submitted.json("$.stage")).isEqualTo("APPROVAL");
 		assertThat((List<String>) submitted.json("$.lines[*].status")).containsOnly("CREATED");
-		assertThat((List<String>) submitted.json("$.transitions[*].toStatus")).containsExactly("DRAFT", "CREATED");
+		assertThat((List<String>) submitted.json("$.transitions[*].toStatus")).containsExactly("DRAFT", "IN_APPROVAL");
 		assertThat((List<String>) submitted.json("$.actions")).isEmpty();
 
 		// No second submission, no edit, no discard after submission.

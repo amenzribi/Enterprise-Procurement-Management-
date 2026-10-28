@@ -398,6 +398,27 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 	}
 
 	/**
+	 * S1CR-09: after commit and after rollback the application lock is released and no transaction stays open on
+	 * the pooled connection.
+	 */
+	@Test
+	void applicationLocksDoNotOutliveTheirTransaction(@Autowired TransactionLocks locks) {
+		TransactionTemplate tx = new TransactionTemplate(transactionManager);
+		tx.executeWithoutResult(status -> locks.lockExclusively("s1cr09-resource"));
+		tx.executeWithoutResult(status -> {
+			locks.lockExclusively("s1cr09-resource");
+			status.setRollbackOnly();
+		});
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys.dm_tran_locks WHERE resource_type = 'APPLICATION' "
+				+ "AND resource_description LIKE '%s1cr09%'", Integer.class)).isZero();
+		for (int i = 0; i < 5; i++) {
+			assertThat(jdbc.queryForObject("SELECT @@TRANCOUNT", Integer.class)).isZero();
+		}
+		// A third transaction gets the lock immediately.
+		tx.executeWithoutResult(status -> locks.lockExclusively("s1cr09-resource"));
+	}
+
+	/**
 	 * CR-25: an event positioned after the chain head (head rewound by someone able to bypass the triggers) makes
 	 * the chain invalid.
 	 */

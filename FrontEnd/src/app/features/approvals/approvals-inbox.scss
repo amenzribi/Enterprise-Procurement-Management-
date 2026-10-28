@@ -1,0 +1,202 @@
+:host {
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-block-end: var(--space-5);
+}
+
+.tabs {
+  display: inline-flex;
+  padding: 0.1875rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.25rem;
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.tab[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.tab-count {
+  min-inline-size: 1.25rem;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-accent-hover);
+  font-size: var(--text-xs);
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.field {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.field input,
+.field select {
+  min-block-size: 2.5rem;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.field input {
+  min-inline-size: min(18rem, 100%);
+  padding-inline-start: 2.25rem;
+}
+
+.field-icon {
+  position: absolute;
+  inset-block-end: 0.75rem;
+  inset-inline-start: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.cards {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-line);
+  border-inline-start: 4px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.card.is-overdue-card {
+  border-inline-start-color: var(--color-danger);
+}
+
+.card-main {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.card-number {
+  color: var(--color-accent-hover);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.card-title {
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+
+.card-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-title a:hover {
+  text-decoration: underline;
+}
+
+.card-meta {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+}
+
+.card-side {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: var(--space-1);
+  text-align: end;
+}
+
+.amount {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.amount-secondary,
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.when.is-overdue {
+  color: var(--color-danger);
+}
+
+.card-side a {
+  margin-block-start: var(--space-2);
+}
+
+@media (max-width: 35.99rem) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-4);
+  }
+
+  .card-side {
+    justify-items: start;
+    text-align: start;
+  }
+
+  .card-side a {
+    justify-self: stretch;
+    min-block-size: 2.75rem;
+  }
+
+  .toolbar,
+  .field input {
+    inline-size: 100%;
+  }
+
+  .field {
+    flex: 1 1 100%;
+  }
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}

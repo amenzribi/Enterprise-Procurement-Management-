@@ -34,7 +34,7 @@
     </div>
 
     <nav class="nav" [attr.aria-label]="'shell.mainNavigation' | translate">
-      @for (group of navigation; track group.key) {
+      @for (group of navigation(); track group.key) {
         <div class="nav-group">
           <h2 class="nav-group-title" [id]="'nav-group-' + group.key">{{ 'nav.groups.' + group.key | translate }}</h2>
           <ul class="nav-list" [attr.aria-labelledby]="'nav-group-' + group.key">
@@ -50,6 +50,12 @@
                 >
                   <app-icon class="nav-icon" [name]="item.icon" />
                   <span class="nav-label">{{ 'nav.items.' + item.key | translate }}</span>
+                  @if (item.badge === 'approvals' && approvalCount.count() > 0) {
+                    <span class="nav-badge tabular">
+                      {{ approvalCount.count() }}
+                      <span class="visually-hidden">{{ 'nav.pendingCount' | translate: { count: approvalCount.count() } }}</span>
+                    </span>
+                  }
                   @if (item.plannedSprint) {
                     <span class="nav-planned">
                       {{ 'nav.plannedSprint' | translate: { sprint: item.plannedSprint } }}
@@ -103,6 +109,7 @@
           <app-status-badge tone="info">{{ 'shell.environment.development' | translate }}</app-status-badge>
         }
         <app-language-select />
+        <app-notification-bell />
         <app-user-menu />
       </div>
     </header>

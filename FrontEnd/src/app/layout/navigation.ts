@@ -1,3 +1,4 @@
+import { Permission } from '../core/auth/auth.models';
 import { IconName } from '../shared/ui/icon';
 
 /**
@@ -13,6 +14,10 @@ export interface NavItem {
   route?: string;
   /** Target sprint of a module that is not available yet. */
   plannedSprint?: number;
+  /** Shown only to users holding this permission (the server enforces access regardless). */
+  permission?: Permission;
+  /** Shows the number of decisions waiting for the user (S2-AC-08). */
+  badge?: 'approvals';
 }
 
 export interface NavGroup {
@@ -32,7 +37,7 @@ export const NAVIGATION: NavGroup[] = [
     key: 'requestToOrder',
     items: [
       { key: 'requests', icon: 'file-plus', route: '/requests' },
-      { key: 'approvals', icon: 'circle-check', plannedSprint: 2 },
+      { key: 'approvals', icon: 'circle-check', route: '/approvals', badge: 'approvals' },
       { key: 'purchasingInbox', icon: 'inbox', plannedSprint: 3 },
       { key: 'sourcing', icon: 'scale', plannedSprint: 4 },
     ],
@@ -41,19 +46,21 @@ export const NAVIGATION: NavGroup[] = [
     key: 'orderToReceipt',
     items: [
       { key: 'purchaseOrders', icon: 'file-text', plannedSprint: 5 },
-      { key: 'logistics', icon: 'truck', plannedSprint: 5 },
-      { key: 'receipts', icon: 'package-check', plannedSprint: 6 },
+      { key: 'logistics', icon: 'truck', plannedSprint: 6 },
+      { key: 'receipts', icon: 'package-check', plannedSprint: 7 },
     ],
   },
   {
     key: 'management',
-    items: [{ key: 'dashboards', icon: 'dashboard', plannedSprint: 7 }],
+    items: [{ key: 'dashboards', icon: 'dashboard', plannedSprint: 8 }],
   },
   {
     key: 'administration',
     items: [
-      { key: 'organization', icon: 'building', plannedSprint: 2 },
-      { key: 'suppliers', icon: 'users', plannedSprint: 4 },
+      { key: 'approvalRules', icon: 'settings', route: '/admin/approval-rules', permission: 'SYSTEM_ADMIN' },
+      { key: 'exchangeRates', icon: 'coins', route: '/admin/exchange-rates', permission: 'SYSTEM_ADMIN' },
+      { key: 'organization', icon: 'building', plannedSprint: 3 },
+      { key: 'suppliers', icon: 'users', plannedSprint: 3 },
     ],
   },
 ];

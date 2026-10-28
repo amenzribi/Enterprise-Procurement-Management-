@@ -54,8 +54,12 @@ class MeAssembler {
 		if (user.hasRole(Role.GROUP_MANAGEMENT)) {
 			permissions.add("REQUEST_VIEW_GROUP");
 		}
+		if (user.grants().stream().anyMatch(g -> g.role().isApproverRole())) {
+			permissions.add("APPROVAL_ACT");
+		}
 		if (user.hasRole(Role.ADMIN)) {
 			permissions.add("SYSTEM_ADMIN");
+			permissions.add("APPROVAL_ADMIN");
 		}
 		return permissions;
 	}

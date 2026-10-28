@@ -1,6 +1,22 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import {
   Activity,
+  ArrowRight,
+  Ban,
+  Bell,
+  CalendarDays,
+  CheckCheck,
+  Coins,
+  Download,
+  Forward,
+  Hourglass,
+  Mail,
+  MessageCircleQuestionMark,
+  Paperclip,
+  Reply,
+  Settings,
+  Undo2,
+  Upload,
   ArrowDown,
   ArrowLeft,
   ArrowUp,
@@ -52,6 +68,22 @@ import {
 // Icons from Lucide (ISC licence). Only the icons listed here are bundled.
 const ICONS = {
   activity: Activity,
+  'arrow-right': ArrowRight,
+  ban: Ban,
+  bell: Bell,
+  calendar: CalendarDays,
+  'check-check': CheckCheck,
+  coins: Coins,
+  download: Download,
+  forward: Forward,
+  hourglass: Hourglass,
+  mail: Mail,
+  question: MessageCircleQuestionMark,
+  paperclip: Paperclip,
+  reply: Reply,
+  settings: Settings,
+  undo: Undo2,
+  upload: Upload,
   'arrow-down': ArrowDown,
   'arrow-left': ArrowLeft,
   'arrow-up': ArrowUp,
@@ -101,6 +133,22 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
+/** Icons that point in the reading direction; they are mirrored in right-to-left languages (S2-AC-01). */
+const DIRECTIONAL: ReadonlySet<IconName> = new Set<IconName>([
+  'arrow-left',
+  'arrow-right',
+  'chevron-left',
+  'chevron-right',
+  'panel-left-close',
+  'panel-left-open',
+  'send',
+  'forward',
+  'reply',
+  'undo',
+  'log-in',
+  'log-out',
+]);
+
 /**
  * Decorative SVG icon. Always pair it with visible text or an accessible label on the parent control.
  */
@@ -117,6 +165,7 @@ export type IconName = keyof typeof ICONS;
       stroke-linecap="round"
       stroke-linejoin="round"
       focusable="false"
+      [class.is-directional]="directional()"
       [attr.width]="size()"
       [attr.height]="size()"
       [attr.stroke-width]="strokeWidth()"
@@ -143,6 +192,10 @@ export type IconName = keyof typeof ICONS;
       flex-shrink: 0;
       line-height: 0;
     }
+
+    :host-context([dir='rtl']) .is-directional {
+      transform: scaleX(-1);
+    }
   `,
 })
 export class Icon {
@@ -150,5 +203,6 @@ export class Icon {
   readonly size = input(18);
   readonly strokeWidth = input(1.75);
 
+  protected readonly directional = computed(() => DIRECTIONAL.has(this.name()));
   protected readonly nodes = computed(() => ICONS[this.name()] as unknown as [string, Record<string, string>][]);
 }

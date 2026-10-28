@@ -36,11 +36,11 @@
       <header class="dossier">
         <div class="dossier-main">
           <p class="dossier-number tabular" [class.is-draft]="!r.number">
-            {{ r.number ?? ('requests.list.draftNumber' | translate) }}
+            <bdi>{{ r.number ?? ('requests.list.draftNumber' | translate) }}</bdi>
           </p>
           <h1 class="title" tabindex="-1">{{ r.title }}</h1>
           <div class="dossier-status">
-            <app-status-badge [tone]="tone(r.status)">{{ statusLabel(r.status) | translate }}</app-status-badge>
+            <app-status-badge [tone]="tone()">{{ statusLabel() | translate }}</app-status-badge>
             @if (r.priority === 'URGENT') {
               <app-status-badge tone="danger">{{ 'requests.priority.URGENT' | translate }}</app-status-badge>
             }
@@ -81,21 +81,26 @@
             @if (actions().includes('SUBMIT')) {
               <button appButton type="button" [disabled]="submitting()" (click)="submit()">
                 <app-icon name="send" [size]="16" />
-                {{ (submitting() ? 'requests.form.submitting' : 'requests.form.submit') | translate }}
+                {{ (submitting() ? 'requests.form.submitting' : (userStatus() === 'RETURNED' ? 'requests.detail.resubmit' : 'requests.form.submit')) | translate }}
               </button>
             }
             @if (actions().includes('EDIT')) {
               <a appButton variant="secondary" [routerLink]="['/requests', r.id, 'edit']">
                 <app-icon name="pencil" [size]="16" />
-                {{ 'requests.detail.edit' | translate }}
+                {{ (userStatus() === 'RETURNED' ? 'requests.detail.editReturned' : 'requests.detail.edit') | translate }}
               </a>
             }
           </div>
         }
       </header>
 
+      <!-- The approver's decision and the requester's answer come first, above the details (mobile-first, S2-AC-08). -->
+      <app-approval-actions class="decide" [requestId]="r.id" [approval]="approval()" (changed)="onApprovalChanged($event)" />
+
       <div class="columns">
         <div class="main">
+          <app-approval-tracker [userStatus]="userStatus()" [approval]="approval()" [locale]="locale()" [now]="now()" />
+
           <section class="panel" aria-labelledby="detail-lines">
             <h2 class="panel-title" id="detail-lines">{{ 'requests.form.sections.lines' | translate }}</h2>
             <!-- Scrolls sideways on phones: focusable and named so keyboard users can scroll it too. -->
@@ -196,6 +201,8 @@
               </dl>
             </section>
           }
+
+          <app-attachments [requestId]="r.id" [editable]="actions().includes('EDIT')" />
         </div>
 
         <div class="side">

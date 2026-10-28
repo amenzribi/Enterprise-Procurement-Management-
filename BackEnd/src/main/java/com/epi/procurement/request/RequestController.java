@@ -57,7 +57,8 @@ class RequestController {
 	@GetMapping("/statuses")
 	List<RequestViews.StatusInfo> statuses() {
 		return Arrays.stream(RequestStatus.values())
-			.map(s -> new RequestViews.StatusInfo(s.name(), s.rank(), s.stage().name(), s.isLineStatus()))
+			.map(s -> new RequestViews.StatusInfo(s.name(), s.rank(), s.stage().name(), s.isLineStatus(),
+					s.userStatus().name()))
 			.toList();
 	}
 

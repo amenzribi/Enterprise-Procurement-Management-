@@ -7,7 +7,8 @@
     "label": "Display language",
     "names": {
       "en": "English",
-      "fr": "Français"
+      "fr": "Français",
+      "ar": "العربية"
     },
     "loadFailed": "{{language}} could not be loaded. The previous language is kept.",
     "saveFailed": "Your language choice could not be saved to your account. It still applies in this browser."
@@ -44,9 +45,12 @@
       "organization": "Organisation",
       "suppliers": "Suppliers",
       "logistics": "Logistics",
-      "dashboards": "Dashboards"
+      "dashboards": "Dashboards",
+      "approvalRules": "Approval rules",
+      "exchangeRates": "Exchange rates"
     },
-    "plannedSprint": "Sprint {{sprint}}"
+    "plannedSprint": "Sprint {{sprint}}",
+    "pendingCount": "{{count}} waiting for your decision"
   },
   "overview": {
     "title": "Procurement Intelligence",
@@ -55,11 +59,12 @@
       "title": "Available in this version",
       "items": {
         "shell": "Responsive workspace for desktop, tablet and phone",
-        "languages": "English and French, switchable at any time",
+        "languages": "Arabic, French and English, switchable at any time",
         "statusCheck": "Live check of the connection to the server and database",
         "signIn": "Sign-in with session expiry and a saved language preference",
         "requests": "Create, save and submit multi-line purchase requests with a unique number",
-        "isolation": "Each user sees only the requests of their company and role"
+        "isolation": "Each user sees only the requests of their company and role",
+        "approvals": "Approval circuits per company, one-tap approval from e-mail and a request tracker"
       },
       "checkConnection": "Check the connection",
       "openRequests": "Open my requests"
@@ -196,7 +201,26 @@
     "invalid-state": "This request can no longer be changed.",
     "invalid-request": "The request could not be understood. Reload the page and try again.",
     "invalid-parameter": "A filter or sort value is not valid. Reset the filters and try again.",
-    "csrf-invalid": "Your security token expired. Try again."
+    "csrf-invalid": "Your security token expired. Try again.",
+    "missing-exchange-rate": "No exchange rate is recorded for this currency at this date. Ask an administrator to add it.",
+    "no-approval-rule": "No approval rule applies to this request. Ask an administrator to configure one.",
+    "ambiguous-approval-rule": "Several approval rules overlap. An administrator must correct them.",
+    "no-eligible-approver": "No one is available to approve this request. Company administrators have been informed.",
+    "task-not-pending": "This decision has already been taken or reassigned.",
+    "reason-required": "Give a reason.",
+    "delegate-not-eligible": "This person cannot receive the approval.",
+    "absence-overlap": "This period overlaps another absence.",
+    "link-invalid": "This link is no longer valid.",
+    "file-too-large": "The file is larger than 20 MB.",
+    "file-type-not-allowed": "This type of file is not accepted.",
+    "too-many-files": "This request already has the maximum number of files.",
+    "busy": "The system is busy with another operation. Try again in a moment.",
+    "question-already-open": "A question is already waiting for the requester's answer.",
+    "no-open-question": "There is no open question to answer.",
+    "too-many-requests": "Too many attempts. Wait a moment and try again.",
+    "idempotency-key-reused": "This action was already sent with different content. Reload the page and try again.",
+    "attachment-limit-reached": "This request has reached the limit of 30 files or 100 MB.",
+    "file-infected": "The virus check refused this file."
   },
   "auth": {
     "signOut": "Sign out",
@@ -210,7 +234,9 @@
       "BUYER": "Buyer",
       "PURCHASING_MANAGER": "Purchasing manager",
       "GROUP_MANAGEMENT": "Group management",
-      "ADMIN": "Administrator"
+      "ADMIN": "Administrator",
+      "BUDGET_APPROVER": "Budget approver",
+      "MANAGEMENT_APPROVER": "Management approver"
     },
     "sessionWarning": {
       "title": "Your session is about to expire",
@@ -305,13 +331,13 @@
     },
     "form": {
       "newTitle": "New purchase request",
-      "editTitle": "Edit draft request",
+      "editTitle": "Edit request",
       "description": "Save a draft at any time. Fields marked * are required to submit.",
       "loading": "Loading the form…",
       "loadError": "The form could not be loaded",
       "notEditable": {
         "title": "This request can no longer be edited",
-        "message": "Only drafts can be edited, by the requester or the person who entered them."
+        "message": "Only drafts and requests returned for revision can be edited, by the requester or the person who entered them."
       },
       "viewRequest": "View the request",
       "restore": {
@@ -344,7 +370,7 @@
       "submitting": "Submitting…",
       "saveDraft": "Save draft",
       "saving": "Saving…",
-      "submitNote": "Submitting gives the request its number. It can no longer be edited afterwards.",
+      "submitNote": "Submitting gives the request its number and starts its approval. It can be edited again only if an approver returns it.",
       "saved": "Draft saved",
       "leave": {
         "title": "Leave without saving?",
@@ -419,7 +445,7 @@
     },
     "submit": {
       "title": "Submit this request?",
-      "message": "It will receive its number and can no longer be edited.",
+      "message": "It will receive its number and go to your company’s approval circuit.",
       "confirm": "Submit request",
       "done": "Request {{number}} submitted",
       "incomplete": "Complete the required fields before submitting."
@@ -477,7 +503,9 @@
       "created": "Created as {{to}}",
       "by": "by {{name}}",
       "ownerAfter": "Responsible afterwards: {{name}}",
-      "noHistory": "No history yet."
+      "noHistory": "No history yet.",
+      "resubmit": "Resubmit request",
+      "editReturned": "Correct the request"
     },
     "status": {
       "DRAFT": "Draft",
@@ -510,7 +538,8 @@
       "PAYMENT_PENDING": "Payment pending",
       "PAID": "Paid",
       "CLOSED": "Closed",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "AWARDED": "Awarded"
     },
     "stages": {
       "REQUEST": "Creation",
@@ -523,6 +552,376 @@
       "RECEIPT": "Receipt",
       "FINANCE": "Finance",
       "CLOSURE": "Closure"
+    },
+    "userStatus": {
+      "DRAFT": "Draft",
+      "SUBMITTED": "Submitted",
+      "RETURNED": "Returned for revision",
+      "REJECTED": "Rejected",
+      "APPROVED": "Approved",
+      "ASSIGNED": "Assigned",
+      "QUOTING": "Quoting",
+      "AWARDED": "Awarded",
+      "ORDERED": "Ordered",
+      "IN_TRANSIT": "In transit",
+      "RECEIVED": "Received",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
     }
+  },
+  "tracker": {
+    "title": "Where is this request?",
+    "stepState": {
+      "done": "completed",
+      "current": "current step",
+      "upcoming": "not reached yet",
+      "returned": "returned for revision",
+      "rejected": "rejected"
+    },
+    "waitingFor": "Waiting for {{names}}",
+    "since": "since {{elapsed}}",
+    "due": "Due {{when}}",
+    "overdue": "Overdue — was due {{when}}",
+    "approvalCircuit": "Approval circuit",
+    "round": "Round {{round}}",
+    "amountForApproval": "Amount used for approval:",
+    "rate": "rate {{rate}} of {{date}}",
+    "earlierRounds": "Earlier approval rounds ({{count}})",
+    "outcome": {
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "RETURNED": "Returned for revision",
+      "CANCELLED": "Cancelled",
+      "ACTIVE": "In progress"
+    },
+    "approverType": {
+      "DEPARTMENT_MANAGER": "Department manager",
+      "BUDGET_APPROVER": "Budget approver",
+      "MANAGEMENT_APPROVER": "Management approval",
+      "NAMED_USER": "Named approver"
+    },
+    "policy": {
+      "ANY": "One approval is enough",
+      "ALL": "Everyone must approve"
+    },
+    "stageStatus": {
+      "WAITING": "Not started",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "RETURNED": "Returned",
+      "SKIPPED": "Not needed",
+      "CANCELLED": "Cancelled",
+      "IN_PROGRESS": "In progress"
+    },
+    "taskStatus": {
+      "PENDING": "waiting",
+      "APPROVED": "approved",
+      "REJECTED": "rejected",
+      "RETURNED": "returned for revision",
+      "DELEGATED": "delegated",
+      "CANCELLED": "cancelled",
+      "SUPERSEDED": "no longer needed"
+    },
+    "onBehalfOf": "on behalf of {{name}}",
+    "delegatedTo": "to {{name}}",
+    "viaLink": "approved from the e-mail",
+    "question": "Question",
+    "answer": "Answer",
+    "questionSuperseded": "Closed by the decision.",
+    "awaitingAnswer": "Waiting for the requester's answer.",
+    "by": "by {{name}}",
+    "stepOf": "Step {{step}} of {{total}}: {{label}}"
+  },
+  "approvals": {
+    "inbox": {
+      "title": "To approve",
+      "description": "Requests waiting for your decision, the most urgent first.",
+      "filtersLabel": "Search and sort approvals",
+      "viewLabel": "Which approvals",
+      "views": {
+        "pending": "Waiting for me",
+        "decided": "Decided by me"
+      },
+      "search": "Search approvals",
+      "searchPlaceholder": "Search by number, title or requester",
+      "sorts": {
+        "dueAt": "Due date",
+        "amount": "Amount",
+        "waitingSince": "Waiting longest",
+        "number": "Request number",
+        "requiredDate": "Required by"
+      },
+      "loading": "Loading your approvals…",
+      "resultCount": "{{count}} approval(s)",
+      "loadError": "Your approvals could not be loaded",
+      "noMatch": {
+        "title": "No approval matches this search",
+        "message": "Change or clear the search."
+      },
+      "empty": {
+        "pending": {
+          "title": "Nothing to approve",
+          "message": "Requests appear here as soon as your decision is needed. You are also notified by e-mail."
+        },
+        "decided": {
+          "title": "No decisions yet",
+          "message": "The requests you approve, return or reject are listed here."
+        }
+      },
+      "informationRequested": "Question asked",
+      "waiting": "Waiting {{elapsed}}",
+      "review": "Review and decide"
+    },
+    "decide": {
+      "title": "Your decision",
+      "delegateTo": "Delegate to",
+      "loadingDelegates": "Loading the people you can delegate to…",
+      "noDelegates": "No one can receive this approval.",
+      "questionLabel": "Your question to the requester",
+      "reasonLabel": "Reason",
+      "commentLabel": "Comment (optional)",
+      "questionRequired": "Write your question.",
+      "reasonRequired": "Give a reason. The requester will see it.",
+      "delegateRequired": "Choose who receives the approval.",
+      "sending": "Sending…"
+    },
+    "actions": {
+      "APPROVE": "Approve",
+      "QUESTION": "Ask a question",
+      "RETURN": "Return for revision",
+      "REJECT": "Reject",
+      "DELEGATE": "Delegate"
+    },
+    "confirm": {
+      "APPROVE": "Confirm approval",
+      "QUESTION": "Send the question",
+      "RETURN": "Return the request",
+      "REJECT": "Reject the request",
+      "DELEGATE": "Delegate the approval"
+    },
+    "hints": {
+      "APPROVE": "The request moves to the next approver, or to central purchasing if you are the last one.",
+      "QUESTION": "The request stays with you. Its deadline is paused until the requester answers.",
+      "RETURN": "The requester corrects the request and submits it again. Approval starts again from the first step.",
+      "REJECT": "Rejection is final. The request is closed.",
+      "DELEGATE": "The approval moves to this person and is recorded as delegated by you."
+    },
+    "done": {
+      "APPROVE": "Approved",
+      "QUESTION": "Question sent to the requester",
+      "RETURN": "Returned to the requester",
+      "REJECT": "Request rejected",
+      "DELEGATE": "Approval delegated"
+    },
+    "errors": {
+      "task-not-pending": "This decision has already been taken or reassigned. The page has been refreshed.",
+      "reason-required": "Give a reason.",
+      "delegate-not-eligible": "This person cannot receive the approval. Choose someone else.",
+      "stale-version": "This request changed in the meantime. The page has been refreshed.",
+      "invalid-state": "This request is no longer waiting for this decision.",
+      "forbidden": "You are not allowed to take this decision.",
+      "not-found": "This approval no longer exists or you do not have access to it.",
+      "question-already-open": "A question is already waiting for the requester's answer.",
+      "no-open-question": "There is no open question to answer. The page has been refreshed."
+    },
+    "answer": {
+      "title": "{{name}} asked a question",
+      "label": "Your answer",
+      "required": "Write your answer.",
+      "send": "Send the answer",
+      "sent": "Answer sent"
+    },
+    "preview": {
+      "loading": "Checking who will approve…",
+      "title": "Approval circuit"
+    }
+  },
+  "oneTap": {
+    "title": "Approval request",
+    "loading": "Opening the approval…",
+    "invalid": {
+      "title": "This link is no longer valid",
+      "message": "The decision may already have been taken, the link may have expired, or it was not meant for you. Open the application to see your approvals."
+    },
+    "unavailable": {
+      "title": "The service cannot be reached",
+      "message": "Check your connection and open the link again in a moment."
+    },
+    "approved": {
+      "title": "Approved",
+      "message": "Request {{number}} has been approved. Thank you."
+    },
+    "openApp": "Open the application",
+    "stage": "Approval step",
+    "approve": "Approve",
+    "review": "Review in the application",
+    "reviewHint": "To reject, return, ask a question or delegate, review the request in the application.",
+    "expires": "This link expires on",
+    "moreLines": "+{{count}} more line(s)"
+  },
+  "notifications": {
+    "open": "Notifications, {{count}} unread",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "loading": "Loading notifications…",
+    "loadError": "Notifications could not be loaded.",
+    "empty": "No notifications yet.",
+    "unread": "unread",
+    "exactCount": "{{count}} unread notifications"
+  },
+  "absences": {
+    "menu": "My absences",
+    "title": "My absences",
+    "description": "While you are away, new approvals go to your delegate and are marked as decided on your behalf.",
+    "new": "Plan an absence",
+    "delegate": "Delegate",
+    "startDate": "From",
+    "endDate": "To (inclusive)",
+    "reason": "Reason (optional)",
+    "datesRequired": "Enter the first and last day of the absence.",
+    "endBeforeStart": "The last day cannot be before the first day.",
+    "save": "Save the absence",
+    "planned": "Planned absences",
+    "loadError": "Your absences could not be loaded",
+    "empty": {
+      "title": "No absence planned",
+      "message": "Plan an absence so that your approvals are not delayed while you are away."
+    },
+    "delegatedTo": "Approvals go to {{name}}",
+    "remove": "Remove",
+    "removeTitle": "Remove this absence?",
+    "removeMessage": "New approvals will come to you again for this period.",
+    "saved": "Absence saved",
+    "removed": "Absence removed",
+    "errors": {
+      "absence-overlap": "This period overlaps another absence.",
+      "delegate-not-eligible": "This person cannot approve in your place. Choose someone with the same approval role.",
+      "self-delegation": "You cannot delegate to yourself.",
+      "invalid-period": "Check the dates of the absence.",
+      "save-failed": "The absence could not be saved. Try again."
+    },
+    "byAdmin": "Recorded by {{name}}"
+  },
+  "rules": {
+    "title": "Approval rules",
+    "description": "Who approves which request, by company, category, purchase type and amount in company currency.",
+    "new": "New rule",
+    "newTitle": "New approval rule",
+    "editTitle": "New version of “{{name}}”",
+    "newVersionNote": "Saving creates a new version. The active version stays in force until you activate the new one. Requests already in approval keep their version.",
+    "fields": {
+      "name": "Rule name",
+      "company": "Company",
+      "minAmount": "From amount (included)",
+      "maxAmount": "Up to amount (excluded)",
+      "approverType": "Approver",
+      "policy": "Decision",
+      "slaHours": "Deadline (working hours)",
+      "escalationRole": "Escalate to",
+      "stageName": "Step name (optional)",
+      "stageMinAmount": "Applies from amount (optional)",
+      "approverSearch": "Find the approver",
+      "approverUser": "Named approver"
+    },
+    "anyCategory": "Any category",
+    "anyPurchaseType": "Local or international",
+    "bandHint": "Amounts in the company's currency. Leave “Up to” empty for no upper limit.",
+    "stages": "Approval steps, in order",
+    "stageNumber": "Step {{number}}",
+    "removeStage": "Remove step {{number}}",
+    "addStage": "Add a step",
+    "save": "Save version",
+    "saved": "Rule version saved",
+    "loadError": "The approval rules could not be loaded",
+    "empty": {
+      "title": "No approval rule yet",
+      "message": "Requests cannot be submitted until each company has a rule."
+    },
+    "band": "{{min}} to {{max}} {{currency}}",
+    "bandOpen": "{{min}} {{currency}} and above",
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "RETIRED": "Retired"
+    },
+    "version": "Version {{version}}",
+    "sla": "{{hours}} h",
+    "activate": "Activate",
+    "activateTitle": "Activate this version?",
+    "activateMessage": "Version {{version}} of “{{name}}” will apply to new submissions. Requests already in approval keep their version.",
+    "activated": "“{{name}}” is active",
+    "newVersion": "New version",
+    "versions": "Versions",
+    "errors": {
+      "ambiguous-approval-rule": "This rule overlaps another active rule for the same company, category and purchase type. Adjust the amounts.",
+      "band": "Enter a valid amount band: the upper amount must be greater than the lower one.",
+      "invalid-value": "A value is not valid. Check the steps.",
+      "required": "Fill in the required fields.",
+      "not-in-company": "The named approver must belong to this group.",
+      "save-failed": "The rule could not be saved. Check the fields and try again."
+    },
+    "approverUserHint": "Only users of this company are listed.",
+    "used": "used by requests",
+    "retire": "Retire",
+    "retireTitle": "Retire this version?",
+    "retireMessage": "Version {{version}} of “{{name}}” will no longer apply to new submissions. Requests already in approval keep it.",
+    "retired": "“{{name}}” is retired",
+    "approverSearchPlaceholder": "Name or e-mail",
+    "chooseCompanyFirst": "Choose the company first."
+  },
+  "rates": {
+    "title": "Exchange rates",
+    "description": "Used to compare request amounts with approval thresholds in each company's currency. A recorded rate is never changed: add a new one to correct it.",
+    "new": "Add a rate",
+    "base": "Base currency",
+    "quote": "Quote currency",
+    "rate": "Rate",
+    "date": "Date",
+    "source": "Source (optional)",
+    "meaning": "1 {{base}} = {{rate}} {{quote}}",
+    "hint": "A rate gives how many units of the quote currency equal one unit of the base currency.",
+    "errors": {
+      "same-currency": "Choose two different currencies.",
+      "invalid": "Check the currencies, the rate and the date."
+    },
+    "add": "Add the rate",
+    "recorded": "Recorded rates",
+    "loadError": "The exchange rates could not be loaded",
+    "empty": {
+      "title": "No exchange rate yet",
+      "message": "Requests in a foreign currency need a rate to be submitted."
+    },
+    "pair": "Pair",
+    "saved": "Rate added"
+  },
+  "attachments": {
+    "title": "Attachments",
+    "uploading": "Uploading…",
+    "add": "Add a file",
+    "hint": "PDF, images, Word, Excel or PowerPoint (.docx, .xlsx, .pptx), text or CSV, up to {{max}} MB each.",
+    "loading": "Loading attachments…",
+    "loadError": "Attachments could not be loaded.",
+    "empty": "No attachment.",
+    "version": "version {{version}}",
+    "scanning": "virus check in progress",
+    "remove": "Remove {{name}}",
+    "removeTitle": "Remove this file?",
+    "removeMessage": "“{{name}}” will be removed from the request.",
+    "removeConfirm": "Remove the file",
+    "uploaded": "“{{name}}” added",
+    "removed": "“{{name}}” removed",
+    "saveFirst": "Save the draft to add datasheets, photos or quotations.",
+    "errors": {
+      "file-too-large": "The file is larger than 20 MB.",
+      "file-type-not-allowed": "This type of file is not accepted. Use PDF, images, Word, Excel or PowerPoint (.docx, .xlsx, .pptx), text or CSV files.",
+      "too-many-files": "This request already has the maximum number of files.",
+      "file-empty": "The file is empty.",
+      "invalid-state": "Files can no longer be changed on this request.",
+      "forbidden": "You cannot change the files of this request.",
+      "upload-failed": "The file could not be uploaded. Try again.",
+      "attachment-limit-reached": "This request has reached the limit of 30 files or 100 MB.",
+      "file-infected": "The virus check refused this file."
+    },
+    "infected": "blocked by the virus check"
   }
 }

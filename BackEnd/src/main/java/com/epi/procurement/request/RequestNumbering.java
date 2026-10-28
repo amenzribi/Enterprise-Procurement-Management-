@@ -61,10 +61,12 @@ class RequestNumbering {
 	}
 
 	private void createCounterIfMissing(long companyId, int year) {
-		locks.lockExclusively("document-counter:" + companyId + ":" + year + ":" + KIND);
+		String resource = "document-counter:" + companyId + ":" + year + ":" + KIND;
+		locks.lockExclusively(resource);
 		jdbc.update("INSERT INTO document_counter (company_id, year, kind, next_value) SELECT ?, ?, ?, 1 "
 				+ "WHERE NOT EXISTS (SELECT 1 FROM document_counter WHERE company_id = ? AND year = ? AND kind = ?)",
 				companyId, year, KIND, companyId, year, KIND);
+		locks.release(resource);
 	}
 
 }

@@ -41,18 +41,21 @@ for (const { lang, user, onBehalf } of journeys) {
     await page.getByRole('button', { name: t(lang, 'requests.form.saveDraft') }).click();
     await expect(page.getByText(t(lang, 'requests.form.saved')).last()).toBeVisible();
 
-    // Submit after confirmation.
+    // Submit after confirmation; the dialog shows who will approve (S2DR-17).
     await page.getByRole('button', { name: t(lang, 'requests.form.submit') }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog).toContainText(t(lang, 'requests.submit.title'));
+    await expect(dialog).toContainText(t(lang, 'approvals.preview.title'));
     await dialog.getByRole('button', { name: t(lang, 'requests.submit.confirm') }).click();
 
     await expect(page).toHaveURL(new RegExp(`/requests/${id}$`));
     const number = page.locator('.dossier-number');
     await expect(number).toHaveText(/^\s*\S+-PR-\d{4}-\d{6}\s*$/);
     const requestNumber = (await number.innerText()).trim();
-    await expect(page.locator('.dossier-status')).toContainText(t(lang, 'requests.status.CREATED'));
-    await expect(page.locator('.dossier-facts')).toContainText(t(lang, 'requests.stages.REQUEST'));
+    // Submission starts the approval circuit (S2-AC-04); users see the v3.0 status "Submitted".
+    await expect(page.locator('.dossier-status')).toContainText(t(lang, 'requests.userStatus.SUBMITTED'));
+    await expect(page.locator('.dossier-facts')).toContainText(t(lang, 'requests.stages.APPROVAL'));
+    await expect(page.locator('app-approval-tracker .next')).toBeVisible();
     // The edit and submit actions are gone once submitted.
     await expect(page.getByRole('link', { name: t(lang, 'requests.detail.edit') })).toHaveCount(0);
 

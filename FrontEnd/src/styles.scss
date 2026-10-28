@@ -1,4 +1,8 @@
 @use '@fontsource-variable/inter';
+// Arabic glyphs only (unicode-range): Latin text keeps Inter. Self-hosted, no public CDN (S2-AC-01).
+@use '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+@use '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
+@use '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
 @use 'styles/tokens';
 
 *,
@@ -93,4 +97,49 @@ textarea {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+// Arabic: letter-spacing breaks the joining of Arabic letters, and Arabic needs a little more line height.
+:root[dir='rtl'] {
+  --tracking-tight: 0;
+  line-height: 1.65;
+}
+
+:lang(ar) {
+  letter-spacing: 0 !important;
+}
+
+// Shared content helpers for feature pages (panels, muted and emphasised text, overdue marks).
+.panel {
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.panel-title {
+  margin-block-end: var(--space-4);
+  font-size: var(--text-md);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.strong {
+  font-weight: var(--weight-semibold);
+}
+
+.small {
+  font-size: var(--text-sm);
+}
+
+.prose {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.is-overdue {
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
 }

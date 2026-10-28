@@ -23,7 +23,8 @@ final class RequestViews {
 	record LocalizedRef(long id, String code, String nameEn, String nameFr) {
 	}
 
-	record Summary(long id, String number, String title, String status, String stage, BigDecimal totalAmount,
+	record Summary(long id, String number, String title, String status, String userStatus, String stage,
+			BigDecimal totalAmount,
 			String currency, LocalDate requiredDate, Instant updatedAt, Instant submittedAt, UserRef requester,
 			Ref requestingCompany, List<String> actions) {
 	}
@@ -40,7 +41,8 @@ final class RequestViews {
 			Instant occurredAt) {
 	}
 
-	record Detail(long id, String number, String status, String stage, int version, String origin, String title,
+	record Detail(long id, String number, String status, String userStatus, String stage, int version, int roundNo,
+			String origin, String title,
 			LocalizedRef category, String priority, String purchaseType, String currency, int currencyMinorUnits,
 			Ref requestingCompany, Ref chargedCompany, Ref buyingCompany, boolean buyingCompanyProposed,
 			Ref department, Ref site, Ref costCenter, UserRef requester, UserRef enteredBy, UserRef updatedBy,
@@ -51,7 +53,7 @@ final class RequestViews {
 			List<Transition> transitions, List<String> actions) {
 	}
 
-	record StatusInfo(String code, int rank, String stage, boolean lineStatus) {
+	record StatusInfo(String code, int rank, String stage, boolean lineStatus, String userStatus) {
 	}
 
 	record CurrencyOption(String code, String nameEn, String nameFr, int minorUnits) {

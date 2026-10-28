@@ -59,7 +59,7 @@ describe('Shell', () => {
 
     it('renders the language selector with one button per language', () => {
       const buttons = element().querySelectorAll<HTMLButtonElement>('app-language-select button');
-      expect(Array.from(buttons).map((b) => b.getAttribute('lang'))).toEqual(['en', 'fr']);
+      expect(Array.from(buttons).map((b) => b.getAttribute('lang'))).toEqual(['ar', 'fr', 'en']);
     });
 
     it('switches language from the selector and marks the active choice', async () => {
@@ -72,13 +72,24 @@ describe('Shell', () => {
       expect(french?.getAttribute('aria-pressed')).toBe('true');
     });
 
-    it('lists every navigation item and flags planned modules with their sprint', () => {
+    it('lists every navigation item open to the user and flags planned modules with their sprint', () => {
       const links = element().querySelectorAll('nav .nav-link');
-      const itemCount = NAVIGATION.reduce((count, group) => count + group.items.length, 0);
-      const plannedCount = NAVIGATION.flatMap((group) => group.items).filter((item) => item.plannedSprint).length;
+      // Nobody is signed in here: administration items that need a permission are hidden.
+      const visible = NAVIGATION.flatMap((group) => group.items).filter((item) => !item.permission);
+      const itemCount = visible.length;
+      const plannedCount = visible.filter((item) => item.plannedSprint).length;
 
       expect(links.length).toBe(itemCount);
       expect(element().querySelectorAll('nav .nav-planned').length).toBe(plannedCount);
+    });
+
+    it('switches the layout to right to left in Arabic', async () => {
+      element().querySelector<HTMLButtonElement>('app-language-select button[lang="ar"]')?.click();
+      await fixture.whenStable();
+      expect(TestBed.inject(DOCUMENT).documentElement.dir).toBe('rtl');
+      element().querySelector<HTMLButtonElement>('app-language-select button[lang="en"]')?.click();
+      await fixture.whenStable();
+      expect(TestBed.inject(DOCUMENT).documentElement.dir).toBe('ltr');
     });
 
     it('collapses the sidebar to a rail and remembers the choice', async () => {

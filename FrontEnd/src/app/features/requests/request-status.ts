@@ -18,6 +18,7 @@ export const REQUEST_STATUSES = [
   'TECHNICAL_VALIDATION',
   'COMMERCIAL_VALIDATION',
   'MANAGEMENT_VALIDATION',
+  'AWARDED',
   'ORDERED',
   'CONTRACT_SIGNED',
   'ORDER_CONFIRMED',
@@ -71,6 +72,7 @@ const STAGE_OF: Record<RequestStatus, RequestStage> = {
   TECHNICAL_VALIDATION: 'EVALUATION',
   COMMERCIAL_VALIDATION: 'EVALUATION',
   MANAGEMENT_VALIDATION: 'EVALUATION',
+  AWARDED: 'EVALUATION',
   ORDERED: 'COMMITMENT',
   CONTRACT_SIGNED: 'COMMITMENT',
   ORDER_CONFIRMED: 'COMMITMENT',
@@ -124,4 +126,124 @@ export function statusTone(status: string): StatusTone {
 /** i18n key of a status label; unknown codes fall back to the missing-translation handler (shows the code). */
 export function statusKey(status: string): string {
   return `requests.status.${status}`;
+}
+
+/**
+ * The twelve statuses users see (Solution Guide v3.0 §8). The server computes `userStatus`; the mapping below is the
+ * fallback for responses without it.
+ */
+export const USER_STATUSES = [
+  'DRAFT',
+  'SUBMITTED',
+  'RETURNED',
+  'REJECTED',
+  'APPROVED',
+  'ASSIGNED',
+  'QUOTING',
+  'AWARDED',
+  'ORDERED',
+  'IN_TRANSIT',
+  'RECEIVED',
+  'CLOSED',
+  'CANCELLED',
+] as const;
+export type UserStatus = (typeof USER_STATUSES)[number];
+
+const USER_STATUS_OF: Record<RequestStatus, UserStatus> = {
+  DRAFT: 'DRAFT',
+  CREATED: 'SUBMITTED',
+  IN_APPROVAL: 'SUBMITTED',
+  REVISION_REQUESTED: 'RETURNED',
+  REJECTED: 'REJECTED',
+  APPROVED: 'APPROVED',
+  IN_PURCHASING_REVIEW: 'APPROVED',
+  ASSIGNED_TO_BUYER: 'ASSIGNED',
+  SOURCING: 'QUOTING',
+  QUOTES_RECEIVED: 'QUOTING',
+  TECHNICAL_VALIDATION: 'QUOTING',
+  COMMERCIAL_VALIDATION: 'QUOTING',
+  MANAGEMENT_VALIDATION: 'QUOTING',
+  AWARDED: 'AWARDED',
+  ORDERED: 'ORDERED',
+  CONTRACT_SIGNED: 'ORDERED',
+  ORDER_CONFIRMED: 'ORDERED',
+  IN_PRODUCTION: 'ORDERED',
+  READY: 'ORDERED',
+  SHIPPED: 'IN_TRANSIT',
+  AT_PORT: 'IN_TRANSIT',
+  IN_CUSTOMS: 'IN_TRANSIT',
+  IN_WAREHOUSE: 'IN_TRANSIT',
+  DELIVERED: 'RECEIVED',
+  PARTIALLY_RECEIVED: 'RECEIVED',
+  NON_CONFORMING: 'RECEIVED',
+  ACCEPTED: 'RECEIVED',
+  INVOICED: 'RECEIVED',
+  PAYMENT_PENDING: 'RECEIVED',
+  PAID: 'RECEIVED',
+  CLOSED: 'CLOSED',
+  CANCELLED: 'CANCELLED',
+};
+
+export function isUserStatus(value: unknown): value is UserStatus {
+  return typeof value === 'string' && (USER_STATUSES as readonly string[]).includes(value);
+}
+
+/** The user-facing status of a request: the server's `userStatus`, else derived from the internal status. */
+export function userStatusOf(request: { status: string; userStatus?: string | null }): UserStatus | null {
+  if (isUserStatus(request.userStatus)) {
+    return request.userStatus;
+  }
+  return isRequestStatus(request.status) ? USER_STATUS_OF[request.status] : null;
+}
+
+export function userStatusKey(status: string): string {
+  return `requests.userStatus.${status}`;
+}
+
+export function userStatusTone(status: UserStatus | null): StatusTone {
+  switch (status) {
+    case 'DRAFT':
+      return 'neutral';
+    case 'REJECTED':
+    case 'CANCELLED':
+      return 'danger';
+    case 'RETURNED':
+      return 'warning';
+    case 'APPROVED':
+    case 'RECEIVED':
+    case 'CLOSED':
+      return 'success';
+    default:
+      return 'info';
+  }
+}
+
+/** The main line of the tracker (S2-AC-11). RETURNED and REJECTED are branches shown on the "Submitted" step. */
+export const TRACKER_STEPS: readonly UserStatus[] = [
+  'DRAFT',
+  'SUBMITTED',
+  'APPROVED',
+  'ASSIGNED',
+  'QUOTING',
+  'AWARDED',
+  'ORDERED',
+  'IN_TRANSIT',
+  'RECEIVED',
+  'CLOSED',
+];
+
+/** Position of a user status on the tracker line; the branches sit on the "Submitted" step. */
+export function trackerIndex(status: UserStatus | null): number {
+  if (status === 'RETURNED' || status === 'REJECTED' || status === 'CANCELLED') {
+    return TRACKER_STEPS.indexOf('SUBMITTED');
+  }
+  return status ? TRACKER_STEPS.indexOf(status) : 0;
+}
+
+/**
+ * Internal statuses behind each user-facing status, for the list filter: the API filters on internal statuses
+ * (`status=A,B`). Exported for tests.
+ */
+export function internalStatusesOf(userStatus: string): RequestStatus[] {
+  return REQUEST_STATUSES.filter((status) => USER_STATUS_OF[status] === userStatus);
 }

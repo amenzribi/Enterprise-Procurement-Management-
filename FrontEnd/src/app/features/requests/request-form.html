@@ -461,6 +461,16 @@
             </div>
           </div>
         </section>
+
+        <!-- Attachments (S2-AC-12): available once the draft exists on the server. -->
+        @if (requestId(); as savedId) {
+          <app-attachments [requestId]="savedId" [editable]="true" />
+        } @else {
+          <p class="attachments-note">
+            <app-icon name="paperclip" [size]="16" />
+            {{ 'attachments.saveFirst' | translate }}
+          </p>
+        }
       </div>
 
       <!-- Summary and actions -->

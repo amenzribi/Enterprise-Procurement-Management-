@@ -1,5 +1,6 @@
 import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withFetch, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
+import localeArTn from '@angular/common/locales/ar-TN';
 import localeEnGb from '@angular/common/locales/en-GB';
 import localeFr from '@angular/common/locales/fr';
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
@@ -17,6 +18,8 @@ import { TranslatedTitleStrategy } from './core/i18n/translated-title-strategy';
 // The English interface formats dates and numbers as en-GB (day/month, as used in Tunisia and France).
 registerLocaleData(localeEnGb);
 registerLocaleData(localeFr);
+// Arabic uses ar-TN: Arabic texts with Latin digits for amounts, dates and numbers (S2-AC-01).
+registerLocaleData(localeArTn);
 
 export const appConfig: ApplicationConfig = {
   providers: [

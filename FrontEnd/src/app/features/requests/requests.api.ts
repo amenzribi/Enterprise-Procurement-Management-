@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { internalStatusesOf } from './request-status';
 import { FormOptions, Page, PurchaseRequest, RequestListItem, RequestPayload, RequestQuery } from './request.models';
 
 const BASE = '/api/v1/requests';
@@ -17,7 +18,8 @@ export class RequestsApi {
       .set('page', query.page)
       .set('size', query.size);
     if (query.status) {
-      params = params.set('status', query.status);
+      // The filter offers the user-facing statuses of Solution Guide v3.0 §8; the API filters on the internal ones.
+      params = params.set('status', internalStatusesOf(query.status).join(','));
     }
     if (query.q) {
       params = params.set('q', query.q);

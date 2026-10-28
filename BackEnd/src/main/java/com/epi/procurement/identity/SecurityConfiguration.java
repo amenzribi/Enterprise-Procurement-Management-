@@ -65,6 +65,9 @@ class SecurityConfiguration {
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
+				// One-tap e-mail approval (S2-AC-07): the token in the body authenticates the single action.
+				.requestMatchers(HttpMethod.POST, "/api/v1/approval-links/summary", "/api/v1/approval-links/approve")
+				.permitAll()
 				.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
 				.requestMatchers("/error").permitAll()
 				.requestMatchers(API_DOC_PATHS.toArray(String[]::new)).hasRole(Role.ADMIN.name())

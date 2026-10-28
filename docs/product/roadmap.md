@@ -1,4 +1,6 @@
-# Sprint Roadmap — Essentials MVP
+# Sprint Roadmap — Core edition
+
+Realigned on 2026-10-27 to the Solution Guide v3.0 (`docs/analysis/solution-guide-v3-review.md`).
 
 Two-week sprints with a demo at the end of each. Each sprint delivers a complete vertical slice: database migration,
 backend, frontend, permissions, audit, EN/FR, and automated tests. A sprint is complete only when QA and the
@@ -8,22 +10,22 @@ acceptance includes: "request detail shows current stage, owner and since when" 
 Capacity assumption: 3 full-time engineers (backend, frontend, full-stack) plus part-time QA. The plan must be
 re-validated if the team differs.
 
-| Sprint | Objective | Main content | Stories |
-|---|---|---|---|
-| S0 | Foundation | Spring Boot modular monolith, Angular shell and design system, SQL Server + Flyway schema, health/connectivity check, EN/FR, test baseline | — |
-| S1 | Identity, company scope, request drafting | Login (local dev accounts, OIDC-ready), roles and scopes, company isolation, create/edit/submit multi-line request with unique number, "my requests" list | US-01 (without attachments) |
-| S2 | Approval circuits | Organisation admin (companies, sites, departments, cost centres; read + edit), Currencies and exchange rates (admin entry), staged circuits (ALL/ANY) per company/category/amount compared in company currency, approver inbox, approve/reject/revise/request info/delegate, absence delegation, idempotent actions, attachments, e-mail notifications via outbox, decision history view | US-03, US-04, US-01, US-11 (partial) |
-| S3 | Central purchasing | Central inbox with filters, completeness check, return, assignment rules, accept/decline, purchase mode, SLA reminders/escalation (outbox + scheduler), in-app notifications | US-05, US-15 |
-| S4 | Sourcing and comparison | Supplier registry, RFQ local/international, manual quotation entry, conversion with stored rates, landed cost, comparison table | US-06 |
-| S5 | Evaluation, order, shipment milestones | Technical/commercial/management validation with thresholds, award decision, PO record and status tracking, shipment milestones local/international with planned vs actual dates and late flags | US-07, US-08 (milestones) |
-| S6 | Receipt and closure | Transport documents, late alerts, partial/non-conforming receipt with photos, service acceptance, manual final-invoice capture (number, amount, currency, document), closure conditions | US-08 (documents), US-09 |
-| S7 | Visibility and ERP files | Pipeline dashboard, management one-click view, audit viewer, CSV/Excel export, supplier/article import, Excel import of parts list | US-10, US-11, US-12 |
-| S8 | AI-assisted request drafting | AI provider port (local model or client-approved endpoint), free-text → draft request, field-level provenance and confidence, mandatory human review, labelled EN/FR evaluation set (collected from S1) and quality gate: per-field exact match for quantity and unit ≥ 95%, item description accepted without edit ≥ 80%, zero automatic submissions | US-02 |
-| S9 | Hardening and release candidate | MFA via IdP, performance tests vs NFR-01, security review, separate DB principals verified, external anchoring of audit chain heads, backup/restore runbook, UAT with demo group, documentation and training material | — |
+| Sprint | Objective | Main content | Use cases (v3.0) | Status |
+|---|---|---|---|---|
+| S0 | Foundation | Spring Boot modular monolith, Angular shell and design system, SQL Server + Flyway schema, health/connectivity check, EN/FR, test baseline | — | Done |
+| S1 | Identity, company scope, request drafting | Sign-in, roles and scopes, company isolation, create/edit/submit multi-line request with unique number, "My requests", detail | UC-01 (EN/FR), UC-02 (form), UC-03 | Done |
+| S2 | Approvals, tracker, Arabic | Arabic + RTL; approval rules (stages ALL/ANY, thresholds in company currency, exchange rates); approval inbox; approve / ask a question / return / reject / delegate; absence delegation; one-tap e-mail approval link + mobile approval screen; reminders and escalation; e-mail + in-app notifications via outbox; request tracker; attachments; v3.0 user-facing statuses | UC-01 (AR), UC-04, UC-05, UC-06 (e-mail), UC-28 (rules) | Next |
+| Gate | Pilot client signed | Business gate before S3 (v3.0 §15); the pilot shapes S3–S9 | — | Required |
+| S3 | Central buying queue | Buying queue with filters, completeness check, question to requester, buyer assignment with suggestion by category and workload, purchase mode, grouping of similar needs, internal transfer proposal, buy again, supplier list, organisation admin, master data import wizard (duplicate detection) | UC-07, UC-08, UC-09, UC-28 (org, master data) | Planned |
+| S4 | Quotes and evaluation | Quote requests, secure supplier quote link (no account), Quick quote, AI quote reading with human check, comparison, landed cost, technical evaluation, commercial / management validation | UC-10 – UC-14 | Planned |
+| S5 | Award and order | Award decision with reason, purchase order, supplier confirmation, payment milestones, price memory | UC-15 – UC-17 | Planned |
+| S6 | Shipment tracking | Milestones local/international, transport documents with AI reading, delay alerts and arrival-date prediction | UC-18, UC-19 | Planned |
+| S7 | Receipt, invoice, closure | Full/partial/damaged receipt with photos and QR, service acceptance, three-way invoice match, payment tracking, recharge record, closure conditions, supplier scorecard | UC-20 – UC-25 | Planned |
+| S8 | Visibility and ERP files | Dashboards, CEO view, audit pack (PDF), ERP file exchange, AI request draft from text/photo | UC-26, UC-27, UC-16 (ERP), UC-02 (AI) | Planned |
+| S9 | Pilot readiness | Full regression, security review and penetration test of external links, performance, restore test, two-step verification, training, go-live | — | Planned |
+| After | Add-ons | Trading (external customers, sales offers, LC, intercompany billing), Enterprise (budget, supplier portal, integrity, Ask the app, ERP APIs), Teams/WhatsApp approval channels, PostgreSQL support | UC-29, UC-30 | By demand |
 
-Phase 2 candidates (ordered by commercial value): budget control, external customer requests and sales quotes,
-document-reading AI, supplier portal, internal recharging, integrity signals, NL assistant, API ERP connectors,
-Arabic/RTL, vertical packs.
+Add-ons follow the editions of the Solution Guide v3.0 §14 (Trading, Enterprise) and are scheduled by client demand.
 
 ## Why this order
 
@@ -67,19 +69,6 @@ in "My requests"; nobody can see another company's data.
 | ceo.group | Holding | Group management |
 | admin | Holding | Administrator |
 
-## Sprint 2 — proposed objective and acceptance criteria
+## Sprint 2
 
-**Objective:** a submitted request follows its company's configured approval circuit; approvers act from any device,
-and every decision is recorded and visible in the request's history.
-
-| ID | Criterion |
-|---|---|
-| S2-AC-01 | Administrators maintain organisation data (companies, sites, departments, cost centres) and currencies with exchange rates by date. |
-| S2-AC-02 | Administrators configure circuits per company × category × purchase type × amount band (in company currency at the submission-date rate) as ordered stages with ALL/ANY approvers, SLA per stage; versioned, activated without code. |
-| S2-AC-03 | Submission moves `CREATED → IN_APPROVAL` and assigns the first stage; approvers see an inbox of pending tasks. |
-| S2-AC-04 | Approve, reject (reason required), return for revision, request information (flag; SLA paused) and delegate, each recorded with user, time, comment, previous and new status; idempotent against double taps. |
-| S2-AC-05 | Absence delegation by date range with authority-limit checks. |
-| S2-AC-06 | Attachments per request and per line (versioned, size/type limits, antivirus hook point). |
-| S2-AC-07 | E-mail notifications via a transactional outbox in the recipient's language, with deep links. |
-| S2-AC-08 | Request detail shows the decision timeline, current stage, owner and since when. |
-| S2-AC-09 | Approval works at 360 px; EN/FR complete; axe clean; cross-company and role tests for every new endpoint. |
+Objective and acceptance criteria: [sprint-2.md](sprint-2.md).

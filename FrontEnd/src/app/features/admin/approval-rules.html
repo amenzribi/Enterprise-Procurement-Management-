@@ -1,0 +1,254 @@
+<app-page-header [heading]="'rules.title' | translate" [description]="'rules.description' | translate">
+  @if (editing() === undefined) {
+    <button appButton type="button" (click)="edit(null)">
+      <app-icon name="plus" [size]="16" />
+      {{ 'rules.new' | translate }}
+    </button>
+  }
+</app-page-header>
+
+@if (editing() !== undefined) {
+  <section class="panel editor" aria-labelledby="rule-editor-title">
+    <h2 class="panel-title" id="rule-editor-title">
+      {{ (editing() ? 'rules.editTitle' : 'rules.newTitle') | translate: { name: editing()?.name ?? '' } }}
+    </h2>
+    @if (editing()) {
+      <p class="muted small">{{ 'rules.newVersionNote' | translate }}</p>
+    }
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate class="form">
+      <div class="grid">
+        <div class="field wide">
+          <label for="rule-name">{{ 'rules.fields.name' | translate }} *</label>
+          <input id="rule-name" type="text" formControlName="name" maxlength="200" [attr.aria-invalid]="submitted() && form.controls.name.invalid" />
+        </div>
+        <div class="field">
+          <label for="rule-company">{{ 'rules.fields.company' | translate }} *</label>
+          <select id="rule-company" formControlName="companyId" [attr.aria-invalid]="submitted() && form.controls.companyId.invalid">
+            <option [ngValue]="null">{{ 'requests.form.choose' | translate }}</option>
+            @for (company of companyOptions(); track company.id) {
+              <option [ngValue]="company.id">{{ company.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="rule-category">{{ 'requests.fields.category' | translate }}</label>
+          <select id="rule-category" formControlName="categoryId">
+            <option [ngValue]="null">{{ 'rules.anyCategory' | translate }}</option>
+            @for (category of categories(); track category.id) {
+              <option [ngValue]="category.id">{{ label(category) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="rule-type">{{ 'requests.fields.purchaseType' | translate }}</label>
+          <select id="rule-type" formControlName="purchaseType">
+            <option [ngValue]="null">{{ 'rules.anyPurchaseType' | translate }}</option>
+            @for (type of purchaseTypes; track type) {
+              <option [ngValue]="type">{{ 'requests.purchaseType.' + type | translate }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="rule-min">{{ 'rules.fields.minAmount' | translate }} *</label>
+          <input id="rule-min" type="text" inputmode="decimal" formControlName="minAmount" dir="ltr" [attr.aria-invalid]="submitted() && amountsInvalid()" />
+        </div>
+        <div class="field">
+          <label for="rule-max">{{ 'rules.fields.maxAmount' | translate }}</label>
+          <input id="rule-max" type="text" inputmode="decimal" formControlName="maxAmount" dir="ltr" [attr.aria-invalid]="submitted() && amountsInvalid()" aria-describedby="rule-band-hint" />
+        </div>
+      </div>
+      <p id="rule-band-hint" class="muted small">{{ 'rules.bandHint' | translate }}</p>
+      @if (submitted() && amountsInvalid()) {
+        <p class="error small" role="alert">{{ 'rules.errors.band' | translate }}</p>
+      }
+
+      <h3 class="section-title">{{ 'rules.stages' | translate }}</h3>
+      <ol class="stage-list" formArrayName="stages">
+        @for (stage of form.controls.stages.controls; track stage; let index = $index) {
+          <li class="stage-editor" [formGroupName]="index">
+            <p class="strong">{{ 'rules.stageNumber' | translate: { number: index + 1 } }}</p>
+            <div class="grid">
+              <div class="field">
+                <label [for]="'stage-type-' + index">{{ 'rules.fields.approverType' | translate }}</label>
+                <select [id]="'stage-type-' + index" formControlName="approverType">
+                  @for (type of approverTypes; track type) {
+                    <option [ngValue]="type">{{ 'tracker.approverType.' + type | translate }}</option>
+                  }
+                </select>
+              </div>
+              @if (stage.controls.approverType.value === 'NAMED_USER') {
+                <div class="field wide named-approver">
+                  <label [for]="'stage-user-search-' + index">{{ 'rules.fields.approverSearch' | translate }}</label>
+                  <input
+                    [id]="'stage-user-search-' + index"
+                    type="search"
+                    maxlength="100"
+                    [value]="userFilters()[index] ?? ''"
+                    [placeholder]="'rules.approverSearchPlaceholder' | translate"
+                    [attr.aria-controls]="'stage-user-' + index"
+                    (input)="filterUsers(index, $any($event.target).value)"
+                  />
+                  <label [for]="'stage-user-' + index">{{ 'rules.fields.approverUser' | translate }} *</label>
+                  <select
+                    [id]="'stage-user-' + index"
+                    formControlName="approverUserId"
+                    [attr.aria-invalid]="submitted() && !stage.controls.approverUserId.value"
+                    [attr.aria-describedby]="'stage-user-hint-' + index"
+                  >
+                    <option [ngValue]="null">{{ 'requests.form.choose' | translate }}</option>
+                    @for (user of usersFor(index); track user.id) {
+                      <option [ngValue]="user.id">{{ user.displayName }}{{ user.email ? ' — ' + user.email : '' }}</option>
+                    }
+                  </select>
+                  <p class="muted small" [id]="'stage-user-hint-' + index">
+                    @if (!form.controls.companyId.value) {
+                      {{ 'rules.chooseCompanyFirst' | translate }}
+                    } @else {
+                      {{ 'rules.approverUserHint' | translate }}
+                    }
+                  </p>
+                </div>
+              }
+              <div class="field">
+                <label [for]="'stage-min-' + index">{{ 'rules.fields.stageMinAmount' | translate }}</label>
+                <input [id]="'stage-min-' + index" type="text" inputmode="decimal" dir="ltr" formControlName="minAmount" />
+              </div>
+              <div class="field">
+                <label [for]="'stage-policy-' + index">{{ 'rules.fields.policy' | translate }}</label>
+                <select [id]="'stage-policy-' + index" formControlName="policy">
+                  @for (policy of policies; track policy) {
+                    <option [ngValue]="policy">{{ 'tracker.policy.' + policy | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field">
+                <label [for]="'stage-sla-' + index">{{ 'rules.fields.slaHours' | translate }}</label>
+                <input [id]="'stage-sla-' + index" type="number" min="1" max="720" formControlName="slaHours" dir="ltr" />
+              </div>
+              <div class="field">
+                <label [for]="'stage-escalation-' + index">{{ 'rules.fields.escalationRole' | translate }}</label>
+                <select [id]="'stage-escalation-' + index" formControlName="escalationRole">
+                  <option [ngValue]="null">{{ 'requests.form.none' | translate }}</option>
+                  @for (role of ['MANAGEMENT_APPROVER', 'BUDGET_APPROVER', 'DEPARTMENT_MANAGER']; track role) {
+                    <option [ngValue]="role">{{ 'auth.roles.' + role | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field">
+                <label [for]="'stage-name-' + index">{{ 'rules.fields.stageName' | translate }}</label>
+                <input [id]="'stage-name-' + index" type="text" formControlName="name" maxlength="100" />
+              </div>
+            </div>
+            @if (form.controls.stages.length > 1) {
+              <button appButton variant="ghost" size="small" type="button" (click)="removeStage(index)">
+                <app-icon name="trash" [size]="16" />
+                {{ 'rules.removeStage' | translate: { number: index + 1 } }}
+              </button>
+            }
+          </li>
+        }
+      </ol>
+      <button appButton variant="secondary" size="small" type="button" (click)="addStage()">
+        <app-icon name="plus" [size]="16" />
+        {{ 'rules.addStage' | translate }}
+      </button>
+
+      @if (error(); as code) {
+        <p class="error" role="alert">{{ ('rules.errors.' + code) | translate }}</p>
+      }
+      <div class="form-actions">
+        <button appButton variant="secondary" type="button" (click)="closeEditor()">{{ 'common.cancel' | translate }}</button>
+        <button appButton type="submit" [disabled]="saving()">
+          <app-icon name="save" [size]="16" />
+          {{ (saving() ? 'requests.form.saving' : 'rules.save') | translate }}
+        </button>
+      </div>
+    </form>
+  </section>
+}
+
+@switch (state()) {
+  @case ('loading') {
+    <app-skeleton height="8rem" />
+  }
+  @case ('error') {
+    <app-error-state [heading]="'rules.loadError' | translate" [retryLabel]="'common.retry' | translate" (retry)="load()" />
+  }
+  @default {
+    @if (rules().length === 0) {
+      <app-empty-state icon="settings" [heading]="'rules.empty.title' | translate" [message]="'rules.empty.message' | translate" />
+    }
+    @for (company of companies(); track company.id) {
+      <section class="company" [attr.aria-labelledby]="'company-' + company.id">
+        <h2 class="company-title" [id]="'company-' + company.id">{{ company.name }}</h2>
+        <ul class="rules">
+          @for (rule of company.rules; track rule.id) {
+            <li class="panel rule">
+              <div class="rule-head">
+                <div>
+                  <p class="strong">{{ rule.name }}</p>
+                  <p class="muted small">
+                    {{ rule.categoryId ? categoryName(rule.categoryId) : ('rules.anyCategory' | translate) }}
+                    · {{ rule.purchaseType ? ('requests.purchaseType.' + rule.purchaseType | translate) : ('rules.anyPurchaseType' | translate) }}
+                    · <bdi class="tabular">{{ (rule.maxAmount !== null && rule.maxAmount !== undefined ? 'rules.band' : 'rules.bandOpen') | translate: band(rule) }}</bdi>
+                  </p>
+                </div>
+                <div class="rule-status">
+                  <app-status-badge [tone]="tone(rule)">{{ 'rules.status.' + rule.status | translate }}</app-status-badge>
+                  <span class="muted small">{{ 'rules.version' | translate: { version: rule.versionNo } }}</span>
+                  @if (rule.used) {
+                    <span class="muted small">· {{ 'rules.used' | translate }}</span>
+                  }
+                </div>
+              </div>
+              <ol class="stage-summary">
+                @for (stage of rule.stages; track stage.stageNo) {
+                  <li>
+                    <span class="strong">{{ stage.stageNo }}.</span>
+                    {{ stage.name || ('tracker.approverType.' + stage.approverType | translate) }}
+                    <span class="muted"> · {{ 'tracker.policy.' + stage.policy | translate }} · {{ 'rules.sla' | translate: { hours: stage.slaHours } }}</span>
+                  </li>
+                }
+              </ol>
+              <div class="rule-actions">
+                @if (rule.status === 'DRAFT') {
+                  <button appButton size="small" type="button" (click)="activate(rule)">
+                    <app-icon name="check" [size]="16" />
+                    {{ 'rules.activate' | translate }}
+                  </button>
+                }
+                <button appButton variant="secondary" size="small" type="button" (click)="edit(rule)">
+                  <app-icon name="pencil" [size]="16" />
+                  {{ 'rules.newVersion' | translate }}
+                </button>
+                @if (rule.status === 'ACTIVE') {
+                  <button appButton variant="ghost" size="small" type="button" (click)="retire(rule)">
+                    <app-icon name="ban" [size]="16" />
+                    {{ 'rules.retire' | translate }}
+                  </button>
+                }
+                <button appButton variant="ghost" size="small" type="button" [attr.aria-expanded]="!!versions()[rule.id]" (click)="toggleVersions(rule)">
+                  <app-icon name="history" [size]="16" />
+                  {{ 'rules.versions' | translate }}
+                </button>
+              </div>
+              @if (versions()[rule.id]; as list) {
+                <ul class="versions">
+                  @for (version of list; track version.id) {
+                    <li>
+                      {{ 'rules.version' | translate: { version: version.versionNo } }}
+                      · {{ 'rules.status.' + version.status | translate }}
+                      @if (version.activatedAt ?? version.createdAt; as at) {
+                        · <time [attr.datetime]="at">{{ at | date: 'medium' : undefined : language.locale() }}</time>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+}

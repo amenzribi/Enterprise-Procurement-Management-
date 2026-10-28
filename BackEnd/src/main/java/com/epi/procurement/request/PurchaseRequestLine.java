@@ -71,7 +71,8 @@ class PurchaseRequestLine {
 	PurchaseRequestLine(PurchaseRequest request, short lineNo) {
 		this.request = request;
 		this.lineNo = lineNo;
-		this.status = request.getStatus();
+		// Lines added while revising a returned request are already submitted lines (S2DR-04).
+		this.status = request.getStatus() == RequestStatus.DRAFT ? RequestStatus.DRAFT : RequestStatus.CREATED;
 	}
 
 	Long getId() {

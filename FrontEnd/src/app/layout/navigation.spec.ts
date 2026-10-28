@@ -8,10 +8,16 @@ describe('navigation roadmap', () => {
     expect(sprintOf('requests')).toBeUndefined();
   });
 
-  it('matches the roadmap (docs/product/roadmap.md)', () => {
+  it('opens approvals from Sprint 2, and the approval administration for administrators only', () => {
+    expect(findNavItem('approvals')?.route).toBe('/approvals');
+    expect(findNavItem('approvals')?.badge).toBe('approvals');
+    expect(findNavItem('approvalRules')?.permission).toBe('SYSTEM_ADMIN');
+    expect(findNavItem('exchangeRates')?.permission).toBe('SYSTEM_ADMIN');
+  });
+
+  it('matches the roadmap realigned to the Solution Guide v3.0 (docs/product/roadmap.md)', () => {
     expect({
       organization: sprintOf('organization'),
-      approvals: sprintOf('approvals'),
       purchasingInbox: sprintOf('purchasingInbox'),
       sourcing: sprintOf('sourcing'),
       suppliers: sprintOf('suppliers'),
@@ -20,15 +26,14 @@ describe('navigation roadmap', () => {
       receipts: sprintOf('receipts'),
       dashboards: sprintOf('dashboards'),
     }).toEqual({
-      organization: 2,
-      approvals: 2,
+      organization: 3,
       purchasingInbox: 3,
       sourcing: 4,
-      suppliers: 4,
+      suppliers: 3,
       purchaseOrders: 5,
-      logistics: 5,
-      receipts: 6,
-      dashboards: 7,
+      logistics: 6,
+      receipts: 7,
+      dashboards: 8,
     });
   });
 

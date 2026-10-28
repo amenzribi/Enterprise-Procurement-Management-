@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -84,12 +85,14 @@ class RequestService {
 
 	private final Clock clock;
 
+	private final ApplicationEventPublisher events;
+
 	private final int maxLines;
 
 	RequestService(ScopedRequests requests, RequestTransitionRepository transitions, RequestAccessPolicy policy,
 			RequestValidator validator, RequestReferenceData reference, RequestNumbering numbering,
 			RequestMapper mapper, OrganizationDirectory organization, UserDirectory users, AuditLog auditLog,
-			PlatformTransactionManager transactionManager, ObjectProvider<Clock> clock,
+			PlatformTransactionManager transactionManager, ObjectProvider<Clock> clock, ApplicationEventPublisher events,
 			@Value("${app.request.max-lines:100}") int maxLines) {
 		this.requests = requests;
 		this.transitions = transitions;
@@ -103,6 +106,7 @@ class RequestService {
 		this.auditLog = auditLog;
 		this.transaction = new TransactionTemplate(transactionManager);
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
+		this.events = events;
 		this.maxLines = maxLines;
 	}
 
@@ -171,8 +175,9 @@ class RequestService {
 	}
 
 	/**
-	 * Submits a draft: number, DRAFT -> CREATED, stage timeline and audit event in one transaction. Locks are taken
-	 * in a fixed order - request row, document counter, audit chain head (S1DR-10) - and the whole transaction is
+	 * Submits a draft (number, DRAFT -> IN_APPROVAL) or resubmits a returned request (number kept, new round), with
+	 * the approval circuit, stage timeline and audit event in one transaction. Locks are taken in a fixed order -
+	 * request row, document counter, approval round and tasks, audit chain head (S1DR-10, S2DR-08) - and the whole transaction is
 	 * retried, in a new transaction, only when SQL Server chose it as a deadlock victim (error 1205). Lock timeouts
 	 * are not retried: they fail fast with 503 {@code busy} (S1CR-03).
 	 */
@@ -196,6 +201,9 @@ class RequestService {
 		// Request row first, then the audit chain: the same order as submission.
 		PurchaseRequest request = requests.getVisibleForUpdate(user, id);
 		requireEditable(user, request);
+		if (request.getStatus() != RequestStatus.DRAFT) {
+			throw ApiProblemException.conflict("invalid-state", "Only a draft can be discarded.");
+		}
 		requireVersion(version, request);
 		auditLog.record(new AuditRecord(user.id(), user.displayName(), request.getRequestingCompanyId(), ENTITY,
 				request.getId().toString(), "DRAFT_DISCARDED", RequestStatus.DRAFT.name(), null, null, null));
@@ -261,18 +269,26 @@ class RequestService {
 		LocalDate today = LocalDate.ofInstant(now, ZoneId.of(company.timeZone()));
 		validate(validator.validateSubmission(request, today));
 
-		String number = numbering.next(company.id(), company.code(), today.getYear());
-		request.markSubmitted(number, now);
-		request.transitionTo(RequestStatus.CREATED, request.getRequesterUserId(), now);
+		RequestStatus from = request.getStatus();
+		boolean resubmission = from == RequestStatus.REVISION_REQUESTED;
+		if (!resubmission) {
+			request.markSubmitted(numbering.next(company.id(), company.code(), today.getYear()), now);
+		}
+		int round = request.nextRound();
+		request.transitionTo(RequestStatus.IN_APPROVAL, request.getRequesterUserId(), now);
 		request.getLines().forEach(line -> line.setStatus(RequestStatus.CREATED));
 		request.touch(user.id(), now);
 		requests.saveAndFlush(request);
-		transitions.save(new RequestTransition(request.getId(), RequestStatus.DRAFT, RequestStatus.CREATED,
+		transitions.save(new RequestTransition(request.getId(), from, RequestStatus.IN_APPROVAL,
 				request.getCurrentOwnerUserId(), user.id(), now));
+		// The approval module starts the circuit in this transaction (rule, rate, round, tasks, notifications);
+		// any failure (no rule, missing rate, no eligible approver) rolls the whole submission back.
+		events.publishEvent(new RequestSubmittedEvent(request.getId(), round, user.id(), now, resubmission));
 		auditLog.record(new AuditRecord(user.id(), user.displayName(), company.id(), ENTITY, request.getId().toString(),
-				"SUBMITTED", RequestStatus.DRAFT.name(), RequestStatus.CREATED.name(), null,
-				"{\"number\":\"" + number + "\",\"totalAmount\":\"" + request.getTotalAmount().toPlainString()
-						+ "\",\"currency\":\"" + request.getCurrencyCode() + "\"}"));
+				resubmission ? "RESUBMITTED" : "SUBMITTED", from.name(), RequestStatus.IN_APPROVAL.name(), null,
+				"{\"number\":\"" + request.getNumber() + "\",\"round\":" + round + ",\"totalAmount\":\""
+						+ request.getTotalAmount().toPlainString() + "\",\"currency\":\"" + request.getCurrencyCode()
+						+ "\"}"));
 		return mapper.detail(user, request);
 	}
 
@@ -415,8 +431,9 @@ class RequestService {
 		if (!policy.isEditor(user, request)) {
 			throw ApiProblemException.forbidden();
 		}
-		if (request.getStatus() != RequestStatus.DRAFT) {
-			throw ApiProblemException.conflict("invalid-state", "Only a draft can be changed or submitted.");
+		if (!RequestAccessPolicy.isEditableStatus(request.getStatus())) {
+			throw ApiProblemException.conflict("invalid-state",
+					"Only a draft or a request returned for revision can be changed or submitted.");
 		}
 	}
 

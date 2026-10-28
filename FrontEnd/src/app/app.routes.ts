@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth/auth.guards';
+import { authGuard, guestGuard, permissionGuard } from './core/auth/auth.guards';
 import { unsavedChangesGuard } from './features/requests/unsaved-changes.guard';
 import { findPlannedItem } from './layout/navigation';
 import { Shell } from './layout/shell/shell';
@@ -10,6 +10,12 @@ export const routes: Routes = [
     title: 'auth.signIn.title',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/sign-in').then((m) => m.SignInPage),
+  },
+  {
+    // One-tap approval from an e-mail (S2-AC-07): outside the signed-in workspace; the token is in the URL fragment.
+    path: 'a',
+    title: 'oneTap.title',
+    loadComponent: () => import('./features/approvals/one-tap-approval').then((m) => m.OneTapApprovalPage),
   },
   {
     // Everything else is the signed-in workspace (S1-AC-01, S1-AC-13).
@@ -50,6 +56,28 @@ export const routes: Routes = [
         path: 'requests/:id',
         title: 'requests.detail.title',
         loadComponent: () => import('./features/requests/request-detail').then((m) => m.RequestDetailPage),
+      },
+      {
+        path: 'approvals',
+        title: 'approvals.inbox.title',
+        loadComponent: () => import('./features/approvals/approvals-inbox').then((m) => m.ApprovalsInboxPage),
+      },
+      {
+        path: 'absences',
+        title: 'absences.title',
+        loadComponent: () => import('./features/approvals/absences').then((m) => m.AbsencesPage),
+      },
+      {
+        path: 'admin/approval-rules',
+        title: 'rules.title',
+        canActivate: [permissionGuard('SYSTEM_ADMIN')],
+        loadComponent: () => import('./features/admin/approval-rules').then((m) => m.ApprovalRulesPage),
+      },
+      {
+        path: 'admin/exchange-rates',
+        title: 'rates.title',
+        canActivate: [permissionGuard('SYSTEM_ADMIN')],
+        loadComponent: () => import('./features/admin/exchange-rates').then((m) => m.ExchangeRatesPage),
       },
       {
         path: 'planned/:module',

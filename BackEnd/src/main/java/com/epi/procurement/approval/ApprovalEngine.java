@@ -163,20 +163,26 @@ class ApprovalEngine {
 		Instant due = calendar.addWorkingMinutes(now, slaMinutes);
 		Instant escalation = calendar.addWorkingMinutes(due, slaMinutes);
 		Set<Long> assignees = new LinkedHashSet<>();
-		for (long approver : approvers) {
-			ApproverResolver.Routing routing = resolver.route(approver, stage.approverType(), stage.approverUserId(),
-					request, now);
-			if (request.isAuthor(routing.assignee()) || !assignees.add(routing.assignee())) {
-				continue;
-			}
+		for (PlannedTask planned : planTasks(stage, approvers, request, now)) {
+			assignees.add(planned.assignee());
+			Long original = planned.absentApprovers().isEmpty() ? null : planned.absentApprovers().get(0);
 			ApprovalStore.NewTask task = new ApprovalStore.NewTask(roundId, request.id(), request.requestingCompanyId(),
-					stage.stageNo(), stage.name(), stage.approverType(), stage.policy(), routing.assignee(),
-					routing.original(), routing.note(), slaMinutes, stage.escalationRole(), due, escalation, now);
+					stage.stageNo(), stage.name(), stage.approverType(), stage.policy(), planned.assignee(), original,
+					planned.note(), slaMinutes, stage.escalationRole(), due, escalation, now);
 			long taskId = store.insertTask(task);
-			requests.addParticipant(request.id(), routing.assignee(), "APPROVER", now);
-			store.insertEvent(request.id(), roundId, taskId, "TASK_CREATED", actorId, routing.original(),
-					routing.assignee(), null, null, null, "APP", now);
-			notices.task("TASK_ASSIGNED", stage.name(), taskId, routing.assignee(), request, actorId, now);
+			requests.addParticipant(request.id(), planned.assignee(), "APPROVER", now);
+			store.insertEvent(request.id(), roundId, taskId, "TASK_CREATED", actorId, original, planned.assignee(), null,
+					null, null, "APP", now);
+			// Every absent approver whose task went to this person is visible in the tracker and the audit trail.
+			for (long absent : planned.absentApprovers()) {
+				store.insertEvent(request.id(), roundId, taskId, "ABSENCE_ROUTED", actorId, absent, planned.assignee(),
+						null, null, null, "APP", now);
+				auditLog.record(new AuditRecord(actorId, actorId == null ? "system" : notices.name(actorId),
+						request.requestingCompanyId(), ENTITY, Long.toString(request.id()), "APPROVAL_ABSENCE_ROUTED",
+						null, null, null, "{\"taskId\":" + taskId + ",\"stage\":" + stage.stageNo() + ",\"absent\":"
+								+ absent + ",\"assignee\":" + planned.assignee() + "}"));
+			}
+			notices.task("TASK_ASSIGNED", stage.name(), taskId, planned.assignee(), request, actorId, now);
 		}
 		if (assignees.isEmpty()) {
 			throw new ApiProblemException(HttpStatus.UNPROCESSABLE_CONTENT, "no-eligible-approver",
@@ -184,6 +190,59 @@ class ApprovalEngine {
 		}
 		requests.assignOwner(request.id(), assignees.iterator().next(), now);
 		store.updateRound(roundId, "ACTIVE", stage.stageNo(), null);
+	}
+
+	/**
+	 * Routes every approver of the stage before creating any task (S2CR-15), independently of the approver order:
+	 * direct approvers first, then absent approvers' delegates sorted by absent approver.
+	 * <ul>
+	 * <li>ANY: tasks that land on the same person collapse into one task, marked ABSENCE_DELEGATE on behalf of the
+	 * absent approver(s); one ABSENCE_ROUTED event per absent approver.</li>
+	 * <li>ALL: one person never holds two required approvals. A delegate who already holds a task of the stage does
+	 * not take another one: the absent approver keeps it, flagged ABSENCE_UNRESOLVED.</li>
+	 * </ul>
+	 */
+	private List<PlannedTask> planTasks(ApprovalStore.Stage stage, List<Long> approvers, RequestSnapshot request,
+			Instant now) {
+		List<ApproverResolver.Routing> direct = new ArrayList<>();
+		List<ApproverResolver.Routing> delegated = new ArrayList<>();
+		for (long approver : approvers) {
+			ApproverResolver.Routing routing = resolver.route(approver, stage.approverType(), stage.approverUserId(),
+					request, now);
+			if (request.isAuthor(routing.assignee())) {
+				routing = new ApproverResolver.Routing(approver, null, "ABSENCE_UNRESOLVED");
+			}
+			(routing.original() == null ? direct : delegated).add(routing);
+		}
+		delegated.sort(Comparator.comparingLong(ApproverResolver.Routing::original));
+		Map<Long, PlannedTask> plan = new java.util.LinkedHashMap<>();
+		for (ApproverResolver.Routing routing : direct) {
+			plan.putIfAbsent(routing.assignee(), new PlannedTask(routing.assignee(), routing.note(), new ArrayList<>()));
+		}
+		boolean all = "ALL".equals(stage.policy());
+		for (ApproverResolver.Routing routing : delegated) {
+			PlannedTask existing = plan.get(routing.assignee());
+			if (existing == null) {
+				List<Long> absent = new ArrayList<>(List.of(routing.original()));
+				plan.put(routing.assignee(), new PlannedTask(routing.assignee(), "ABSENCE_DELEGATE", absent));
+			}
+			else if (all) {
+				plan.putIfAbsent(routing.original(),
+						new PlannedTask(routing.original(), "ABSENCE_UNRESOLVED", new ArrayList<>()));
+			}
+			else {
+				existing.absentApprovers().add(routing.original());
+				plan.put(routing.assignee(),
+						new PlannedTask(routing.assignee(), "ABSENCE_DELEGATE", existing.absentApprovers()));
+			}
+		}
+		return List.copyOf(plan.values());
+	}
+
+	/**
+	 * @param absentApprovers designated approvers whose task went to {@code assignee} (the first is "on behalf of")
+	 */
+	private record PlannedTask(long assignee, String note, List<Long> absentApprovers) {
 	}
 
 	// Decisions -------------------------------------------------------------------------------------------------

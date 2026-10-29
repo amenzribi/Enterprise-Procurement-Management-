@@ -1,21 +1,22 @@
 # Architecture
 
-Status: Sprint 0 baseline. Decisions referenced: [decision log](../decisions/decision-log.md).
+Status: Sprint 2 baseline (2026-10-29). Decisions referenced: [decision log](../decisions/decision-log.md).
+Java 21 (ADR-008); Java 25 rejected (ADR-010).
 
 ## 1. Context
 
 ```
  Requesters, approvers, buyers,      ┌──────────────────────────────────┐      SQL Server
  logistics, finance, management ───► │  Angular SPA  (FrontEnd/)        │      (procurement DB)
-          (browser / phone)          │  EN/FR, responsive, PWA later    │            ▲
+          (browser / phone)          │  EN/FR/AR (RTL), responsive      │            ▲
                                      └───────────────┬──────────────────┘            │ JDBC + Flyway
                                                      │ HTTPS /api/v1 (JSON)          │
                                      ┌───────────────▼──────────────────────────────┴───┐
                                      │  Spring Boot modular monolith  (BackEnd/)        │
-                                     │  modules: organization · identity · request ·    │
-                                     │  approval · purchasing · sourcing · ordering ·   │
-                                     │  logistics · receiving · supplier · document ·   │
-                                     │  dashboard · integration · audit · system        │
+                                     │  modules present: organization · identity ·      │
+                                     │  request · approval · document · notification ·  │
+                                     │  audit · platform · system                       │
+                                     │  planned: purchasing · sourcing · supplier …     │
                                      └───────┬───────────────────────┬──────────────────┘
                                              │ file store            │ ports (later)
                                              ▼                       ▼
@@ -24,7 +25,7 @@ Status: Sprint 0 baseline. Decisions referenced: [decision log](../decisions/dec
 
 ## 2. Backend
 
-- Java 25 LTS, Spring Boot 4.1, Maven Wrapper. Root package `com.epi.procurement`.
+- Java 21 LTS, Spring Boot 4.1, Maven Wrapper. Root package `com.epi.procurement`.
 - Module = top-level package; `ApplicationModules.verify()` runs in the test suite (ADR-002).
 - Layering inside a module: `api` (REST controllers, DTOs) → application services (transactions, authorisation,
   audit) → domain (entities, state machines, rules) → persistence (Spring Data JPA repositories).
@@ -53,7 +54,7 @@ Status: Sprint 0 baseline. Decisions referenced: [decision log](../decisions/dec
 - Angular 22, standalone components, signals, zoneless, OnPush; lazy-loaded feature routes per module.
 - `core/` (shell, i18n, http, error handling), `shared/ui/` (design system components), `features/<module>/`.
 - Design tokens as CSS custom properties; logical properties (RTL-ready); dark-mode-ready tokens.
-- i18n: `@ngx-translate/core`, `public/i18n/{en,fr}.json`, key parity enforced by a unit test.
+- i18n: `@ngx-translate/core`, `public/i18n/{en,fr,ar}.json`, key parity enforced by a unit test. Arabic is RTL.
 - Dev: `ng serve` proxies `/api` and `/actuator` to `localhost:8080`. Production: SPA served behind the same
   reverse proxy as the API (same origin; no CORS).
 

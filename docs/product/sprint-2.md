@@ -124,3 +124,22 @@ they fit, otherwise listed as deferred in the sprint report.
 | S2DR-13 | Migration extends the `preferred_language` and `default_language` checks to `ar`. Bidi isolation (`<bdi>` / `dir="auto"`) for numbers, codes and amounts in Arabic text. Arabic e-mails with `dir="rtl"` and safe system fonts. **Native-speaker review of Arabic texts is an open item**, not a passed check. |
 | S2DR-16 | If capacity runs short, cut in this order and record as carry-over: rule edit screen (keep seeded rules + activation), escalation at 2×SLA, in-app notification list (keep badge), attachment versions, exchange-rate admin screen. |
 | S2DR-17 | API additions: `actions` for the current user on `GET /requests/{id}/approval`; `GET /approvals/inbox/count`; `GET /requests/{id}/approval-preview` (who will approve, before submission); `GET /requests/{id}/attachments`; admin absences for other users (`/admin/absences`); `GET /admin/approval-rules/{id}/versions`. |
+
+## Absence routing rules as built (S2-AC-06, QA2-45, S2CR-15 — closure, 2026-10-29)
+
+Approved behaviour of `ApprovalEngine.planTasks`, confirmed by `ApprovalIntegrationTests` on the Sprint 2 closure
+revision. Every approver of a stage is routed before any task is created, so the outcome does not depend on the order
+in which approvers are resolved.
+
+| Case | Behaviour | Tracker note |
+|---|---|---|
+| Absent approver, delegate is **not** an approver of the stage | One task for the delegate, on behalf of the absent approver (`original_user_id`); `ABSENCE_ROUTED` event and `APPROVAL_ABSENCE_ROUTED` audit record. | `ABSENCE_DELEGATE` |
+| **ANY** stage, delegate is also a direct approver of the stage | The two tasks collapse into **one** task for the delegate, marked on behalf of the absent approver(s). The delegate decides once. | `ABSENCE_DELEGATE` |
+| **ALL** stage, delegate is also a direct approver of the stage | One person never holds two required approvals. The delegate keeps only their own task; the **absent approver keeps their task**, flagged unresolved. That task stays pending until the approver returns, an administrator re-routes it, or the SLA reminder / escalation to the stage's escalation role fires (S2-AC-09). The request is **not** blocked silently: the flag is shown in the tracker (requester, approvers, management). | `ABSENCE_UNRESOLVED` |
+| Delegation chain (delegate also absent) | Followed up to 3 hops with cycle detection (QA2-45); unresolved → the original approver keeps the task, flagged. | `ABSENCE_UNRESOLVED` |
+| Delegate is the request author or the entered-by user | Never routed (no self-approval, QA2-35 / S2DR-02). The absent approver keeps their task, flagged; other direct approvers get normal tasks. | `ABSENCE_UNRESOLVED` |
+| Explicit delegation from the inbox (`POST /approvals/tasks/{id}/delegate`) | The original task becomes `DELEGATED`; a new pending task is created for the chosen delegate. | `DELEGATED` |
+
+Known limitation (accepted for Sprint 2, tracked in the backlog): an `ABSENCE_UNRESOLVED` task is only moved on by
+the escalation mechanism or by an administrator editing the absence/delegation; there is no dedicated
+"re-route now" admin action yet.

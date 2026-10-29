@@ -63,3 +63,94 @@
 | S2-AC-12 Attachments | Met (S2CR-12 minor) | |
 | S2-AC-13 Visibility, idempotency | Met (S2CR-05 minor) | |
 | S2-AC-14 Quality | **Partly** | delegation e2e skipped (S2CR-03); native Arabic review open |
+
+## Fix verification (tree `69be61a`)
+
+- Revision: git tree `69be61a10917020ab71c337c1fa9cfc14ec66f6e` (commit `487d53b` plus 3 staged FrontEnd files), confirmed
+  with `git write-tree`. Compared with the reviewed tree `767933d`.
+- Method: static reading of the diff only. Nothing was built, tested or run. QA's runtime results are separate.
+
+| ID | Status | Evidence / remark |
+|---|---|---|
+| S2CR-01 | Verified | `ApprovalNotices.task` now stores a placeholder (`{{link:approval:task:user}}`). `OutboxSender.send` resolves it when sending, through `ApprovalLinkResolver`, which creates the token only if the task is still pending for that user and otherwise links to `/requests/{id}`. V6 redacts old outbox bodies and invalidates every unused token; sent/failed rows are purged after `app.mail.retention` (30 days). Remark: if the sender crashes after SMTP but before marking the row, the re-send creates a second valid token for the same task. Both are bound to the task and the approver, and the decision stays single, so this is acceptable. Dev `.eml` files still contain tokens (dev only). |
+| S2CR-02 | Verified | `GET /admin/companies` and `GET /admin/users` are scoped to the admin's group, admin-only, with `role` and `q` validated and results capped at 200. The rule editor uses them for the company list and named-approver picker. |
+| S2CR-03 | Verified (static) | Demo user `manager2.tn` (Hichem Gharbi (Demo), Sfax, MAINT, department manager) added. No `skip`/`fixme` left in `FrontEnd/e2e`; the delegation journey asserts "on behalf of". Whether it passes is for QA to confirm. |
+| S2CR-04 | Verified | `ApprovalReminders.send` locks the task and re-checks pending, no open question and the deadline **before** claiming, so a paused task's reminder is not used up. |
+| S2CR-05 | Verified | When there is no escalation contact, administrators are notified without being added as participants. |
+| S2CR-06 | Verified | V6 adds `SENDING` and `claimed_at`. Rows are claimed and committed before SMTP; marks are per row (`WHERE status = 'SENDING'`); a claim older than 5 minutes is taken over again. |
+| S2CR-07 | Verified | `activate()` takes `lockExclusively("approval-rule-activation:" + companyId)` before the overlap check. |
+| S2CR-08 | Deferred (S9 pilot readiness) | Accepted. Must be fixed before any deployment behind a reverse proxy. |
+| S2CR-09 | Verified | `ApprovalStore.namedUserOfTask` reads the stage's named user from the round's rule version. |
+| S2CR-10 | Verified | `LinkLine{description, quantity, unit}`, `lineCount`, `currencyMinorUnits`; the page shows "+N more lines". `oneTap.moreLines` and `notifications.exactCount` exist in en, fr and ar. |
+| S2CR-11 | Verified | `end()` records `QUESTION_SUPERSEDED` (the outcome notice already informs the authors). |
+| S2CR-12 | Verified | Uploads take `lockExclusively("attachments:" + requestId)` before counting. |
+| S2CR-13 | Verified | `TestingController` now has `@Profile("dev")` in addition to the property. No test configuration relies on it. |
+| S2CR-14 | Verified | `retire()` accepts only ACTIVE rules; idempotency rows older than 24 h are purged hourly. |
+| QA2-D-01 | Verified (static) | The bell's accessible name uses the same text as the badge (`99+`); the exact count is in `title`. |
+| QA2-D-05 | Verified (static) | Same change as S2CR-10. |
+
+### New point S2CR-15 — absence routing collapsed when the delegate is already a stage approver
+
+- Severity: **Minor**. Not blocking for Sprint 2, provided it is documented as a known limitation.
+- Location: `approval/ApprovalEngine.java:165-171` (`createStageTasks`).
+- Finding: assignees are de-duplicated. If an absent approver's delegate is also an approver of the same stage
+  (Karim absent → Hichem, and Hichem is himself a stage approver), only one task is created for Hichem.
+  - Which task survives depends on the order of the resolver's list. If Hichem's own entry comes first, his task has
+    no `onBehalfOf`/`routingNote`, and no event records the absence routing.
+  - S2-AC-06 ("delegated tasks are marked on behalf of") and audit traceability are not met for this case.
+  - With an **ALL** stage, the absence also removes one required approval: one person's decision counts for two seats.
+- Why not blocking:
+  - Every demo and default rule uses **ANY** at every stage. Under ANY the outcome is the same: one eligible approver
+    decides, and no approval is granted to anyone who isn't entitled.
+  - The case needs a delegate who is also an approver for the same department. The e2e delegation journey uses a
+    different department, so it is not affected.
+- Fix (next sprint, or Sprint 2 if cheap):
+  - When the routed assignee is already an assignee, keep one task but record `original_user_id` and
+    `routing_note = ABSENCE_DELEGATE` on it, and write an `ABSENCE_ROUTED` event so the history is complete.
+  - For ALL stages, either keep one task per seat, or refuse to activate an absence whose delegate is already an
+    approver of the same department, and document the rule.
+  - Add a unit test for both list orders.
+
+### Verdict
+
+**Acceptable.** Every Blocker or Major finding (S2CR-01, -02, -03) is fixed in code. Every Minor finding is fixed except
+S2CR-08, which is deferred to S9 with a reason. S2CR-15 is Minor and acceptable for Sprint 2 if it is written down as a
+known limitation in `docs/product/sprint-2.md`. This verdict is static only: closing the sprint still depends on QA's
+runtime results on the same revision, especially the delegation e2e (S2-AC-06, S2-AC-14) and the native Arabic review
+(S2-AC-01).
+
+### Re-verification on tree `bf12fb7` (S2CR-15, QA2-D-08)
+
+- Revision: git tree `bf12fb7f31163aafe8d34cb14b15e0063033f0f2`, confirmed with `git write-tree`. Main-code changes
+  since `69be61a`: `ApprovalEngine.java` and `OutboxSender.java` only (plus `ApprovalIntegrationTests.java`). Static
+  review only; the tests were not run by the Reviewer.
+
+| ID | Status | Evidence / remark |
+|---|---|---|
+| S2CR-15 | Verified | `ApprovalEngine.planTasks` routes every approver before any task is created. Direct approvers are placed first, then delegations sorted by absent approver, so the result no longer depends on the resolver's order. **ANY:** a delegate who is also a direct approver gets one task with `original_user_id` = the first absent approver and `routing_note = ABSENCE_DELEGATE`, plus one `ABSENCE_ROUTED` event and one `APPROVAL_ABSENCE_ROUTED` audit record per absent approver, all in the same transaction. **ALL:** a delegate who already holds a task of the stage does not get a second one; the absent approver keeps their own task, flagged `ABSENCE_UNRESOLVED`, so one person never fills two required approvals. **Delegate is an author:** the absent approver keeps the task, flagged `ABSENCE_UNRESOLVED`. Self-exclusion is unchanged, because `resolveStage` already removes authors. A broken delegation chain falls back the same way, through `route()`. Integration tests cover ANY in both orders (with a valid audit chain) and ALL. |
+| QA2-D-08 | Verified | `OutboxSender.send` resolves each placeholder once per e-mail (`computeIfAbsent` on a per-mail map), so the HTML and text parts carry the same token. A retried send still creates a new token, which was accepted under S2CR-01. |
+
+Remarks (Suggestions only, nothing blocking):
+- The "delegate is an author → unresolved" path has no dedicated test; add one with the next approval-test change.
+- With ALL and ABSENCE_UNRESOLVED, the task stays with an absent person until escalation. This is the intended
+  behaviour, but it should be listed as a known behaviour in `docs/product/sprint-2.md` so administrators know to set a
+  different delegate.
+
+### Updated verdict
+
+**Acceptable.** All findings are verified fixed except S2CR-08, which is deferred to S9 with a reason. No Blocker,
+Major or Minor code-review finding remains open for Sprint 2. Closing the sprint still depends on QA's runtime results
+on tree `bf12fb7` and on the native Arabic review (S2-AC-01).
+
+### Closure addendum (2026-10-29)
+
+Developer self-review of the D-09 / D-10 / D-11 / delegate-is-author work: `docs/reviews/repository-review.md`.
+Not an independent re-review.
+
+| ID | Status | Evidence |
+|---|---|---|
+| QA2-D-09 | Verified (runtime, Developer) | e2e absence-delegation journey 23/23; assertion requires on-behalf-of + translated note. |
+| QA2-D-10 | Verified (runtime, Developer) | `routingNoteKey` + EN/FR/AR including `DELEGATED`; unit test; e2e uses the translation. |
+| S2CR-15 remarks | Verified | Delegate-is-author DB-IT added. ALL/`ABSENCE_UNRESOLVED` documented in `docs/product/sprint-2.md`. |
+| S2CR-08 | Still deferred S9 | Unchanged. Not described as fixed. |
+| Native Arabic review | Still outstanding | Unchanged. |

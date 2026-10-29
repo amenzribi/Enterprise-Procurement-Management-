@@ -1,11 +1,12 @@
 # Enterprise Procurement Intelligence
 
 Procurement request platform for multi-company groups: one entry point for every purchase request, from need to
-closure. Spring Boot (Java 25) + Angular 22 + Microsoft SQL Server. English and French.
+closure. Spring Boot 4.1 (Java 21) + Angular 22 + Microsoft SQL Server. English, French and Arabic (RTL).
 
-**Current state: Sprint 0 (foundation).** No procurement features yet. The app runs, connects to SQL Server,
-migrates the schema, and shows a bilingual application shell with a live system-status check. See
-[docs/product/roadmap.md](docs/product/roadmap.md) for what comes next.
+**Current state: Sprint 2 complete locally** (identity, company-scoped requests, approval circuits, tracker,
+one-tap e-mail, absences, attachments). Sprint 3 (central buying queue) is next; the pilot-client business gate
+in the Solution Guide v3.0 §15 is **not** recorded as passed and restricts rollout, not local development.
+See [docs/product/roadmap.md](docs/product/roadmap.md). Java 25 was proposed (ADR-010) and **rejected**.
 
 | Folder | Contents |
 |---|---|
@@ -15,7 +16,7 @@ migrates the schema, and shows a bilingual application shell with a live system-
 
 ## Prerequisites (Windows + VS Code)
 
-- JDK 25 LTS (`java -version`)
+- JDK 21 LTS (`java -version`) — Temurin 21. ADR-010 rejected Java 25.
 - Node.js 24.15+ or 22.22+ with npm (`node -v`)
 - SQL Server 2019+ running locally (developed on SQL Server 2025 Developer Edition), TCP on port 1433, with
   `sqlcmd` available

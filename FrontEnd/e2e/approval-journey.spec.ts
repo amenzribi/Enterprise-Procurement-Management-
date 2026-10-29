@@ -134,17 +134,18 @@ test('absence delegation sends new approvals to the delegate on behalf of the ab
   try {
     await signIn(page, USERS.requesterTn, 'en');
     const request = await createAndSubmit(page, 'en', uniqueTitle('Delegation'));
-    // While Karim is away the stage goes to Hichem only; Karim receives no task.
-    // Note: the backend currently routes it without onBehalfOf (reported as a backend finding), so the
-    // "on behalf of Karim" mark is not asserted here; the tracker shows it whenever the API sends it.
-    const tracker = page.locator('app-approval-tracker');
-    await expect(tracker.locator('.task')).toHaveCount(1);
-    await expect(tracker.locator('.task')).toContainText('Hichem');
-    await expect(tracker.locator('.task')).not.toContainText('Karim Haddad');
+    // While Karim is away his approval goes to Hichem, marked as on his behalf (S2-AC-06).
+    const task = page.locator('app-approval-tracker .task');
+    await expect(task).toHaveCount(1);
+    await expect(task).toContainText('Hichem');
+    await expect(task).toContainText(t('en', 'tracker.onBehalfOf', { name: 'Karim Haddad (Demo)' }));
+    await expect(task).toContainText(t('en', 'tracker.routingNotes.ABSENCE_DELEGATE'));
 
     // Hichem finds it in his inbox and approves it.
     const hichemPage = await newUserPage(browser);
     await signIn(hichemPage, USERS.manager2Tn, 'en', '/approvals');
+    // The demo inbox holds many requests: search for this one.
+    await hichemPage.locator('#inbox-search').fill(request.number);
     await expect(hichemPage.locator('.card', { hasText: request.number })).toBeVisible();
     await decide(hichemPage, 'en', request.id, 'APPROVE');
     await hichemPage.context().close();

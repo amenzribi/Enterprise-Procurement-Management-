@@ -128,8 +128,10 @@ public class OutboxSender {
 	private boolean send(MailTransport.OutgoingMail mail) {
 		Instant now = clock.instant();
 		try {
+			// One resolution per placeholder per e-mail: the HTML and text parts carry the same token (QA2-D-08).
+			java.util.Map<String, String> resolved = new java.util.HashMap<>();
 			transport.send(new MailTransport.OutgoingMail(mail.outboxId(), mail.messageId(), mail.to(), mail.subject(),
-					resolve(mail.html()), resolve(mail.text())));
+					resolve(mail.html(), resolved), resolve(mail.text(), resolved)));
 			jdbc.update("""
 					UPDATE notification_outbox SET status = 'SENT', sent_at = ?, attempts = attempts + 1, claimed_at = NULL
 					WHERE id = ? AND status = 'SENDING'""", UtcTimes.db(now), mail.outboxId());
@@ -153,18 +155,18 @@ public class OutboxSender {
 	/**
 	 * Replaces deferred link placeholders; an unresolved link falls back to the application's home page.
 	 */
-	private String resolve(String body) {
+	private String resolve(String body, java.util.Map<String, String> resolved) {
 		Matcher matcher = PLACEHOLDER.matcher(body);
 		StringBuilder result = new StringBuilder();
 		while (matcher.find()) {
 			String kind = matcher.group(1);
 			List<String> args = matcher.group(2).isEmpty() ? List.of()
 					: Arrays.asList(matcher.group(2).substring(1).split(":"));
-			String path = resolvers.stream()
+			String path = resolved.computeIfAbsent(matcher.group(), placeholder -> resolvers.stream()
 				.map(r -> r.resolve(kind, args))
 				.flatMap(Optional::stream)
 				.findFirst()
-				.orElse("/");
+				.orElse("/"));
 			matcher.appendReplacement(result, Matcher.quoteReplacement(path));
 		}
 		matcher.appendTail(result);

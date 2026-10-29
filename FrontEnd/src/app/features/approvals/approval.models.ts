@@ -189,6 +189,7 @@ export interface LinkSummary {
   lines?: { description: string; quantity: Amount; unit?: string | null }[];
   /** Total number of lines; the summary shows the first few. */
   lineCount?: number | null;
+  currencyMinorUnits?: number | null;
   expiresAt?: string | null;
 }
 

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { ApprovalTracker, questionsByTask, trackerSteps } from './approval-tracker';
+import { ApprovalTracker, questionsByTask, routingNoteKey, trackerSteps } from './approval-tracker';
 import { ApprovalView } from './approval.models';
 
 const NOW = Date.parse('2026-11-02T10:00:00Z');
@@ -30,6 +30,7 @@ function view(overrides: Partial<ApprovalView> = {}): ApprovalView {
                 version: 1,
                 assignee: { id: 3, displayName: 'Karim' },
                 onBehalfOf: { id: 9, displayName: 'Mounir' },
+                routingNote: 'ABSENCE_DELEGATE',
                 status: 'PENDING',
                 createdAt: '2026-11-02T08:00:00Z',
                 dueAt: '2026-11-01T08:00:00Z',
@@ -65,6 +66,18 @@ function view(overrides: Partial<ApprovalView> = {}): ApprovalView {
     ...overrides,
   };
 }
+
+describe('routingNoteKey', () => {
+  it('translates the known routing notes and never shows an unknown code (QA2-D-10)', () => {
+    expect(routingNoteKey('ABSENCE_DELEGATE')).toBe('tracker.routingNotes.ABSENCE_DELEGATE');
+    expect(routingNoteKey('ABSENCE_UNRESOLVED')).toBe('tracker.routingNotes.ABSENCE_UNRESOLVED');
+    // Set by an explicit delegation (ApprovalEngine.delegate): must not fall back to the generic text.
+    expect(routingNoteKey('DELEGATED')).toBe('tracker.routingNotes.DELEGATED');
+    expect(routingNoteKey('SOMETHING_NEW')).toBe('tracker.routingNotes.OTHER');
+    expect(routingNoteKey(null)).toBeNull();
+    expect(routingNoteKey('')).toBeNull();
+  });
+});
 
 describe('questionsByTask', () => {
   it('pairs each question with its answer and marks superseded ones', () => {
@@ -124,6 +137,9 @@ describe('ApprovalTracker', () => {
     const current = element().querySelector('.round')!;
     expect(current.textContent).toContain('Karim');
     expect(current.textContent).toContain('tracker.onBehalfOf');
+    expect(current.querySelector('.routing-note')?.textContent?.trim()).toBe('tracker.routingNotes.ABSENCE_DELEGATE');
+    // The raw code only ever appears as the suffix of its translation key, never as bare text (QA2-D-10).
+    expect(current.textContent).not.toMatch(/(^|[^.])ABSENCE_DELEGATE/);
     expect(current.textContent).toContain('Which pump?');
     expect(current.textContent).toContain('P-204');
     expect(current.querySelectorAll('.stage').length).toBe(2);

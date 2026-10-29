@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { toApiProblem } from '../../core/api/api-problem';
 import { LanguageService } from '../../core/i18n/language.service';
 import { Button } from '../../shared/ui/button';
@@ -21,6 +21,7 @@ import { INBOX_SORTS, InboxItem, InboxQuery, InboxSort, InboxView } from './appr
 import { ApprovalsApi } from './approvals.api';
 
 type PageState = 'loading' | 'ready' | 'error';
+type LoadResult = { kind: 'ready'; page: Page<InboxItem> } | { kind: 'error'; problem: ReturnType<typeof toApiProblem> };
 
 const PAGE_SIZE = 20;
 const MAX_SEARCH_LENGTH = 100;
@@ -215,10 +216,36 @@ export class ApprovalsInboxPage {
   protected readonly pages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
   private readonly now = signal(Date.now());
 
+  private readonly reload$ = new Subject<void>();
+
   constructor() {
     const destroyRef = inject(DestroyRef);
     const ticker = setInterval(() => this.now.set(Date.now()), 60_000);
     destroyRef.onDestroy(() => clearInterval(ticker));
+
+    // One in-flight request at a time: a filter change cancels the previous load, so a slow unfiltered response can
+    // never overwrite the filtered page that arrived first (QA2-D-11). Subscribed before the query stream, which
+    // emits synchronously.
+    this.reload$
+      .pipe(
+        switchMap(() => {
+          this.state.set('loading');
+          return this.api.inbox(this.query()).pipe(
+            map((page): LoadResult => ({ kind: 'ready', page })),
+            catchError((error: unknown) => of<LoadResult>({ kind: 'error', problem: toApiProblem(error) })),
+          );
+        }),
+        takeUntilDestroyed(destroyRef),
+      )
+      .subscribe((result) => {
+        if (result.kind === 'ready') {
+          this.page.set(result.page);
+          this.state.set('ready');
+        } else if (result.problem.status !== 401) {
+          this.error.set(result.problem.code);
+          this.state.set('error');
+        }
+      });
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       this.query.set(inboxQueryFromParams(params));
@@ -230,21 +257,7 @@ export class ApprovalsInboxPage {
   }
 
   load(): void {
-    this.state.set('loading');
-    this.api.inbox(this.query()).subscribe({
-      next: (page) => {
-        this.page.set(page);
-        this.state.set('ready');
-      },
-      error: (error: unknown) => {
-        const problem = toApiProblem(error);
-        if (problem.status === 401) {
-          return;
-        }
-        this.error.set(problem.code);
-        this.state.set('error');
-      },
-    });
+    this.reload$.next();
     if (this.query().view === 'pending') {
       this.count.refresh();
     }

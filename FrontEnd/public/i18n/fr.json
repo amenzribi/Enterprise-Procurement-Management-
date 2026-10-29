@@ -630,7 +630,13 @@
     "questionSuperseded": "Close par la décision.",
     "awaitingAnswer": "En attente de la réponse du demandeur.",
     "by": "par {{name}}",
-    "stepOf": "Étape {{step}} sur {{total}} : {{label}}"
+    "stepOf": "Étape {{step}} sur {{total}} : {{label}}",
+    "routingNotes": {
+      "ABSENCE_DELEGATE": "Transmise au délégué pendant une absence",
+      "ABSENCE_UNRESOLVED": "Valideur absent — aucun délégué possible ; intervention d’un administrateur nécessaire",
+      "DELEGATED": "Reçue par délégation du valideur désigné",
+      "OTHER": "Transmise selon une règle particulière"
+    }
   },
   "approvals": {
     "inbox": {

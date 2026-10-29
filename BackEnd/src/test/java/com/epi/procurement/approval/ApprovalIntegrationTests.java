@@ -86,6 +86,10 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 		assertThat(summary.header("Referrer-Policy")).isEqualTo("no-referrer");
 		// ANY stage with two Sfax maintenance managers (Karim, Hichem).
 		assertThat(pendingTasks(id)).hasSize(2);
+		// QA2-D-08: one token per e-mail (the HTML and text parts share it).
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_link_token k JOIN approval_task t ON t.id = k.task_id "
+				+ "WHERE t.request_id = ? AND t.assignee_user_id = ?", Integer.class, id, userId("manager.tn@demo.local")))
+			.isEqualTo(1);
 		// S2CR-01: no usable token is stored in the outbox, before or after sending.
 		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification_outbox WHERE body_html LIKE ? OR body_text LIKE ?",
 				Integer.class, "%" + token + "%", "%" + token + "%")).isZero();
@@ -380,6 +384,127 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 		finally {
 			admin.post("/api/v1/admin/approval-rules/" + rule + "/retire", null).expectStatus(200);
 		}
+	}
+
+	/**
+	 * S2CR-15 / QA2-D-07, ANY stage: an absent approver whose delegate is also a direct approver gives one task,
+	 * marked as absence delegation, with an ABSENCE_ROUTED event and audit record - whichever manager is absent.
+	 */
+	@Test
+	void anyStageCollapsesAnAbsenceOntoADirectApproverInBothDirections() {
+		for (String[] pair : List.of(new String[] { "manager.tn@demo.local", "manager2.tn@demo.local" },
+				new String[] { "manager2.tn@demo.local", "manager.tn@demo.local" })) {
+			long absent = userId(pair[0]);
+			long delegate = userId(pair[1]);
+			long absence = absence(pair[0], delegate);
+			try {
+				long id = submit(signedIn("requester.tn@demo.local"), request("Absence ANY", "TND", 15, "DEMO-SPARE"));
+				List<Map<String, Object>> tasks = jdbc.queryForList("SELECT assignee_user_id, original_user_id, routing_note "
+						+ "FROM approval_task WHERE request_id = ?", id);
+				assertThat(tasks).hasSize(1);
+				assertThat(((Number) tasks.get(0).get("assignee_user_id")).longValue()).isEqualTo(delegate);
+				assertThat(((Number) tasks.get(0).get("original_user_id")).longValue()).isEqualTo(absent);
+				assertThat(tasks.get(0).get("routing_note")).isEqualTo("ABSENCE_DELEGATE");
+				assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task_event WHERE request_id = ? AND kind = "
+						+ "'ABSENCE_ROUTED' AND on_behalf_of_user_id = ? AND target_user_id = ?", Integer.class, id, absent,
+						delegate)).isEqualTo(1);
+				assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE entity_id = ? AND action = "
+						+ "'APPROVAL_ABSENCE_ROUTED'", Integer.class, Long.toString(id))).isEqualTo(1);
+			}
+			finally {
+				signedIn(pair[0]).delete("/api/v1/me/absences/" + absence).expectStatus(204);
+			}
+		}
+		assertThat(auditLog.verifyChain("company:" + companyId("DEMO-TN-PLT")).valid()).isTrue();
+	}
+
+	/**
+	 * S2CR-15, ALL stage: the delegate already holds a required approval, so the absent approver keeps their task,
+	 * flagged ABSENCE_UNRESOLVED - one person never approves twice.
+	 */
+	@Test
+	void allStageNeverGivesTwoRequiredApprovalsToOnePerson() {
+		ApiClient admin = signedIn("admin@demo.local");
+		long rule = admin.post("/api/v1/admin/approval-rules", json(Map.of("companyId", companyId("DEMO-TN-PLT"), "name",
+				"IT ALL absence (test)", "categoryId", categoryId("DEMO-IT"), "minAmount", 0, "stages", List.of(Map.of("name",
+						"Both managers", "approverType", "DEPARTMENT_MANAGER", "policy", "ALL", "slaHours", 8)))))
+			.expectStatus(201)
+			.id();
+		admin.post("/api/v1/admin/approval-rules/" + rule + "/activate", null).expectStatus(200);
+		long karim = userId("manager.tn@demo.local");
+		long hichem = userId("manager2.tn@demo.local");
+		long absence = absence("manager.tn@demo.local", hichem);
+		try {
+			long id = submit(signedIn("requester.tn@demo.local"), request("Absence ALL", "TND", 15, "DEMO-IT"));
+			List<Map<String, Object>> tasks = jdbc.queryForList("SELECT assignee_user_id, original_user_id, routing_note "
+					+ "FROM approval_task WHERE request_id = ? ORDER BY assignee_user_id", id);
+			assertThat(tasks).hasSize(2);
+			assertThat(tasks).anySatisfy(t -> {
+				assertThat(((Number) t.get("assignee_user_id")).longValue()).isEqualTo(hichem);
+				assertThat(t.get("original_user_id")).isNull();
+			});
+			assertThat(tasks).anySatisfy(t -> {
+				assertThat(((Number) t.get("assignee_user_id")).longValue()).isEqualTo(karim);
+				assertThat(t.get("routing_note")).isEqualTo("ABSENCE_UNRESOLVED");
+			});
+		}
+		finally {
+			signedIn("manager.tn@demo.local").delete("/api/v1/me/absences/" + absence).expectStatus(204);
+			admin.post("/api/v1/admin/approval-rules/" + rule + "/retire", null).expectStatus(200);
+		}
+	}
+
+	/**
+	 * S2CR-15 suggestion / S2-AC-06: a request never routes to its own author. When the absent approver's delegate is
+	 * the requester, the absent approver keeps the task flagged ABSENCE_UNRESOLVED and the other direct approver gets
+	 * a normal task; the author holds no task.
+	 */
+	@Test
+	void absenceDelegationNeverRoutesATaskToTheRequestAuthor() {
+		ApiClient admin = signedIn("admin@demo.local");
+		long karim = userId("manager.tn@demo.local");
+		long hichem = userId("manager2.tn@demo.local");
+		long sami = userId("requester.tn@demo.local");
+		Instant now = clock.instant();
+		// Only an administrator can name a delegate who does not hold the role (adminOverride).
+		long absence = admin.post("/api/v1/admin/absences", "{\"userId\":" + karim + ",\"adminOverride\":true,"
+				+ "\"delegateUserId\":" + sami + ",\"startsAt\":\"" + now.minusSeconds(60) + "\",\"endsAt\":\""
+				+ now.plus(Duration.ofDays(1)) + "\"}").expectStatus(201).id();
+		try {
+			long id = submit(signedIn("requester.tn@demo.local"), request("Absence to author", "TND", 15, "DEMO-SPARE"));
+			List<Map<String, Object>> tasks = jdbc.queryForList("SELECT assignee_user_id, original_user_id, routing_note, "
+					+ "status FROM approval_task WHERE request_id = ? ORDER BY assignee_user_id", id);
+			assertThat(tasks).extracting(t -> ((Number) t.get("assignee_user_id")).longValue())
+				.containsExactlyInAnyOrder(karim, hichem)
+				.doesNotContain(sami);
+			assertThat(tasks).anySatisfy(t -> {
+				assertThat(((Number) t.get("assignee_user_id")).longValue()).isEqualTo(karim);
+				assertThat(t.get("original_user_id")).isNull();
+				assertThat(t.get("routing_note")).isEqualTo("ABSENCE_UNRESOLVED");
+				assertThat(t.get("status")).isEqualTo("PENDING");
+			});
+			assertThat(tasks).anySatisfy(t -> {
+				assertThat(((Number) t.get("assignee_user_id")).longValue()).isEqualTo(hichem);
+				assertThat(t.get("routing_note")).isNull();
+			});
+			assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task_event WHERE request_id = ? AND kind = "
+					+ "'ABSENCE_ROUTED'", Integer.class, id)).as("no absence routing happened").isZero();
+			// The author sees the unresolved note in the tracker and is never asked to approve their own request.
+			ApiClient author = signedIn("requester.tn@demo.local");
+			assertThat((List<String>) author.get("/api/v1/requests/" + id + "/approval").expectStatus(200)
+				.json("$.rounds[0].stages[0].tasks[*].routingNote")).contains("ABSENCE_UNRESOLVED");
+			assertThat((List<Integer>) author.get("/api/v1/approvals/inbox?size=100").expectStatus(200)
+				.json("$.items[*].requestId")).doesNotContain((int) id);
+		}
+		finally {
+			admin.delete("/api/v1/admin/absences/" + absence).expectStatus(204);
+		}
+	}
+
+	private long absence(String absentEmail, long delegateId) {
+		Instant now = clock.instant();
+		return signedIn(absentEmail).post("/api/v1/me/absences", "{\"delegateUserId\":" + delegateId + ",\"startsAt\":\""
+				+ now.minusSeconds(60) + "\",\"endsAt\":\"" + now.plus(Duration.ofDays(1)) + "\"}").expectStatus(201).id();
 	}
 
 	@Test

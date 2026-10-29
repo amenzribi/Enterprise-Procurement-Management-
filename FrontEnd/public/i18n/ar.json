@@ -630,7 +630,13 @@
     "questionSuperseded": "أُغلق بالقرار.",
     "awaitingAnswer": "بانتظار إجابة طالب الشراء.",
     "by": "بواسطة {{name}}",
-    "stepOf": "الخطوة {{step}} من {{total}}: {{label}}"
+    "stepOf": "الخطوة {{step}} من {{total}}: {{label}}",
+    "routingNotes": {
+      "ABSENCE_DELEGATE": "أُحيلت إلى المفوَّض أثناء الغياب",
+      "ABSENCE_UNRESOLVED": "المعتمِد غائب — لا يوجد مفوَّض مؤهَّل؛ يلزم تدخّل المسؤول",
+      "DELEGATED": "وردت بالتفويض من المعتمِد المعيَّن",
+      "OTHER": "أُحيلت وفق قاعدة خاصة"
+    }
   },
   "approvals": {
     "inbox": {

@@ -7,7 +7,7 @@ the product; nothing React-based is installed.
 
 | Tool | Version | Notes |
 |---|---|---|
-| JDK | Eclipse Temurin 25.0.4.1 LTS | Spring Boot 4.1 supports Java 25; JDK 25 is the project target |
+| JDK | Eclipse Temurin 21.0.12.1 LTS | Compiler target and runtime: Java 21 (`pom.xml` `java.version`). Java 25 was proposed and rejected (ADR-010). |
 | Maven | via Maven Wrapper in `BackEnd/` | No global Maven needed |
 | Node.js / npm | 24.20.0 / 11.19.0 | Angular CLI 22 requires Node ^22.22.3 or ^24.15.0 |
 | Angular CLI | via `npx` / project dependency | No global install needed |

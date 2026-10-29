@@ -12,6 +12,8 @@
 | Sprint roadmap (incl. Sprint 1 criteria) | [product/roadmap.md](product/roadmap.md) |
 | Backlog | [product/backlog.md](product/backlog.md) |
 | Sprint 0 scope and acceptance criteria | [product/sprint-0.md](product/sprint-0.md) |
+| Sprint 1 / 2 scope | [product/sprint-1.md](product/sprint-1.md), [product/sprint-2.md](product/sprint-2.md) |
+| Repository review (Sprint 2 closure, self-review) | [reviews/repository-review.md](reviews/repository-review.md) |
 | Architecture | [architecture/architecture.md](architecture/architecture.md) |
 | Decisions (ADRs) | [decisions/decision-log.md](decisions/decision-log.md) |
 | QA strategy, test plans, results | [qa/](qa/) |

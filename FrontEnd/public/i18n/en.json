@@ -630,7 +630,13 @@
     "questionSuperseded": "Closed by the decision.",
     "awaitingAnswer": "Waiting for the requester's answer.",
     "by": "by {{name}}",
-    "stepOf": "Step {{step}} of {{total}}: {{label}}"
+    "stepOf": "Step {{step}} of {{total}}: {{label}}",
+    "routingNotes": {
+      "ABSENCE_DELEGATE": "Routed to the delegate during an absence",
+      "ABSENCE_UNRESOLVED": "Approver absent — no eligible delegate; administrator action needed",
+      "DELEGATED": "Received by delegation from the designated approver",
+      "OTHER": "Routed by a special rule"
+    }
   },
   "approvals": {
     "inbox": {

@@ -46,6 +46,20 @@ const STAGE_TONES: Record<StageStatus, StatusTone> = {
   CANCELLED: 'neutral',
 };
 
+/** Routing notes the server sets on tasks; each has a translated explanation. */
+const ROUTING_NOTES = ['ABSENCE_DELEGATE', 'ABSENCE_UNRESOLVED', 'DELEGATED'] as const;
+
+/**
+ * Translation key for a task's routing note, or null for none. Unknown codes get a generic explanation rather than
+ * the raw code (QA2-D-10). Exported for tests.
+ */
+export function routingNoteKey(note: string | null | undefined): string | null {
+  if (!note) {
+    return null;
+  }
+  return (ROUTING_NOTES as readonly string[]).includes(note) ? `tracker.routingNotes.${note}` : 'tracker.routingNotes.OTHER';
+}
+
 /** A question asked on a task and its answer, rebuilt from the decision history. */
 export interface TaskQuestion {
   question: string;
@@ -219,8 +233,10 @@ const TASK_ICONS: Record<TaskStatus, IconName> = {
                         {{ 'tracker.delegatedTo' | translate: { name } }}
                       }
                     </p>
-                    @if (task.routingNote) {
-                      <p class="muted small">{{ task.routingNote }}</p>
+                    @if (routingNoteKey(task.routingNote); as noteKey) {
+                      <p class="muted small routing-note" [class.is-overdue]="task.routingNote === 'ABSENCE_UNRESOLVED'">
+                        {{ noteKey | translate }}
+                      </p>
                     }
                     <p class="muted small">
                       @if (task.decidedAt) {
@@ -330,6 +346,10 @@ export class ApprovalTracker {
 
   protected outcomeTone(outcome: string): StatusTone {
     return outcome === 'APPROVED' ? 'success' : outcome === 'REJECTED' ? 'danger' : outcome === 'RETURNED' ? 'warning' : 'neutral';
+  }
+
+  protected routingNoteKey(note: string | null | undefined): string | null {
+    return routingNoteKey(note);
   }
 
   /** Who a delegated task went to, from the DELEGATED event of that task. */

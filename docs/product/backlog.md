@@ -32,7 +32,17 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 | 15 | Decision history timeline on request detail | FR-AUD-01 | M |
 | 16 | Mobile-optimised approval view | NFR-02 | S |
 
+## Sprint 2 carry-over (not closure blockers)
+
+| # | Item | Req | Size |
+|---|---|---|---|
+| S2-C1 | S2CR-08: proxy-aware client address for one-tap rate limits (trusted-proxy list + per-token limit) | S2-AC-07 | S — **Sprint 9** |
+| S2-C2 | Native-speaker review of Arabic UI and e-mail texts | NFR-11, S2DR-13 | S |
+| S2-C3 | Admin action to re-route an `ABSENCE_UNRESOLVED` task without waiting for escalation (RR-10) | FR-APR-03 | S |
+| S2-C4 | Bind parameters in `ApprovalStore` SQL that currently concatenates numeric ids (RR-07) | NFR-05 | S |
+
 ## Sprint 3 onwards
 
-See [roadmap.md](roadmap.md); items are broken down at each sprint planning from the register rows tagged with that
-sprint.
+See [roadmap.md](roadmap.md). Items are broken down at sprint planning from the register rows tagged with that
+sprint. Grouping of similar needs, internal transfer and "buy again" stay confirm-with-pilot (G12); they are not
+in the first S3 slice unless the Sprint 3 plan says otherwise.

@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { convertToParamMap, provideRouter } from '@angular/router';
+import { Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ApprovalsInboxPage, inboxQueryFromParams } from './approvals-inbox';
 import { InboxItem } from './approval.models';
@@ -82,6 +82,19 @@ describe('ApprovalsInboxPage', () => {
     inbox().flush({ items: [], page: 0, size: 20, totalItems: 0 });
     await fixture.whenStable();
     expect(element().textContent).toContain('approvals.inbox.empty.pending.title');
+  });
+
+  it('drops a slow earlier response when the search has changed since (QA2-D-11)', async () => {
+    const unfiltered = inbox();
+    // The user searches before the first page arrives: the filtered request replaces the unfiltered one.
+    await TestBed.inject(Router).navigate([], { queryParams: { q: 'DEMO-TN-PLT-PR-2026-000418' } });
+    await fixture.whenStable();
+    expect(unfiltered.cancelled).toBe(true);
+    const filtered = http.expectOne((request) => request.url === '/api/v1/approvals/inbox' && request.params.get('q') === 'DEMO-TN-PLT-PR-2026-000418');
+    filtered.flush({ items: [ITEM], page: 0, size: 20, totalItems: 1 });
+    await fixture.whenStable();
+    expect(element().querySelectorAll('.card').length).toBe(1);
+    expect(element().querySelector('.card')?.textContent).toContain('DEMO-TN-PLT-PR-2026-000418');
   });
 
   it('shows an error with retry when the inbox cannot be loaded', async () => {

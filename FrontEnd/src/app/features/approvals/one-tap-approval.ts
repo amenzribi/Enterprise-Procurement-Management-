@@ -302,7 +302,7 @@ export class OneTapApprovalPage {
   }
 
   protected money(summary: LinkSummary): string {
-    return formatMoney(summary.amount ?? null, summary.currency, minorUnitsOf(summary.currency), this.language.locale()) || '—';
+    return formatMoney(summary.amount ?? null, summary.currency, summary.currencyMinorUnits ?? minorUnitsOf(summary.currency), this.language.locale()) || '—';
   }
 
   private fail(error: unknown): void {

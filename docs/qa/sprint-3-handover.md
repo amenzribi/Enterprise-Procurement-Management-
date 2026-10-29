@@ -1,6 +1,6 @@
 # Sprint 3 handover (developer)
 
-Local delivery, 2026-10-29, commit `c42bee9` (`c42bee92863a4d61afcbc7e99e29fcf4702d01b3`), on top of Sprint 2 close [`42c03b9`](../qa/sprint-2-test-results.md). **Not** an independent QA or code review. **Do not push** until the owner asks.
+Local delivery, 2026-10-29, commit `a24500e` (`a24500ef35d3fb371a5f45cdf68044c6b3a16166`), on top of Sprint 2 close [`42c03b9`](../qa/sprint-2-test-results.md). **Not** an independent QA or code review. **Do not push** until the owner asks.
 
 ## What shipped
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Revision | **`c42bee92863a4d61afcbc7e99e29fcf4702d01b3`** (`c42bee9`), on top of Sprint 2 close `42c03b9`. |
+| Revision | **`a24500ef35d3fb371a5f45cdf68044c6b3a16166`** (`a24500e`), on top of Sprint 2 close `42c03b9`. |
 | Date | 2026-10-29 |
 | Environment | Windows 11; backend `spring-boot:run` profiles `dev,demo` on **8081** (restarted with this tree); session `DEMO_USER_PASSWORD` in a temp file outside the repo; `ng serve --port 4300` with a scratchpad proxy to 8081; SQL Server `procurement_dev` (live) and `procurement_test` (DB-IT). Ports 8080/4200 were not in use and were not touched. Demo database was **not** wiped. |
 | Tester | Developer. **Not** an independent QA or reviewer run. |

@@ -7,15 +7,15 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 
 | ID | Requirement | Spec | Story | Release | Sprint | Status |
 |---|---|---|---|---|---|---|
-| FR-ORG-01 | Group, companies (parent, subsidiary, central purchasing), sites, departments, cost centres | §3.1, §3.6, §23 | — | MVP | S0 schema, S2 admin | In progress |
-| FR-ORG-02 | Per-company currency, language, time zone, ERP company code, purchase mode | §3.6, §3.7 | — | MVP | S0 schema, S1 | In progress |
+| FR-ORG-01 | Group, companies (parent, subsidiary, central purchasing), sites, departments, cost centres | §3.1, §3.6, §23 | — | MVP | S0 schema, S3 admin | Done (S3: ADMIN create/update companies, sites, departments, cost centres) |
+| FR-ORG-02 | Per-company currency, language, time zone, ERP company code, purchase mode | §3.6, §3.7 | — | MVP | S0 schema, S1, S3 | Done (S3: org admin can set purchasing mode, currency, language, time zone, ERP code) |
 | FR-IAM-01 | Authentication (local dev accounts; OIDC in production) | §24, §22 | — | MVP | S1 | Done (S1) |
 | FR-IAM-02 | Roles of §20 with scope by company/department/country/category | §20 | — | MVP | S1 | Done (S1) |
 | FR-IAM-03 | Company isolation for every query and endpoint | §3.6, §17 | — | MVP | S1→all | Done (S1) |
 | FR-IAM-04 | MFA for management, purchasing, finance (via IdP) | §24 | — | MVP | S9 | Planned |
 | FR-REQ-01 | Multi-line request with unique number and request actors (entered by, requester, beneficiary, requesting/charged/buying company) | §3.2, §6.1 | US-01 | MVP | S1 | Done (S1) |
 | FR-REQ-02 | Attachments per request and per line, versioned | §6.1, §19 | US-01 | MVP | S2 | Done (S2) |
-| FR-REQ-03 | Pre-submission checks: mandatory fields by category, near-duplicate warning | §6.3 | — | MVP | S1, S3 | Partly done (S1: mandatory fields; near-duplicate warning moved to S3 with the buying queue) |
+| FR-REQ-03 | Pre-submission checks: mandatory fields by category, near-duplicate warning | §6.3 | — | MVP | S1, later | Partly done (S1: mandatory fields; near-duplicate / grouping remains G12, not in the S3 slice) |
 | FR-REQ-04 | Stock / framework-contract / price-history checks | §6.3 | — | P2 | — | Deferred |
 | FR-REQ-05 | Excel import of a parts list into one request | §6.2 | — | MVP | S7 | Planned |
 | FR-REQ-06 | Per-line status, header status derived (assumption A2) | §5 | — | MVP | S1→S6 | Planned |
@@ -24,13 +24,13 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-APR-03 | Delegation of authority matrix and dated absence delegation | §7.1 | — | MVP | S2 | Done (S2: approval rules as authority matrix, per-task and absence delegation) |
 | FR-APR-04 | SLA per step, reminders, escalation | §7.1 | — | MVP | S2 | Done (S2) |
 | FR-APR-05 | BPMN graphical designer | §7.1 | — | P2 | — | Deferred (ADR-005) |
-| FR-PUR-01 | Central inbox of approved requests with filters | §8 | US-05 | MVP | S3 | Planned |
-| FR-PUR-02 | Completeness check and return to requester | §8 | — | MVP | S3 | Planned |
-| FR-PUR-03 | Rule-based assignment; buyer accepts or declines with reason | §8 | US-05 | MVP | S3 | Planned |
-| FR-PUR-04 | Purchase mode per request: direct / centralised / on behalf | §3.7 | US-15 | MVP | S3 | Planned |
+| FR-PUR-01 | Central inbox of approved requests with filters | §8 | US-05 | MVP | S3 | Done (S3: queue + API filters; inbox UI is a subset — see sprint-3-defects S3-D-01) |
+| FR-PUR-02 | Completeness check and return to requester | §8 | — | MVP | S3 | Done (S3: gaps on the panel; completeness return → PURCHASING_RETURNED; resubmit skips approval) |
+| FR-PUR-03 | Rule-based assignment; buyer accepts or declines with reason | §8 | US-05 | MVP | S3 | Done (S3: PM assigns; suggestion = lowest open load; buyer accepts or returns) |
+| FR-PUR-04 | Purchase mode per request: direct / centralised / on behalf | §3.7 | US-15 | MVP | S3 | Done (S3: charged company unchanged; MIXED may choose any of the three) |
 | FR-PUR-05 | Grouping similar requests from several subsidiaries into one RFQ | §8 | — | P2 | — | Deferred |
 | FR-PUR-06 | AI buyer suggestion | §8, §17 | — | P2 | — | Deferred |
-| FR-SRC-01 | Supplier registry (local by country, international), categories | §14 | — | MVP | S3 list/register, S4 RFQ | Planned (S3: register and list; RFQs remain S4) |
+| FR-SRC-01 | Supplier registry (local by country, international), categories | §14 | — | MVP | S3 list/register, S4 RFQ | Done (S3: register and list, SHARED/COMPANY). RFQs remain S4. |
 | FR-SRC-02 | RFQ local (quick quote) and international | §9.1 | — | MVP | S4 | Planned |
 | FR-SRC-03 | Manual quotation entry with currency, lead time, payment terms, Incoterm, validity, compliance | §9.2 | US-06 | MVP | S4 | Planned |
 | FR-SRC-04 | Conversion to comparison currency, landed-cost estimate, comparison table | §9.2 | US-06 | MVP | S4 | Planned |
@@ -50,7 +50,7 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-DSH-02 | Management "where / who / how much / late / when" view | §16.2 | US-10 | MVP | S7 | Planned |
 | FR-AUD-01 | Complete decision history per request | §7.2, §24 | US-11 | MVP | S0 table, S2 view | Done (S2: request tracker and approval history) |
 | FR-ERP-01 | Export approved requests and POs (CSV/Excel) | §21.1 | US-12 | MVP | S7 | Planned |
-| FR-ERP-02 | Import suppliers, articles, statuses (CSV/Excel) | §21.1 | US-12 | MVP | S3 wizard, S7/S8 ERP files | Planned (S3: authorised import wizard, no live ERP connector) |
+| FR-ERP-02 | Import suppliers, articles, statuses (CSV/Excel) | §21.1 | US-12 | MVP | S3 wizard, S7/S8 ERP files | Done (S3: authorised CSV wizard for SUPPLIER and ORGANISATION). Live ERP connectors remain deferred. |
 | FR-ERP-03 | API connectors (SAP, Oracle, Dynamics, Sage, Odoo) | §21.2–§21.4 | — | P2 | — | Deferred |
 | FR-AI-01 | Free text → structured draft request, human-reviewed | §6.2, §17 | US-02 | MVP | S8 | Planned |
 | FR-EXT-01 | External customer requests, sales quotes, customer orders | §3.4, §17 M17 | US-13, US-14 | P2 | — | Deferred |

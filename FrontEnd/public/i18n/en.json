@@ -47,7 +47,8 @@
       "logistics": "Logistics",
       "dashboards": "Dashboards",
       "approvalRules": "Approval rules",
-      "exchangeRates": "Exchange rates"
+      "exchangeRates": "Exchange rates",
+      "import": "Master-data import"
     },
     "plannedSprint": "Sprint {{sprint}}",
     "pendingCount": "{{count}} waiting for your decision"
@@ -64,7 +65,8 @@
         "signIn": "Sign-in with session expiry and a saved language preference",
         "requests": "Create, save and submit multi-line purchase requests with a unique number",
         "isolation": "Each user sees only the requests of their company and role",
-        "approvals": "Approval circuits per company, one-tap approval from e-mail and a request tracker"
+        "approvals": "Approval circuits per company, one-tap approval from e-mail and a request tracker",
+        "purchasing": "Central buying queue, buyer assignment, supplier register and organisation import"
       },
       "checkConnection": "Check the connection",
       "openRequests": "Open my requests"
@@ -220,7 +222,13 @@
     "too-many-requests": "Too many attempts. Wait a moment and try again.",
     "idempotency-key-reused": "This action was already sent with different content. Reload the page and try again.",
     "attachment-limit-reached": "This request has reached the limit of 30 files or 100 MB.",
-    "file-infected": "The virus check refused this file."
+    "file-infected": "The virus check refused this file.",
+    "purchase-mode-not-allowed": "This purchase mode is not allowed for the requesting company.",
+    "import-rejected": "The file was not imported. Correct the rows and try again.",
+    "import-empty": "The file has no data rows.",
+    "duplicate-code": "This code is already used.",
+    "duplicate-supplier": "A supplier with this code or tax id already exists.",
+    "not-eligible": "This person cannot receive the assignment."
   },
   "auth": {
     "signOut": "Sign out",
@@ -516,6 +524,7 @@
       "APPROVED": "Approved",
       "IN_PURCHASING_REVIEW": "In purchasing review",
       "ASSIGNED_TO_BUYER": "Assigned to a buyer",
+      "PURCHASING_RETURNED": "Returned by purchasing",
       "SOURCING": "Sourcing in progress",
       "QUOTES_RECEIVED": "Quotations received",
       "TECHNICAL_VALIDATION": "Technical validation",
@@ -929,5 +938,166 @@
       "file-infected": "The virus check refused this file."
     },
     "infected": "blocked by the virus check"
+  },
+  "purchasing": {
+    "inbox": {
+      "title": "Purchasing inbox",
+      "description": "Approved requests waiting for a buyer at your buying company.",
+      "search": "Search by number or title",
+      "searchPlaceholder": "Number or title",
+      "filtersLabel": "Filters",
+      "status": "Status",
+      "priority": "Priority",
+      "mode": "Purchase mode",
+      "all": "All",
+      "loading": "Loading the purchasing inbox…",
+      "resultCount": "{{count}} requests",
+      "loadError": "The purchasing inbox could not be loaded",
+      "empty": {
+        "title": "No request waiting",
+        "message": "Approved requests of companies you buy for will appear here."
+      },
+      "open": "Open",
+      "assignedTo": "Assigned to {{name}}",
+      "unassigned": "Not assigned",
+      "gaps": "Missing: {{list}}",
+      "proposed": "Buying company proposed"
+    },
+    "sorts": {
+      "requiredDate": "Required date",
+      "amount": "Amount",
+      "submittedAt": "Submitted"
+    },
+    "actions": {
+      "title": "Purchasing",
+      "assign": "Assign a buyer",
+      "assignConfirm": "Assign",
+      "buyer": "Buyer",
+      "suggested": "Suggested",
+      "openLoad": "{{count}} open",
+      "accept": "Accept assignment",
+      "returnAssignment": "Return assignment",
+      "returnDossier": "Return to requester",
+      "mode": "Purchase mode",
+      "setMode": "Set purchase mode",
+      "chargedUnchanged": "Cost allocation (charged company) does not change.",
+      "reason": "Reason",
+      "reasonRequired": "Give a reason.",
+      "assigned": "Assigned to {{name}}",
+      "accepted": "Assignment accepted",
+      "returned": "Assignment returned",
+      "modeSet": "Purchase mode updated",
+      "dossierReturned": "Returned to the requester",
+      "noBuyers": "No buyer is available in this company.",
+      "history": "Assignment history",
+      "complete": "The dossier has the required fields."
+    },
+    "mode": {
+      "DIRECT": "Direct",
+      "CENTRALIZED": "Centralised",
+      "ON_BEHALF": "On behalf",
+      "MIXED": "Mixed"
+    },
+    "assignmentStatus": {
+      "ASSIGNED": "Waiting",
+      "ACCEPTED": "Accepted",
+      "RETURNED": "Returned",
+      "SUPERSEDED": "Superseded"
+    }
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "description": "Shared and company-scoped suppliers of this group. A supplier used on a request cannot be deleted.",
+    "search": "Search suppliers",
+    "searchPlaceholder": "Code or name",
+    "visibilityLabel": "Visibility",
+    "visibility": {
+      "SHARED": "Shared",
+      "COMPANY": "This company"
+    },
+    "statusLabel": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "new": "Add a supplier",
+    "edit": "Edit the supplier",
+    "code": "Code",
+    "legalName": "Legal name",
+    "country": "Country",
+    "taxId": "Tax id",
+    "city": "City",
+    "save": "Save the supplier",
+    "saved": "Supplier saved",
+    "deactivate": "Deactivate",
+    "deactivated": "Supplier deactivated",
+    "loadError": "Suppliers could not be loaded",
+    "empty": {
+      "title": "No supplier yet",
+      "message": "Add a supplier or import a CSV file."
+    }
+  },
+  "org": {
+    "title": "Organisation",
+    "description": "Companies, sites, departments and cost centres of this group.",
+    "companies": "Companies",
+    "code": "Code",
+    "legalName": "Legal name",
+    "country": "Country",
+    "currency": "Currency",
+    "purchasingMode": "Purchasing mode",
+    "statusLabel": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "newCompany": "Add a company",
+    "type": "Type",
+    "language": "Language",
+    "timeZone": "Time zone",
+    "createCompany": "Create the company",
+    "companyCreated": "Company created",
+    "unitsOf": "Units of {{name}}",
+    "sites": "Sites",
+    "departments": "Departments",
+    "cost-centres": "Cost centres",
+    "name": "Name",
+    "addUnit": "Add",
+    "unitCreated": "Added",
+    "noUnits": "None yet.",
+    "loadError": "The organisation could not be loaded",
+    "empty": {
+      "title": "No company",
+      "message": "Create a company to start."
+    }
+  },
+  "imports": {
+    "title": "Master-data import",
+    "description": "Upload a UTF-8 CSV. Every row is checked; if one fails, nothing is saved.",
+    "upload": "Upload a file",
+    "kind": "Kind",
+    "kinds": {
+      "SUPPLIER": "Suppliers",
+      "ORGANISATION": "Sites of a company"
+    },
+    "company": "Company",
+    "file": "CSV file",
+    "hintSupplier": "Columns: code, legalName, country, visibility (SHARED or COMPANY), optional tax id.",
+    "hintOrg": "Columns: code, name, type. Sites of the selected company.",
+    "run": "Import",
+    "uploading": "Importing…",
+    "result": "Result",
+    "counts": "{{accepted}} accepted, {{rejected}} rejected",
+    "rowStatus": "Row",
+    "rowErrors": "Errors",
+    "committed": "{{accepted}} rows imported",
+    "status": {
+      "COMMITTED": "Imported",
+      "REJECTED": "Rejected"
+    },
+    "row": {
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected"
+    },
+    "noRows": {
+      "title": "No row in the result",
+      "message": "The file did not contain data rows."
+    }
   }
 }

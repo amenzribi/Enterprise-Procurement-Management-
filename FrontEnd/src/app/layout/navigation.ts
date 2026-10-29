@@ -17,7 +17,7 @@ export interface NavItem {
   /** Shown only to users holding this permission (the server enforces access regardless). */
   permission?: Permission;
   /** Shows the number of decisions waiting for the user (S2-AC-08). */
-  badge?: 'approvals';
+  badge?: 'approvals' | 'purchasing';
 }
 
 export interface NavGroup {
@@ -38,7 +38,7 @@ export const NAVIGATION: NavGroup[] = [
     items: [
       { key: 'requests', icon: 'file-plus', route: '/requests' },
       { key: 'approvals', icon: 'circle-check', route: '/approvals', badge: 'approvals' },
-      { key: 'purchasingInbox', icon: 'inbox', plannedSprint: 3 },
+      { key: 'purchasingInbox', icon: 'inbox', route: '/purchasing', permission: 'PURCHASING_ACT', badge: 'purchasing' },
       { key: 'sourcing', icon: 'scale', plannedSprint: 4 },
     ],
   },
@@ -59,8 +59,9 @@ export const NAVIGATION: NavGroup[] = [
     items: [
       { key: 'approvalRules', icon: 'settings', route: '/admin/approval-rules', permission: 'SYSTEM_ADMIN' },
       { key: 'exchangeRates', icon: 'coins', route: '/admin/exchange-rates', permission: 'SYSTEM_ADMIN' },
-      { key: 'organization', icon: 'building', plannedSprint: 3 },
-      { key: 'suppliers', icon: 'users', plannedSprint: 3 },
+      { key: 'organization', icon: 'building', route: '/admin/organization', permission: 'ORG_ADMIN' },
+      { key: 'suppliers', icon: 'users', route: '/suppliers', permission: 'SUPPLIER_READ' },
+      { key: 'import', icon: 'upload', route: '/admin/import', permission: 'IMPORT_RUN' },
     ],
   },
 ];

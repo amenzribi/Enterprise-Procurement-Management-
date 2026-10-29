@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Sprint 2 baseline (2026-10-29). Decisions referenced: [decision log](../decisions/decision-log.md).
+Status: Sprint 3 baseline (2026-10-29). Decisions referenced: [decision log](../decisions/decision-log.md).
 Java 21 (ADR-008); Java 25 rejected (ADR-010).
 
 ## 1. Context
@@ -15,8 +15,9 @@ Java 21 (ADR-008); Java 25 rejected (ADR-010).
                                      │  Spring Boot modular monolith  (BackEnd/)        │
                                      │  modules present: organization · identity ·      │
                                      │  request · approval · document · notification ·  │
-                                     │  audit · platform · system                       │
-                                     │  planned: purchasing · sourcing · supplier …     │
+                                     │  audit · platform · system · purchasing ·        │
+                                     │  supplier · importdata · orgadmin                │
+                                     │  planned: sourcing · order · logistics …         │
                                      └───────┬───────────────────────┬──────────────────┘
                                              │ file store            │ ports (later)
                                              ▼                       ▼

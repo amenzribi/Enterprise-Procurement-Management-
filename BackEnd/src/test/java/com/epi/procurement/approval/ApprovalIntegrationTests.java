@@ -113,7 +113,8 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 		assertThat((String) done.json("$.userStatus")).isEqualTo("APPROVED");
 
 		ApiClient.Response detail = sami.get("/api/v1/requests/" + id).expectStatus(200);
-		assertThat((String) detail.json("$.status")).isEqualTo("APPROVED");
+		assertThat((String) detail.json("$.status")).isEqualTo("IN_PURCHASING_REVIEW");
+		assertThat((String) detail.json("$.userStatus")).isEqualTo("APPROVED");
 		assertThat((List<String>) sami.get("/api/v1/requests/" + id + "/approval").json("$.events[*].kind"))
 			.contains("TASK_CREATED", "APPROVED", "ROUND_APPROVED");
 		assertThat((String) jdbc.queryForObject("SELECT TOP (1) channel FROM approval_task_event WHERE request_id = ? "
@@ -371,7 +372,7 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 			long[] hichemTask = myTask(hichem, approved);
 			hichem.post("/api/v1/approvals/tasks/" + hichemTask[0] + "/approve", "{\"version\":" + hichemTask[1] + "}")
 				.expectStatus(200);
-			assertThat((String) sami.get("/api/v1/requests/" + approved).json("$.status")).isEqualTo("APPROVED");
+			assertThat((String) sami.get("/api/v1/requests/" + approved).json("$.status")).isEqualTo("IN_PURCHASING_REVIEW");
 
 			long rejected = submit(sami, request("Breaker ALL", "TND", 300, "DEMO-ELEC"));
 			long[] task = myTask(karim, rejected);

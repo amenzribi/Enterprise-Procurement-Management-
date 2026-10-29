@@ -270,6 +270,20 @@ class RequestService {
 		validate(validator.validateSubmission(request, today));
 
 		RequestStatus from = request.getStatus();
+		if (from == RequestStatus.PURCHASING_RETURNED) {
+			request.transitionTo(RequestStatus.IN_PURCHASING_REVIEW,
+					request.getAssignedBuyerUserId() != null ? request.getAssignedBuyerUserId()
+							: request.getRequesterUserId(),
+					now);
+			request.touch(user.id(), now);
+			requests.saveAndFlush(request);
+			transitions.save(new RequestTransition(request.getId(), from, RequestStatus.IN_PURCHASING_REVIEW,
+					request.getCurrentOwnerUserId(), user.id(), now, "purchasing-resubmitted"));
+			auditLog.record(new AuditRecord(user.id(), user.displayName(), company.id(), ENTITY,
+					request.getId().toString(), "PURCHASING_RESUBMITTED", from.name(),
+					RequestStatus.IN_PURCHASING_REVIEW.name(), null, null));
+			return mapper.detail(user, request);
+		}
 		boolean resubmission = from == RequestStatus.REVISION_REQUESTED;
 		if (!resubmission) {
 			request.markSubmitted(numbering.next(company.id(), company.code(), today.getYear()), now);
@@ -398,12 +412,13 @@ class RequestService {
 	}
 
 	/**
-	 * Proposed buying company from the company's purchasing mode (S1DR-07): the group's purchasing centre for
-	 * CENTRALIZED, otherwise the requesting company itself (DIRECT, ON_BEHALF - where the subsidiary remains the
-	 * legal buyer - and MIXED until category rules exist). Purchasing confirms or changes it in Sprint 3 (US-15).
+	 * Proposed buying company from the company's purchasing mode (S1DR-07, S3-AC-04): the group's purchasing centre
+	 * for CENTRALIZED and MIXED (until purchasing confirms another mode); the requesting company itself for DIRECT
+	 * and ON_BEHALF. Charged company stays the requesting company.
 	 */
 	private long buyingCompany(OrganizationDirectory.CompanyRef company) {
-		if (company.purchasingMode() == PurchasingMode.CENTRALIZED) {
+		if (company.purchasingMode() == PurchasingMode.CENTRALIZED
+				|| company.purchasingMode() == PurchasingMode.MIXED) {
 			return organization.purchasingCenterOf(company.groupId())
 				.map(OrganizationDirectory.CompanyRef::id)
 				.orElse(company.id());

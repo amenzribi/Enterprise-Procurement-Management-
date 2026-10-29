@@ -134,6 +134,8 @@ export interface PurchaseRequest {
   chargedCompany?: Reference | null;
   buyingCompany?: Reference | null;
   buyingCompanyProposed?: boolean;
+  assignedBuyer?: PersonOption | null;
+  purchaseMode?: string | null;
   department?: Reference | null;
   site?: Reference | null;
   costCenter?: Reference | null;

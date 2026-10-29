@@ -3,9 +3,10 @@
 Procurement request platform for multi-company groups: one entry point for every purchase request, from need to
 closure. Spring Boot 4.1 (Java 21) + Angular 22 + Microsoft SQL Server. English, French and Arabic (RTL).
 
-**Current state: Sprint 2 complete locally** (identity, company-scoped requests, approval circuits, tracker,
-one-tap e-mail, absences, attachments). Sprint 3 (central buying queue) is next; the pilot-client business gate
-in the Solution Guide v3.0 §15 is **not** recorded as passed and restricts rollout, not local development.
+**Current state: Sprint 3 locally implemented** (central buying queue, buyer assignment, purchase mode, supplier
+register, organisation admin, master-data import). Sprint 2 remains locally closed at `42c03b9`. The pilot-client
+business gate in the Solution Guide v3.0 §15 is **not** recorded as passed and restricts rollout, not local
+development. This is a developer delivery, not an independent QA/reviewer sign-off.
 See [docs/product/roadmap.md](docs/product/roadmap.md). Java 25 was proposed (ADR-010) and **rejected**.
 
 | Folder | Contents |

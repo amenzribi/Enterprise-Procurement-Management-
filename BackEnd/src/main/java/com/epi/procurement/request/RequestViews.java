@@ -45,6 +45,7 @@ final class RequestViews {
 			String origin, String title,
 			LocalizedRef category, String priority, String purchaseType, String currency, int currencyMinorUnits,
 			Ref requestingCompany, Ref chargedCompany, Ref buyingCompany, boolean buyingCompanyProposed,
+			UserRef assignedBuyer, String purchaseMode,
 			Ref department, Ref site, Ref costCenter, UserRef requester, UserRef enteredBy, UserRef updatedBy,
 			String beneficiary, Ref beneficiarySite, String project, String justification,
 			String urgencyJustification, String budgetLineRef, String equipmentRef, String maintenanceOrderRef,

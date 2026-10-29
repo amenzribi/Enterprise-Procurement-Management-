@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Closure revision | **`c99e249b1e30293d0fe43cee5e0fecf35fcfd99f`** (`c99e249`). 2026-10-29 Developer run after QA2-D-09 / D-10 / D-11. Earlier trees: `bf12fb7` (D-07/D-08 verification), `69be61a`, `767933d`. |
+| Closure revision | **`42c03b9f1f8452d8960cf1b761fb0fb4e8adab3e`** (`42c03b9`). 2026-10-29 local Sprint 2 close. Earlier trees: `c99e249`, `bf12fb7` (D-07/D-08 verification), `69be61a`, `767933d`. The S3 run did **not** re-execute this table. |
 | Date | 2026-10-29 (closure). First run 2026-10-27/28. |
 | Environment | Windows 11; backend `spring-boot:run` profiles `dev,demo` on **8081**, session-generated `DEMO_USER_PASSWORD` (never committed); `ng serve --port 4300` proxying to 8081; SQL Server (`procurement_dev` for live checks, `procurement_test` for DB-IT). Ports 8080/4200 untouched. Demo database was **not** wiped. |
 | Tester | Developer (closure run). The 52-check QA2 API script was **not** re-executed; those rows below remain historical. |

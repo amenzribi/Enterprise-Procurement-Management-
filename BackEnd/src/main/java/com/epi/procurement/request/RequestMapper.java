@@ -59,6 +59,9 @@ class RequestMapper {
 		List<RequestTransition> timeline = transitions.findByRequestIdOrderByOccurredAtAscIdAsc(r.getId());
 		Set<Long> userIds = new HashSet<>(List.of(r.getRequesterUserId(), r.getEnteredByUserId(),
 				r.getUpdatedByUserId(), r.getCurrentOwnerUserId()));
+		if (r.getAssignedBuyerUserId() != null) {
+			userIds.add(r.getAssignedBuyerUserId());
+		}
 		timeline.forEach(t -> {
 			userIds.add(t.getActorUserId());
 			if (t.getOwnerUserId() != null) {
@@ -93,6 +96,8 @@ class RequestMapper {
 				name(r.getPurchaseType()), r.getCurrencyCode(), minorUnits.getOrDefault(r.getCurrencyCode(), 2),
 				companyRef.apply(r.getRequestingCompanyId()), companyRef.apply(r.getChargedCompanyId()),
 				companyRef.apply(r.getBuyingCompanyId()), r.isBuyingCompanyProposed(),
+				r.getAssignedBuyerUserId() == null ? null : userRef(people, r.getAssignedBuyerUserId()),
+				name(r.getPurchaseMode()),
 				unit(r.getDepartmentId(), organization::findDepartment), unit(r.getSiteId(), organization::findSite),
 				unit(r.getCostCenterId(), organization::findCostCenter), userRef(people, r.getRequesterUserId()),
 				userRef(people, r.getEnteredByUserId()), userRef(people, r.getUpdatedByUserId()), r.getBeneficiary(),

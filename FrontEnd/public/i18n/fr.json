@@ -47,7 +47,8 @@
       "logistics": "Logistique",
       "dashboards": "Tableaux de bord",
       "approvalRules": "Règles de validation",
-      "exchangeRates": "Taux de change"
+      "exchangeRates": "Taux de change",
+      "import": "Import des données"
     },
     "plannedSprint": "Sprint {{sprint}}",
     "pendingCount": "{{count}} en attente de votre décision"
@@ -64,7 +65,8 @@
         "signIn": "Connexion avec expiration de session et préférence de langue enregistrée",
         "requests": "Création, enregistrement et soumission de demandes d’achat multi-lignes avec un numéro unique",
         "isolation": "Chaque utilisateur ne voit que les demandes de sa société et de son rôle",
-        "approvals": "Circuits de validation par société, validation en un geste depuis l’e-mail et suivi de la demande"
+        "approvals": "Circuits de validation par société, validation en un geste depuis l’e-mail et suivi de la demande",
+        "purchasing": "File d’achats centrale, affectation d’un acheteur, registre fournisseurs et import organisationnel"
       },
       "checkConnection": "Vérifier la connexion",
       "openRequests": "Ouvrir mes demandes"
@@ -220,7 +222,13 @@
     "too-many-requests": "Trop de tentatives. Patientez un instant puis réessayez.",
     "idempotency-key-reused": "Cette action a déjà été envoyée avec un contenu différent. Rechargez la page et réessayez.",
     "attachment-limit-reached": "Cette demande a atteint la limite de 30 fichiers ou 100 Mo.",
-    "file-infected": "L’antivirus a refusé ce fichier."
+    "file-infected": "L’antivirus a refusé ce fichier.",
+    "purchase-mode-not-allowed": "Ce mode d’achat n’est pas autorisé pour la société demanderesse.",
+    "import-rejected": "Le fichier n’a pas été importé. Corrigez les lignes et réessayez.",
+    "import-empty": "Le fichier n’a aucune ligne de données.",
+    "duplicate-code": "Ce code est déjà utilisé.",
+    "duplicate-supplier": "Un fournisseur avec ce code ou cet identifiant fiscal existe déjà.",
+    "not-eligible": "Cette personne ne peut pas recevoir l’affectation."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -516,6 +524,7 @@
       "APPROVED": "Validée",
       "IN_PURCHASING_REVIEW": "En revue achats",
       "ASSIGNED_TO_BUYER": "Affectée à un acheteur",
+      "PURCHASING_RETURNED": "Renvoyée par les achats",
       "SOURCING": "Consultation en cours",
       "QUOTES_RECEIVED": "Offres reçues",
       "TECHNICAL_VALIDATION": "Validation technique",
@@ -929,5 +938,166 @@
       "file-infected": "L’antivirus a refusé ce fichier."
     },
     "infected": "bloqué par l’antivirus"
+  },
+  "purchasing": {
+    "inbox": {
+      "title": "Boîte achats",
+      "description": "Demandes validées en attente d’un acheteur dans votre société d’achat.",
+      "search": "Rechercher par numéro ou titre",
+      "searchPlaceholder": "Numéro ou titre",
+      "filtersLabel": "Filtres",
+      "status": "Statut",
+      "priority": "Priorité",
+      "mode": "Mode d’achat",
+      "all": "Tous",
+      "loading": "Chargement de la boîte achats…",
+      "resultCount": "{{count}} demandes",
+      "loadError": "La boîte achats n’a pas pu être chargée",
+      "empty": {
+        "title": "Aucune demande en attente",
+        "message": "Les demandes validées des sociétés pour lesquelles vous achetez apparaîtront ici."
+      },
+      "open": "Ouvrir",
+      "assignedTo": "Affectée à {{name}}",
+      "unassigned": "Non affectée",
+      "gaps": "Manquant : {{list}}",
+      "proposed": "Société d’achat proposée"
+    },
+    "sorts": {
+      "requiredDate": "Date souhaitée",
+      "amount": "Montant",
+      "submittedAt": "Soumise"
+    },
+    "actions": {
+      "title": "Achats",
+      "assign": "Affecter un acheteur",
+      "assignConfirm": "Affecter",
+      "buyer": "Acheteur",
+      "suggested": "Suggéré",
+      "openLoad": "{{count}} ouvertes",
+      "accept": "Accepter l’affectation",
+      "returnAssignment": "Renvoyer l’affectation",
+      "returnDossier": "Renvoyer au demandeur",
+      "mode": "Mode d’achat",
+      "setMode": "Définir le mode d’achat",
+      "chargedUnchanged": "L’imputation (société facturée) ne change pas.",
+      "reason": "Motif",
+      "reasonRequired": "Indiquez un motif.",
+      "assigned": "Affectée à {{name}}",
+      "accepted": "Affectation acceptée",
+      "returned": "Affectation renvoyée",
+      "modeSet": "Mode d’achat mis à jour",
+      "dossierReturned": "Renvoyée au demandeur",
+      "noBuyers": "Aucun acheteur n’est disponible dans cette société.",
+      "history": "Historique des affectations",
+      "complete": "Le dossier a les champs requis."
+    },
+    "mode": {
+      "DIRECT": "Direct",
+      "CENTRALIZED": "Centralisé",
+      "ON_BEHALF": "Pour le compte",
+      "MIXED": "Mixte"
+    },
+    "assignmentStatus": {
+      "ASSIGNED": "En attente",
+      "ACCEPTED": "Acceptée",
+      "RETURNED": "Renvoyée",
+      "SUPERSEDED": "Remplacée"
+    }
+  },
+  "suppliers": {
+    "title": "Fournisseurs",
+    "description": "Fournisseurs partagés ou rattachés à une société du groupe. Un fournisseur utilisé sur une demande ne peut pas être supprimé.",
+    "search": "Rechercher des fournisseurs",
+    "searchPlaceholder": "Code ou nom",
+    "visibilityLabel": "Visibilité",
+    "visibility": {
+      "SHARED": "Partagé",
+      "COMPANY": "Cette société"
+    },
+    "statusLabel": "Statut",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "new": "Ajouter un fournisseur",
+    "edit": "Modifier le fournisseur",
+    "code": "Code",
+    "legalName": "Raison sociale",
+    "country": "Pays",
+    "taxId": "Identifiant fiscal",
+    "city": "Ville",
+    "save": "Enregistrer le fournisseur",
+    "saved": "Fournisseur enregistré",
+    "deactivate": "Désactiver",
+    "deactivated": "Fournisseur désactivé",
+    "loadError": "Les fournisseurs n’ont pas pu être chargés",
+    "empty": {
+      "title": "Aucun fournisseur",
+      "message": "Ajoutez un fournisseur ou importez un fichier CSV."
+    }
+  },
+  "org": {
+    "title": "Organisation",
+    "description": "Sociétés, sites, départements et centres de coût de ce groupe.",
+    "companies": "Sociétés",
+    "code": "Code",
+    "legalName": "Raison sociale",
+    "country": "Pays",
+    "currency": "Devise",
+    "purchasingMode": "Mode d’achat",
+    "statusLabel": "Statut",
+    "active": "Active",
+    "inactive": "Inactive",
+    "newCompany": "Ajouter une société",
+    "type": "Type",
+    "language": "Langue",
+    "timeZone": "Fuseau horaire",
+    "createCompany": "Créer la société",
+    "companyCreated": "Société créée",
+    "unitsOf": "Unités de {{name}}",
+    "sites": "Sites",
+    "departments": "Départements",
+    "cost-centres": "Centres de coût",
+    "name": "Nom",
+    "addUnit": "Ajouter",
+    "unitCreated": "Ajouté",
+    "noUnits": "Aucun pour le moment.",
+    "loadError": "L’organisation n’a pas pu être chargée",
+    "empty": {
+      "title": "Aucune société",
+      "message": "Créez une société pour commencer."
+    }
+  },
+  "imports": {
+    "title": "Import des données",
+    "description": "Téléversez un CSV UTF-8. Chaque ligne est contrôlée ; si une ligne échoue, rien n’est enregistré.",
+    "upload": "Téléverser un fichier",
+    "kind": "Type",
+    "kinds": {
+      "SUPPLIER": "Fournisseurs",
+      "ORGANISATION": "Sites d’une société"
+    },
+    "company": "Société",
+    "file": "Fichier CSV",
+    "hintSupplier": "Colonnes : code, legalName, country, visibility (SHARED ou COMPANY), identifiant fiscal optionnel.",
+    "hintOrg": "Colonnes : code, name, type. Sites de la société choisie.",
+    "run": "Importer",
+    "uploading": "Import en cours…",
+    "result": "Résultat",
+    "counts": "{{accepted}} acceptées, {{rejected}} rejetées",
+    "rowStatus": "Ligne",
+    "rowErrors": "Erreurs",
+    "committed": "{{accepted}} lignes importées",
+    "status": {
+      "COMMITTED": "Importé",
+      "REJECTED": "Rejeté"
+    },
+    "row": {
+      "ACCEPTED": "Acceptée",
+      "REJECTED": "Rejetée"
+    },
+    "noRows": {
+      "title": "Aucune ligne dans le résultat",
+      "message": "Le fichier ne contenait pas de lignes de données."
+    }
   }
 }

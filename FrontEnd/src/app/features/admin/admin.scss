@@ -25,6 +25,7 @@
 .field {
   display: grid;
   gap: var(--space-1);
+  min-inline-size: 0;
   font-size: var(--text-sm);
 }
 
@@ -35,10 +36,17 @@
 input,
 select {
   min-block-size: 2.5rem;
+  max-inline-size: 100%;
+  min-inline-size: 0;
   padding-inline: var(--space-3);
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
+}
+
+input[type='file'] {
+  inline-size: 100%;
+  min-block-size: auto;
 }
 
 [aria-invalid='true'] {
@@ -124,6 +132,20 @@ select {
 }
 
 .rule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-block-end: var(--space-5);
+}
+
+.choices {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);

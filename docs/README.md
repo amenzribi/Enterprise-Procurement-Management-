@@ -12,10 +12,10 @@
 | Sprint roadmap (incl. Sprint 1 criteria) | [product/roadmap.md](product/roadmap.md) |
 | Backlog | [product/backlog.md](product/backlog.md) |
 | Sprint 0 scope and acceptance criteria | [product/sprint-0.md](product/sprint-0.md) |
-| Sprint 1 / 2 scope | [product/sprint-1.md](product/sprint-1.md), [product/sprint-2.md](product/sprint-2.md) |
+| Sprint 1 / 2 / 3 scope | [product/sprint-1.md](product/sprint-1.md), [product/sprint-2.md](product/sprint-2.md), [product/sprint-3.md](product/sprint-3.md) |
 | Repository review (Sprint 2 closure, self-review) | [reviews/repository-review.md](reviews/repository-review.md) |
 | Architecture | [architecture/architecture.md](architecture/architecture.md) |
 | Decisions (ADRs) | [decisions/decision-log.md](decisions/decision-log.md) |
-| QA strategy, test plans, results | [qa/](qa/) |
+| QA strategy, test plans, results | [qa/](qa/) — Sprint 3: [handover](qa/sprint-3-handover.md), [results](qa/sprint-3-test-results.md), [defects](qa/sprint-3-defects.md) |
 | Independent reviews | [reviews/](reviews/) |
 | Tooling and resource evaluation | [tooling.md](tooling.md) |

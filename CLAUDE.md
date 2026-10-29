@@ -3,7 +3,7 @@
 > `AGENTS.md` (read by other coding agents) mirrors `CLAUDE.md`. Change both together.
 
 Enterprise Procurement Intelligence — procurement request platform for multi-company groups.
-Functional reference: Solution Guide v3.0 (`docs/specification/…_Solution_Guide_EN_v3.0.md`, reviewed in `docs/analysis/solution-guide-v3-review.md`); detailed rules: French spec v2.1 in the same folder (both unchanged). Plan: `docs/product/roadmap.md`. Decisions: `docs/decisions/`.
+Functional reference: Solution Guide v3.0 (`docs/specification/…_Solution_Guide_EN_v3.0.md`, reviewed in `docs/analysis/solution-guide-v3-review.md`); detailed rules: French spec v2.1 in the same folder (both unchanged). Plan: `docs/product/roadmap.md`. Sprint 3: `docs/product/sprint-3.md`. Decisions: `docs/decisions/`.
 
 ## Stack (fixed — do not substitute)
 

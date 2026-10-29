@@ -1,6 +1,6 @@
 # Sprint 2 — Approvals, request tracker, Arabic
 
-Status: in progress · Two weeks · Reference: Solution Guide v3.0 Steps 0–2, §7 (returned, approver on leave), §8,
+Status: locally closed 2026-10-29 (`42c03b9`). Two weeks · Reference: Solution Guide v3.0 Steps 0–2, §7 (returned, approver on leave), §8,
 §9 (one-tap approval, tracker), UC-01 (Arabic), UC-04, UC-05, UC-06 (e-mail), UC-28 (approval rules);
 French spec v2.1 §7. Decisions of 2026-10-27: SQL Server only; Arabic in this sprint; e-mail link + mobile web
 (Teams/WhatsApp later).

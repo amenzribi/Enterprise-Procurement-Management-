@@ -16,20 +16,18 @@ describe('navigation roadmap', () => {
   });
 
   it('matches the roadmap realigned to the Solution Guide v3.0 (docs/product/roadmap.md)', () => {
+    expect(findNavItem('purchasingInbox')?.route).toBe('/purchasing');
+    expect(findNavItem('organization')?.route).toBe('/admin/organization');
+    expect(findNavItem('suppliers')?.route).toBe('/suppliers');
+    expect(findNavItem('import')?.route).toBe('/admin/import');
     expect({
-      organization: sprintOf('organization'),
-      purchasingInbox: sprintOf('purchasingInbox'),
       sourcing: sprintOf('sourcing'),
-      suppliers: sprintOf('suppliers'),
       purchaseOrders: sprintOf('purchaseOrders'),
       logistics: sprintOf('logistics'),
       receipts: sprintOf('receipts'),
       dashboards: sprintOf('dashboards'),
     }).toEqual({
-      organization: 3,
-      purchasingInbox: 3,
       sourcing: 4,
-      suppliers: 3,
       purchaseOrders: 5,
       logistics: 6,
       receipts: 7,

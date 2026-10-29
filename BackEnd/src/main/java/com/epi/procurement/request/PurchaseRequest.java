@@ -10,6 +10,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Nationalized;
 import org.hibernate.type.SqlTypes;
 
+import com.epi.procurement.organization.PurchasingMode;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -86,6 +88,16 @@ class PurchaseRequest {
 
 	@Column(name = "buying_company_proposed", nullable = false)
 	private boolean buyingCompanyProposed = true;
+
+	@Column(name = "assigned_buyer_user_id")
+	private Long assignedBuyerUserId;
+
+	@Column(name = "assigned_at")
+	private Instant assignedAt;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "purchase_mode", length = 20)
+	private PurchasingMode purchaseMode;
 
 	@Column(name = "department_id")
 	private Long departmentId;
@@ -349,6 +361,29 @@ class PurchaseRequest {
 
 	boolean isBuyingCompanyProposed() {
 		return buyingCompanyProposed;
+	}
+
+	Long getAssignedBuyerUserId() {
+		return assignedBuyerUserId;
+	}
+
+	Instant getAssignedAt() {
+		return assignedAt;
+	}
+
+	PurchasingMode getPurchaseMode() {
+		return purchaseMode;
+	}
+
+	void assignBuyer(Long buyerUserId, Instant now) {
+		this.assignedBuyerUserId = buyerUserId;
+		this.assignedAt = buyerUserId == null ? null : now;
+	}
+
+	void confirmPurchaseMode(PurchasingMode mode, long buyingCompanyId) {
+		this.purchaseMode = mode;
+		this.buyingCompanyId = buyingCompanyId;
+		this.buyingCompanyProposed = false;
 	}
 
 	Long getDepartmentId() {

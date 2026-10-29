@@ -57,9 +57,27 @@ class MeAssembler {
 		if (user.grants().stream().anyMatch(g -> g.role().isApproverRole())) {
 			permissions.add("APPROVAL_ACT");
 		}
+		if (user.hasRole(Role.BUYER) || user.hasRole(Role.PURCHASING_MANAGER)) {
+			permissions.add("PURCHASING_ACT");
+		}
+		if (user.hasRole(Role.PURCHASING_MANAGER)) {
+			permissions.add("PURCHASING_MANAGE");
+		}
 		if (user.hasRole(Role.ADMIN)) {
 			permissions.add("SYSTEM_ADMIN");
 			permissions.add("APPROVAL_ADMIN");
+			permissions.add("ORG_ADMIN");
+			permissions.add("IMPORT_RUN");
+		}
+		if (user.hasRole(Role.BUYER) || user.hasRole(Role.PURCHASING_MANAGER) || user.hasRole(Role.ADMIN)
+				|| user.hasRole(Role.GROUP_MANAGEMENT)) {
+			permissions.add("SUPPLIER_READ");
+		}
+		if (user.hasRole(Role.PURCHASING_MANAGER) || user.hasRole(Role.ADMIN)) {
+			permissions.add("SUPPLIER_MANAGE");
+			if (!permissions.contains("IMPORT_RUN")) {
+				permissions.add("IMPORT_RUN");
+			}
 		}
 		return permissions;
 	}

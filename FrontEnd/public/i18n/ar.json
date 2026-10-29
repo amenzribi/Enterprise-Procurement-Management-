@@ -47,7 +47,8 @@
       "logistics": "اللوجستيات",
       "dashboards": "لوحات المتابعة",
       "approvalRules": "قواعد الاعتماد",
-      "exchangeRates": "أسعار الصرف"
+      "exchangeRates": "أسعار الصرف",
+      "import": "استيراد البيانات المرجعية"
     },
     "plannedSprint": "المرحلة {{sprint}}",
     "pendingCount": "{{count}} بانتظار قرارك"
@@ -64,7 +65,8 @@
         "signIn": "تسجيل دخول مع انتهاء الجلسة وحفظ اللغة المفضلة",
         "requests": "إنشاء طلبات شراء متعددة البنود وحفظها وإرسالها برقم فريد",
         "isolation": "كل مستخدم يرى طلبات شركته ودوره فقط",
-        "approvals": "دوائر اعتماد لكل شركة، واعتماد بلمسة واحدة من البريد الإلكتروني، وتتبّع الطلب"
+        "approvals": "دوائر اعتماد لكل شركة، واعتماد بلمسة واحدة من البريد الإلكتروني، وتتبّع الطلب",
+        "purchasing": "طابور الشراء المركزي، وإسناد مشترٍ، وسجل الموردين، واستيراد الهيكل التنظيمي"
       },
       "checkConnection": "فحص الاتصال",
       "openRequests": "فتح طلباتي"
@@ -220,7 +222,13 @@
     "too-many-requests": "محاولات كثيرة جدًا. انتظر قليلًا ثم أعد المحاولة.",
     "idempotency-key-reused": "أُرسل هذا الإجراء مسبقًا بمحتوى مختلف. أعد تحميل الصفحة ثم أعد المحاولة.",
     "attachment-limit-reached": "بلغ هذا الطلب الحد الأقصى: 30 ملفًا أو 100 ميغابايت.",
-    "file-infected": "رفض فحص الفيروسات هذا الملف."
+    "file-infected": "رفض فحص الفيروسات هذا الملف.",
+    "purchase-mode-not-allowed": "وضع الشراء هذا غير مسموح به للشركة الطالبة.",
+    "import-rejected": "لم يُستورد الملف. صحّح الصفوف ثم أعد المحاولة.",
+    "import-empty": "لا يحتوي الملف على صفوف بيانات.",
+    "duplicate-code": "هذا الرمز مستخدم بالفعل.",
+    "duplicate-supplier": "يوجد مورد بهذا الرمز أو المعرّف الضريبي بالفعل.",
+    "not-eligible": "لا يمكن إسناد المهمة إلى هذا الشخص."
   },
   "auth": {
     "signOut": "تسجيل الخروج",
@@ -516,6 +524,7 @@
       "APPROVED": "معتمد",
       "IN_PURCHASING_REVIEW": "قيد مراجعة المشتريات",
       "ASSIGNED_TO_BUYER": "مُسند إلى مشترٍ",
+      "PURCHASING_RETURNED": "أُعيد من المشتريات",
       "SOURCING": "طلب العروض جارٍ",
       "QUOTES_RECEIVED": "وردت العروض",
       "TECHNICAL_VALIDATION": "التقييم الفني",
@@ -929,5 +938,166 @@
       "file-infected": "رفض فحص الفيروسات هذا الملف."
     },
     "infected": "محجوب بسبب فحص الفيروسات"
+  },
+  "purchasing": {
+    "inbox": {
+      "title": "صندوق المشتريات",
+      "description": "الطلبات المعتمدة بانتظار مشترٍ في شركة الشراء الخاصة بك.",
+      "search": "البحث بالرقم أو العنوان",
+      "searchPlaceholder": "الرقم أو العنوان",
+      "filtersLabel": "عوامل التصفية",
+      "status": "الحالة",
+      "priority": "الأولوية",
+      "mode": "وضع الشراء",
+      "all": "الكل",
+      "loading": "جارٍ تحميل صندوق المشتريات…",
+      "resultCount": "{{count}} طلبات",
+      "loadError": "تعذّر تحميل صندوق المشتريات",
+      "empty": {
+        "title": "لا يوجد طلب بانتظار المعالجة",
+        "message": "ستظهر هنا الطلبات المعتمدة للشركات التي تشترون لها."
+      },
+      "open": "فتح",
+      "assignedTo": "مُسند إلى {{name}}",
+      "unassigned": "غير مُسند",
+      "gaps": "ناقص: {{list}}",
+      "proposed": "شركة الشراء مقترحة"
+    },
+    "sorts": {
+      "requiredDate": "التاريخ المطلوب",
+      "amount": "المبلغ",
+      "submittedAt": "تاريخ الإرسال"
+    },
+    "actions": {
+      "title": "المشتريات",
+      "assign": "إسناد مشترٍ",
+      "assignConfirm": "إسناد",
+      "buyer": "المشتري",
+      "suggested": "مقترح",
+      "openLoad": "{{count}} مفتوحة",
+      "accept": "قبول الإسناد",
+      "returnAssignment": "إرجاع الإسناد",
+      "returnDossier": "إرجاع إلى طالب الشراء",
+      "mode": "وضع الشراء",
+      "setMode": "تعيين وضع الشراء",
+      "chargedUnchanged": "توزيع التكلفة (الشركة المحمّلة) لا يتغيّر.",
+      "reason": "السبب",
+      "reasonRequired": "أدخل سببًا.",
+      "assigned": "أُسند إلى {{name}}",
+      "accepted": "قُبل الإسناد",
+      "returned": "أُرجع الإسناد",
+      "modeSet": "تم تحديث وضع الشراء",
+      "dossierReturned": "أُرجع إلى طالب الشراء",
+      "noBuyers": "لا يوجد مشترٍ متاح في هذه الشركة.",
+      "history": "سجل الإسناد",
+      "complete": "يحتوي الملف على الحقول المطلوبة."
+    },
+    "mode": {
+      "DIRECT": "مباشر",
+      "CENTRALIZED": "مركزي",
+      "ON_BEHALF": "نيابةً عن",
+      "MIXED": "مختلط"
+    },
+    "assignmentStatus": {
+      "ASSIGNED": "بانتظار",
+      "ACCEPTED": "مقبول",
+      "RETURNED": "مُرجَع",
+      "SUPERSEDED": "استُبدل"
+    }
+  },
+  "suppliers": {
+    "title": "الموردون",
+    "description": "موردون مشتركون أو خاصون بشركة في هذه المجموعة. لا يمكن حذف مورد مستخدم في طلب.",
+    "search": "البحث عن موردين",
+    "searchPlaceholder": "الرمز أو الاسم",
+    "visibilityLabel": "الظهور",
+    "visibility": {
+      "SHARED": "مشترك",
+      "COMPANY": "هذه الشركة"
+    },
+    "statusLabel": "الحالة",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "new": "إضافة مورد",
+    "edit": "تعديل المورد",
+    "code": "الرمز",
+    "legalName": "الاسم القانوني",
+    "country": "البلد",
+    "taxId": "المعرّف الضريبي",
+    "city": "المدينة",
+    "save": "حفظ المورد",
+    "saved": "تم حفظ المورد",
+    "deactivate": "إيقاف",
+    "deactivated": "تم إيقاف المورد",
+    "loadError": "تعذّر تحميل الموردين",
+    "empty": {
+      "title": "لا يوجد مورد بعد",
+      "message": "أضف موردًا أو استورد ملف CSV."
+    }
+  },
+  "org": {
+    "title": "الهيكل التنظيمي",
+    "description": "الشركات والمواقع والأقسام ومراكز التكلفة في هذه المجموعة.",
+    "companies": "الشركات",
+    "code": "الرمز",
+    "legalName": "الاسم القانوني",
+    "country": "البلد",
+    "currency": "العملة",
+    "purchasingMode": "وضع الشراء",
+    "statusLabel": "الحالة",
+    "active": "نشطة",
+    "inactive": "غير نشطة",
+    "newCompany": "إضافة شركة",
+    "type": "النوع",
+    "language": "اللغة",
+    "timeZone": "المنطقة الزمنية",
+    "createCompany": "إنشاء الشركة",
+    "companyCreated": "تم إنشاء الشركة",
+    "unitsOf": "وحدات {{name}}",
+    "sites": "المواقع",
+    "departments": "الأقسام",
+    "cost-centres": "مراكز التكلفة",
+    "name": "الاسم",
+    "addUnit": "إضافة",
+    "unitCreated": "تمت الإضافة",
+    "noUnits": "لا يوجد بعد.",
+    "loadError": "تعذّر تحميل الهيكل التنظيمي",
+    "empty": {
+      "title": "لا توجد شركة",
+      "message": "أنشئ شركة للبدء."
+    }
+  },
+  "imports": {
+    "title": "استيراد البيانات المرجعية",
+    "description": "ارفع ملف CSV بترميز UTF-8. تُفحص كل الصفوف؛ إذا فشل صف واحد لا يُحفظ شيء.",
+    "upload": "رفع ملف",
+    "kind": "النوع",
+    "kinds": {
+      "SUPPLIER": "الموردون",
+      "ORGANISATION": "مواقع شركة"
+    },
+    "company": "الشركة",
+    "file": "ملف CSV",
+    "hintSupplier": "الأعمدة: code وlegalName وcountry وvisibility ‏(SHARED أو COMPANY) ومعرّف ضريبي اختياري.",
+    "hintOrg": "الأعمدة: code وname وtype. مواقع الشركة المختارة.",
+    "run": "استيراد",
+    "uploading": "جارٍ الاستيراد…",
+    "result": "النتيجة",
+    "counts": "{{accepted}} مقبول، {{rejected}} مرفوض",
+    "rowStatus": "الصف",
+    "rowErrors": "الأخطاء",
+    "committed": "تم استيراد {{accepted}} صفوف",
+    "status": {
+      "COMMITTED": "مستورد",
+      "REJECTED": "مرفوض"
+    },
+    "row": {
+      "ACCEPTED": "مقبول",
+      "REJECTED": "مرفوض"
+    },
+    "noRows": {
+      "title": "لا صفوف في النتيجة",
+      "message": "لم يحتوِ الملف على صفوف بيانات."
+    }
   }
 }

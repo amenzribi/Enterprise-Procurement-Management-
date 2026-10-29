@@ -96,6 +96,7 @@
 
       <!-- The approver's decision and the requester's answer come first, above the details (mobile-first, S2-AC-08). -->
       <app-approval-actions class="decide" [requestId]="r.id" [approval]="approval()" (changed)="onApprovalChanged($event)" />
+      <app-purchasing-actions [request]="r" (changed)="load()" />
 
       <div class="columns">
         <div class="main">

@@ -51,7 +51,7 @@ class RequestApiIntegrationTests extends SqlServerTestSupport {
 		assertThat(((Number) created.json("$.requester.id")).longValue()).isEqualTo(requesterId);
 		assertThat(((Number) created.json("$.currentOwner.id")).longValue()).isEqualTo(requesterId);
 		assertThat((String) created.json("$.chargedCompany.code")).isEqualTo("DEMO-TN-PLT");
-		assertThat((String) created.json("$.buyingCompany.code")).isEqualTo("DEMO-TN-PLT");
+		assertThat((String) created.json("$.buyingCompany.code")).isEqualTo("DEMO-CPA");
 		assertThat((Boolean) created.json("$.buyingCompanyProposed")).isTrue();
 		assertThat((List<String>) created.json("$.actions")).containsExactly("EDIT", "SUBMIT", "DISCARD");
 		assertThat((List<Object>) created.json("$.transitions")).hasSize(1);

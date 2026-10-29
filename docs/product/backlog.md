@@ -41,8 +41,15 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 | S2-C3 | Admin action to re-route an `ABSENCE_UNRESOLVED` task without waiting for escalation (RR-10) | FR-APR-03 | S |
 | S2-C4 | Bind parameters in `ApprovalStore` SQL that currently concatenates numeric ids (RR-07) | NFR-05 | S |
 
-## Sprint 3 onwards
+## Sprint 3 carry-over
 
-See [roadmap.md](roadmap.md). Items are broken down at sprint planning from the register rows tagged with that
-sprint. Grouping of similar needs, internal transfer and "buy again" stay confirm-with-pilot (G12); they are not
-in the first S3 slice unless the Sprint 3 plan says otherwise.
+| # | Item | Req | Size |
+|---|---|---|---|
+| S3-C1 | Inbox UI filters still missing from S3-AC-01: country, category, amount band, requester, required date, assigned buyer, completeness (API already has company, category, type, buyer, requester, dates) | FR-PUR-01 | S |
+| S3-C2 | Buyer suggestion uses lowest open load only; no stored category affinity yet | FR-PUR-03 | S |
+| S3-C3 | Near-duplicate / grouping of similar needs, internal transfer, buy again | FR-REQ-03, G12 | M — confirm with pilot |
+
+## Sprint 4 onwards
+
+See [roadmap.md](roadmap.md). RFQs, quote comparison, AI, supplier portals, refacturing and live ERP APIs stay
+out of Sprint 3. Grouping of similar needs, internal transfer and "buy again" stay confirm-with-pilot (G12).

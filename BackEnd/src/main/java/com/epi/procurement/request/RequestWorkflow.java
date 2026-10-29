@@ -10,9 +10,14 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.epi.procurement.identity.CurrentUser;
 import com.epi.procurement.platform.web.ApiProblemException;
@@ -48,6 +53,88 @@ public class RequestWorkflow {
 	@Transactional(readOnly = true)
 	public RequestSnapshot requireVisible(CurrentUser user, long id) {
 		return snapshot(requests.getVisible(user, id));
+	}
+
+	/** Visibility then exclusive row lock (purchasing assign / mode / return). */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public RequestSnapshot requireVisibleForUpdate(CurrentUser user, long id) {
+		return snapshot(requests.getVisibleForUpdate(user, id));
+	}
+
+	/**
+	 * Reloads after a purchasing mutation. Authorisation already happened; visibility may have changed (for example
+	 * the buying company after a purchase-mode change).
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public RequestSnapshot currentLocked(long id) {
+		return snapshot(requests.getForSystemUpdate(id));
+	}
+
+	/**
+	 * Buying queue (S3-AC-01): visibility already applied; extra filters are ANDed.
+	 */
+	@Transactional(readOnly = true)
+	public Page<RequestSnapshot> purchasingQueue(CurrentUser user, PurchasingQuery query) {
+		int size = query.size() < 1 || query.size() > 100 ? 20 : query.size();
+		int page = Math.max(0, query.page());
+		Sort sort = switch (query.sort() == null ? "requiredDate" : query.sort()) {
+			case "amount" -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "totalAmount");
+			case "submittedAt" -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "submittedAt");
+			default -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "requiredDate");
+		};
+		return requests.search(user, purchasingSpec(query), PageRequest.of(page, size, sort)).map(RequestWorkflow::snapshot);
+	}
+
+	public record PurchasingQuery(String q, Long buyingCompanyId, Long categoryId, String status, String priority,
+			String purchaseType, String purchaseMode, Long buyerUserId, Long requesterUserId, LocalDate requiredFrom,
+			LocalDate requiredTo, String sort, boolean descending, int page, int size) {
+	}
+
+	private static Specification<PurchaseRequest> purchasingSpec(PurchasingQuery query) {
+		return (root, q, cb) -> {
+			java.util.ArrayList<jakarta.persistence.criteria.Predicate> all = new java.util.ArrayList<>();
+			if (StringUtils.hasText(query.status())) {
+				all.add(cb.equal(root.get("status"), RequestStatus.valueOf(query.status())));
+			}
+			else {
+				all.add(root.get("status")
+					.in(RequestStatus.IN_PURCHASING_REVIEW, RequestStatus.ASSIGNED_TO_BUYER,
+							RequestStatus.PURCHASING_RETURNED));
+			}
+			if (query.buyingCompanyId() != null) {
+				all.add(cb.equal(root.get("buyingCompanyId"), query.buyingCompanyId()));
+			}
+			if (query.categoryId() != null) {
+				all.add(cb.equal(root.get("categoryId"), query.categoryId()));
+			}
+			if (StringUtils.hasText(query.priority())) {
+				all.add(cb.equal(root.get("priority"), Priority.valueOf(query.priority())));
+			}
+			if (StringUtils.hasText(query.purchaseType())) {
+				all.add(cb.equal(root.get("purchaseType"), PurchaseType.valueOf(query.purchaseType())));
+			}
+			if (StringUtils.hasText(query.purchaseMode())) {
+				all.add(cb.equal(root.get("purchaseMode"),
+						com.epi.procurement.organization.PurchasingMode.valueOf(query.purchaseMode())));
+			}
+			if (query.buyerUserId() != null) {
+				all.add(cb.equal(root.get("assignedBuyerUserId"), query.buyerUserId()));
+			}
+			if (query.requesterUserId() != null) {
+				all.add(cb.equal(root.get("requesterUserId"), query.requesterUserId()));
+			}
+			if (query.requiredFrom() != null) {
+				all.add(cb.greaterThanOrEqualTo(root.get("requiredDate"), query.requiredFrom()));
+			}
+			if (query.requiredTo() != null) {
+				all.add(cb.lessThanOrEqualTo(root.get("requiredDate"), query.requiredTo()));
+			}
+			if (StringUtils.hasText(query.q())) {
+				String text = "%" + query.q().strip().toLowerCase(java.util.Locale.ROOT) + "%";
+				all.add(cb.or(cb.like(cb.lower(root.get("number")), text), cb.like(cb.lower(root.get("title")), text)));
+			}
+			return cb.and(all.toArray(jakarta.persistence.criteria.Predicate[]::new));
+		};
 	}
 
 	/**
@@ -114,10 +201,10 @@ public class RequestWorkflow {
 		requests.saveAndFlush(request);
 	}
 
-	/** IN_APPROVAL -> APPROVED (last stage approved). The requester owns it until purchasing picks it up (S3). */
+	/** IN_APPROVAL -> IN_PURCHASING_REVIEW (last stage approved). User status stays APPROVED (S3-AC-01). */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void markApproved(long id, long actorUserId, Instant now) {
-		move(id, RequestStatus.APPROVED, actorUserId, now, null);
+		move(id, RequestStatus.IN_PURCHASING_REVIEW, actorUserId, now, null);
 	}
 
 	/** IN_APPROVAL -> REJECTED (terminal). */
@@ -157,6 +244,84 @@ public class RequestWorkflow {
 		return round;
 	}
 
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void assignBuyer(long id, long buyerUserId, Instant now, long actorUserId) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		request.assignBuyer(buyerUserId, now);
+		request.transitionTo(RequestStatus.ASSIGNED_TO_BUYER, buyerUserId, now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		addParticipant(id, buyerUserId, "BUYER", now);
+		transitions.save(new RequestTransition(id, from, RequestStatus.ASSIGNED_TO_BUYER, buyerUserId, actorUserId, now,
+				null));
+	}
+
+	/**
+	 * Buyer accepted; status stays ASSIGNED_TO_BUYER.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void buyerAccepted(long id, long buyerUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		if (request.getStatus() != RequestStatus.ASSIGNED_TO_BUYER) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not assigned to a buyer.");
+		}
+		request.assignOwner(buyerUserId, now);
+		request.touch(buyerUserId, now);
+		requests.saveAndFlush(request);
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void clearBuyer(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		request.assignBuyer(null, now);
+		request.transitionTo(RequestStatus.IN_PURCHASING_REVIEW, request.getRequesterUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.IN_PURCHASING_REVIEW,
+				request.getCurrentOwnerUserId(), actorUserId, now, "assignment-returned"));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void confirmPurchaseMode(long id, com.epi.procurement.organization.PurchasingMode mode, long buyingCompanyId,
+			long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		request.confirmPurchaseMode(mode, buyingCompanyId);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void returnFromPurchasing(long id, long actorUserId, Instant now, String reason) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from != RequestStatus.IN_PURCHASING_REVIEW && from != RequestStatus.ASSIGNED_TO_BUYER) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not in purchasing.");
+		}
+		request.transitionTo(RequestStatus.PURCHASING_RETURNED, request.getRequesterUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.PURCHASING_RETURNED,
+				request.getCurrentOwnerUserId(), actorUserId, now, reason));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void resubmitToPurchasing(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		if (request.getStatus() != RequestStatus.PURCHASING_RETURNED) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not returned from purchasing.");
+		}
+		request.transitionTo(RequestStatus.IN_PURCHASING_REVIEW,
+				request.getAssignedBuyerUserId() != null ? request.getAssignedBuyerUserId()
+						: request.getRequesterUserId(),
+				now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, RequestStatus.PURCHASING_RETURNED, RequestStatus.IN_PURCHASING_REVIEW,
+				request.getCurrentOwnerUserId(), actorUserId, now, "purchasing-resubmitted"));
+	}
+
 	private void move(long id, RequestStatus next, long actorUserId, Instant now, String comment) {
 		PurchaseRequest request = requests.getForSystemUpdate(id);
 		if (request.getStatus() != RequestStatus.IN_APPROVAL) {
@@ -171,11 +336,14 @@ public class RequestWorkflow {
 
 	static RequestSnapshot snapshot(PurchaseRequest r) {
 		return new RequestSnapshot(r.getId(), r.getNumber(), r.getTitle(), r.getStatus().name(),
-				r.getStatus().userStatus(), r.getGroupId(), r.getRequestingCompanyId(), r.getDepartmentId(),
-				r.getRequesterUserId(), r.getEnteredByUserId(), r.getCurrencyCode(), r.getTotalAmount(),
-				r.getCategoryId(), r.getPurchaseType() == null ? null : r.getPurchaseType().name(),
+				r.getStatus().userStatus(), r.getGroupId(), r.getRequestingCompanyId(), r.getChargedCompanyId(),
+				r.getBuyingCompanyId(), r.getDepartmentId(), r.getRequesterUserId(), r.getEnteredByUserId(),
+				r.getCurrencyCode(), r.getTotalAmount(), r.getCategoryId(),
+				r.getPurchaseType() == null ? null : r.getPurchaseType().name(),
 				r.getPriority() == null ? null : r.getPriority().name(), r.getRequiredDate(), r.getSubmittedAt(),
 				r.getRoundNo(), r.getCurrentOwnerUserId(), r.getOwnerSince(), r.getVersion(),
+				r.getAssignedBuyerUserId(), r.getPurchaseMode() == null ? null : r.getPurchaseMode().name(),
+				r.isBuyingCompanyProposed(),
 				r.getLines()
 					.stream()
 					.map(l -> new RequestSnapshot.LineSnapshot(l.getId(), l.getLineNo(), l.getDescription(),

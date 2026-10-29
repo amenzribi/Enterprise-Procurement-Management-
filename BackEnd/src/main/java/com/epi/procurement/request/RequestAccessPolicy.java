@@ -25,7 +25,8 @@ import jakarta.persistence.criteria.Subquery;
  * company.</li>
  * <li>GROUP_MANAGEMENT: non-draft requests of every company of their group (or of the granted company).</li>
  * <li>Participants (approvers and delegates with a task on the request, Sprint 2): the request, once submitted.</li>
- * <li>Everyone else, including BUYER, PURCHASING_MANAGER and ADMIN: nothing yet.</li>
+ * <li>BUYER and PURCHASING_MANAGER: non-draft requests whose {@code buying_company_id} is a company of their
+ * grant, from {@code IN_PURCHASING_REVIEW} onwards (Sprint 3). ADMIN still sees no business requests.</li>
  * </ul>
  * Drafts are never visible to anyone but their requester and entered-by user. Authors edit drafts and requests
  * returned for revision (S2DR-04); only drafts can be discarded.
@@ -65,7 +66,16 @@ class RequestAccessPolicy {
 	}
 
 	static boolean isEditableStatus(RequestStatus status) {
-		return status == RequestStatus.DRAFT || status == RequestStatus.REVISION_REQUESTED;
+		return status == RequestStatus.DRAFT || status == RequestStatus.REVISION_REQUESTED
+				|| status == RequestStatus.PURCHASING_RETURNED;
+	}
+
+	static boolean isPurchasingStatus(RequestStatus status) {
+		return status == RequestStatus.IN_PURCHASING_REVIEW || status == RequestStatus.ASSIGNED_TO_BUYER
+				|| status == RequestStatus.PURCHASING_RETURNED || status.stage() == Stage.SOURCING
+				|| status.stage() == Stage.EVALUATION || status.stage() == Stage.COMMITMENT
+				|| status.stage() == Stage.SHIPMENT || status.stage() == Stage.RECEIPT
+				|| status.stage() == Stage.FINANCE || status.stage() == Stage.CLOSURE;
 	}
 
 	List<String> actions(CurrentUser user, PurchaseRequest request) {
@@ -105,6 +115,23 @@ class RequestAccessPolicy {
 			any.add(grant.companyId() == null
 					? cb.and(notDraft, cb.equal(root.get("groupId"), user.groupId()))
 					: cb.and(notDraft, cb.equal(root.get("requestingCompanyId"), grant.companyId())));
+		}
+		Predicate purchasing = cb.or(
+				root.get("status")
+					.in(RequestStatus.IN_PURCHASING_REVIEW, RequestStatus.ASSIGNED_TO_BUYER,
+							RequestStatus.PURCHASING_RETURNED),
+				root.get("stage")
+					.in(Stage.SOURCING, Stage.EVALUATION, Stage.COMMITMENT, Stage.SHIPMENT, Stage.RECEIPT,
+							Stage.FINANCE));
+		for (RoleGrant grant : user.grants(Role.BUYER)) {
+			if (grant.companyId() != null) {
+				any.add(cb.and(purchasing, cb.equal(root.get("buyingCompanyId"), grant.companyId())));
+			}
+		}
+		for (RoleGrant grant : user.grants(Role.PURCHASING_MANAGER)) {
+			if (grant.companyId() != null) {
+				any.add(cb.and(purchasing, cb.equal(root.get("buyingCompanyId"), grant.companyId())));
+			}
 		}
 		return cb.or(any.toArray(Predicate[]::new));
 	}

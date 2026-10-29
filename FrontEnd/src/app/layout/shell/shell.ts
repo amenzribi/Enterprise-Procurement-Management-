@@ -23,6 +23,7 @@ import { StatusBadge } from '../../shared/ui/status-badge';
 import { hasPermission } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { ApprovalCountService } from '../../features/approvals/approval-count.service';
+import { PurchasingCountService } from '../../features/purchasing/purchasing-count.service';
 import { InAppNotifications } from '../../features/notifications/in-app-notifications';
 import { NAVIGATION, NavGroup } from '../navigation';
 import { NotificationBell } from '../notification-bell';
@@ -57,6 +58,7 @@ export class Shell {
 
   private readonly auth = inject(AuthService);
   protected readonly approvalCount = inject(ApprovalCountService);
+  protected readonly purchasingCount = inject(PurchasingCountService);
   private readonly inAppNotifications = inject(InAppNotifications);
 
   /** Navigation filtered by the user's permissions; empty groups are hidden. */
@@ -113,6 +115,7 @@ export class Shell {
   private refreshCounts(): void {
     if (this.auth.isAuthenticated()) {
       this.approvalCount.refresh();
+      this.purchasingCount.refresh();
       this.inAppNotifications.refreshCount();
     }
   }

@@ -56,6 +56,12 @@
                       <span class="visually-hidden">{{ 'nav.pendingCount' | translate: { count: approvalCount.count() } }}</span>
                     </span>
                   }
+                  @if (item.badge === 'purchasing' && purchasingCount.count() > 0) {
+                    <span class="nav-badge tabular">
+                      {{ purchasingCount.count() }}
+                      <span class="visually-hidden">{{ 'nav.pendingCount' | translate: { count: purchasingCount.count() } }}</span>
+                    </span>
+                  }
                   @if (item.plannedSprint) {
                     <span class="nav-planned">
                       {{ 'nav.plannedSprint' | translate: { sprint: item.plannedSprint } }}

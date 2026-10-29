@@ -63,6 +63,30 @@ export const routes: Routes = [
         loadComponent: () => import('./features/approvals/approvals-inbox').then((m) => m.ApprovalsInboxPage),
       },
       {
+        path: 'purchasing',
+        title: 'purchasing.inbox.title',
+        canActivate: [permissionGuard('PURCHASING_ACT')],
+        loadComponent: () => import('./features/purchasing/purchasing-inbox').then((m) => m.PurchasingInboxPage),
+      },
+      {
+        path: 'suppliers',
+        title: 'suppliers.title',
+        canActivate: [permissionGuard('SUPPLIER_READ')],
+        loadComponent: () => import('./features/suppliers/suppliers').then((m) => m.SuppliersPage),
+      },
+      {
+        path: 'admin/organization',
+        title: 'org.title',
+        canActivate: [permissionGuard('ORG_ADMIN')],
+        loadComponent: () => import('./features/organization/organization-admin').then((m) => m.OrganizationAdminPage),
+      },
+      {
+        path: 'admin/import',
+        title: 'imports.title',
+        canActivate: [permissionGuard('IMPORT_RUN')],
+        loadComponent: () => import('./features/importdata/import-page').then((m) => m.ImportPage),
+      },
+      {
         path: 'absences',
         title: 'absences.title',
         loadComponent: () => import('./features/approvals/absences').then((m) => m.AbsencesPage),

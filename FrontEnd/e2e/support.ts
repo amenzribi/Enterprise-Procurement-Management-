@@ -32,6 +32,7 @@ export const USERS = {
   requesterFr: 'requester.fr@demo.local',
   managerFr: 'manager.fr@demo.local',
   buyer: 'buyer@demo.local',
+  purchasingManager: 'purchasing.manager@demo.local',
   ceo: 'ceo@demo.local',
   admin: 'admin@demo.local',
 } as const;

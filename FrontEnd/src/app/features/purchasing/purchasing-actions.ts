@@ -14,7 +14,7 @@ import { PurchasingCountService } from './purchasing-count.service';
 import { Assignment, BuyerOption, PURCHASE_MODES } from './purchasing.models';
 import { PurchasingApi } from './purchasing.api';
 
-type PanelAction = 'assign' | 'mode' | 'return-assignment' | 'completeness' | null;
+type PanelAction = 'assign' | 'mode' | 'return-assignment' | 'completeness' | 'question' | null;
 
 /**
  * Purchasing actions on a request dossier: assign/accept/return, purchase mode, completeness return (S3-AC-02..04).
@@ -66,6 +66,11 @@ type PanelAction = 'assign' | 'mode' | 'return-assignment' | 'completeness' | nu
                 {{ 'purchasing.actions.returnDossier' | translate }}
               </button>
             }
+            @if (canAct() && inPurchasing()) {
+              <button appButton variant="secondary" type="button" (click)="choose('question')">
+                {{ 'purchasing.actions.askQuestion' | translate }}
+              </button>
+            }
             @if (canAccept()) {
               <button appButton type="button" (click)="run('accept')">
                 <app-icon name="circle-check" [size]="16" />
@@ -114,6 +119,23 @@ type PanelAction = 'assign' | 'mode' | 'return-assignment' | 'completeness' | nu
             <p class="error small" role="alert">@if (error(); as code) { {{ 'errors.' + code | translate }} }</p>
             <div class="choices">
               <button appButton type="submit" [disabled]="busy() || !mode()">{{ 'purchasing.actions.setMode' | translate }}</button>
+              <button appButton variant="secondary" type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+            </div>
+          </form>
+        } @else if (selected() === 'question') {
+          <form class="form" (submit)="$event.preventDefault(); run('question')" novalidate>
+            <label class="label" for="purchase-question">{{ 'purchasing.actions.question' | translate }} *</label>
+            <textarea id="purchase-question" rows="3" maxlength="2000" [value]="reason()" (input)="reason.set($any($event.target).value)"></textarea>
+            <p class="muted small">{{ 'purchasing.actions.questionHint' | translate }}</p>
+            <p class="error small" role="alert">
+              @if (showErrors() && !reason().trim()) {
+                {{ 'purchasing.actions.questionRequired' | translate }}
+              } @else if (error(); as code) {
+                {{ 'errors.' + code | translate }}
+              }
+            </p>
+            <div class="choices">
+              <button appButton type="submit" [disabled]="busy()">{{ 'purchasing.actions.askQuestion' | translate }}</button>
               <button appButton variant="secondary" type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
             </div>
           </form>
@@ -249,7 +271,7 @@ export class PurchasingActions {
     return hasPermission(this.auth.me(), 'PURCHASING_ACT') || hasPermission(this.auth.me(), 'PURCHASING_MANAGE');
   }
 
-  private inPurchasing(): boolean {
+  protected inPurchasing(): boolean {
     const status = this.request().status;
     return status === 'IN_PURCHASING_REVIEW' || status === 'ASSIGNED_TO_BUYER';
   }
@@ -277,9 +299,9 @@ export class PurchasingActions {
     this.showErrors.set(false);
   }
 
-  protected run(kind: 'assign' | 'accept' | 'return-assignment' | 'mode' | 'completeness'): void {
+  protected run(kind: 'assign' | 'accept' | 'return-assignment' | 'mode' | 'completeness' | 'question'): void {
     const request = this.request();
-    if ((kind === 'return-assignment' || kind === 'completeness') && !this.reason().trim()) {
+    if ((kind === 'return-assignment' || kind === 'completeness' || kind === 'question') && !this.reason().trim()) {
       this.showErrors.set(true);
       return;
     }
@@ -291,11 +313,13 @@ export class PurchasingActions {
     this.error.set(null);
     this.pendingKey ??= newIdempotencyKey();
     const key = this.pendingKey;
+    const text = this.reason().trim() || null;
     const body = {
       version: request.version,
       buyerUserId: this.buyerId(),
       purchaseMode: this.mode(),
-      reason: this.reason().trim() || null,
+      reason: text,
+      question: text,
     };
     const call =
       kind === 'assign'
@@ -306,7 +330,9 @@ export class PurchasingActions {
             ? this.api.purchaseMode(request.id, body, key)
             : kind === 'completeness'
               ? this.api.completenessReturn(request.id, body, key)
-              : this.api.returnAssignment(request.id, body, key);
+              : kind === 'question'
+                ? this.api.askQuestion(request.id, body, key)
+                : this.api.returnAssignment(request.id, body, key);
     call.subscribe({
       next: () => {
         this.busy.set(false);
@@ -322,7 +348,9 @@ export class PurchasingActions {
                 ? 'purchasing.actions.modeSet'
                 : kind === 'completeness'
                   ? 'purchasing.actions.dossierReturned'
-                  : 'purchasing.actions.returned';
+                  : kind === 'question'
+                    ? 'purchasing.actions.questionSent'
+                    : 'purchasing.actions.returned';
         this.notifications.success(done, { name: this.buyers().find((b) => b.id === this.buyerId())?.displayName ?? '' });
         this.changed.emit();
       },

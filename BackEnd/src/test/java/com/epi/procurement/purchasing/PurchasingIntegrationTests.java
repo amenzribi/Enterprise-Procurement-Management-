@@ -79,13 +79,60 @@ class PurchasingIntegrationTests extends SqlServerTestSupport {
 	@Test
 	void supplierImportIsAllOrNothingAndDuplicatesAreRejected() {
 		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
-		String ok = "code,legalName,country,visibility\nDEMO-IMP-1,Imported One (Demo),TN,SHARED\n";
+		String ok = "code,legalName,country,visibility\nDEMO-IMP-" + System.nanoTime() + ",Imported One (Demo),TN,SHARED\n";
 		mehdi.upload("/api/v1/imports?kind=SUPPLIER", "suppliers.csv", "text/csv", ok.getBytes(), null).expectStatus(200);
 		String dup = "code,legalName,country,visibility\nDEMO-SKF,Duplicate (Demo),SE,SHARED\n";
 		assertThat(mehdi.upload("/api/v1/imports?kind=SUPPLIER", "dup.csv", "text/csv", dup.getBytes(), null)
 			.expectStatus(422)
 			.code()).isEqualTo("import-rejected");
 		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM supplier WHERE code = 'DEMO-SKF'", Integer.class)).isEqualTo(1);
+	}
+
+	@Test
+	void queueFiltersCountryAmountAndCompletenessAndQuestionKeepsStatus() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = approve(submit(sami, request("Filter and question")));
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		assertThat((List<Integer>) mehdi.get("/api/v1/purchasing/queue?countryCode=TN&size=100").json("$.items[*].requestId"))
+			.contains((int) id);
+		assertThat((List<Integer>) mehdi.get("/api/v1/purchasing/queue?countryCode=XX&size=100").json("$.items[*].requestId"))
+			.doesNotContain((int) id);
+		assertThat((List<Integer>) mehdi.get("/api/v1/purchasing/queue?amountMin=1&amountMax=10000&complete=true&size=100")
+			.json("$.items[*].requestId")).contains((int) id);
+		@SuppressWarnings("unchecked")
+		List<String> countries = mehdi.get("/api/v1/purchasing/queue/filter-options").expectStatus(200).json("$.countries");
+		assertThat(countries).contains("TN");
+
+		int version = ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/question",
+				"{\"version\":" + version + ",\"question\":\"Which seal reference?\"}").expectStatus(200);
+		assertThat((String) sami.get("/api/v1/requests/" + id).json("$.status")).isEqualTo("IN_PURCHASING_REVIEW");
+		assertThat(jdbc.queryForObject(
+				"SELECT COUNT(*) FROM audit_event WHERE entity_type = 'PURCHASE_REQUEST' AND entity_id = ? AND action = 'PURCHASING_QUESTION'",
+				Integer.class, Long.toString(id))).isGreaterThanOrEqualTo(1);
+	}
+
+	@Test
+	void buyerSuggestionPrefersCategoryAffinityAndConcurrentAssignConflicts() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = approve(submit(sami, request("Affinity assign")));
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		long companyId = companyId("DEMO-CPA");
+		long categoryId = jdbc.queryForObject(
+				"SELECT c.id FROM request_category c JOIN organization_group g ON g.id = c.group_id WHERE g.code = 'DEMO-GRP' AND c.code = 'DEMO-SPARE'",
+				Long.class);
+		long inesId = userId("buyer@demo.local");
+		List<Integer> suggested = mehdi
+			.get("/api/v1/purchasing/buyers?companyId=" + companyId + "&categoryId=" + categoryId)
+			.expectStatus(200)
+			.json("$[?(@.suggested == true)].id");
+		assertThat(suggested).containsExactly((int) inesId);
+
+		int version = ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/assign",
+				"{\"version\":" + version + ",\"buyerUserId\":" + inesId + "}").expectStatus(200);
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/assign",
+				"{\"version\":" + version + ",\"buyerUserId\":" + inesId + "}").expectStatus(409);
 	}
 
 	private long approve(long requestId) {

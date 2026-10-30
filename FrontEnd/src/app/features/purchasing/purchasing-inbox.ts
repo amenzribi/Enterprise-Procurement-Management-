@@ -17,7 +17,7 @@ import { formatMoney, minorUnitsOf } from '../requests/money';
 import { Page } from '../requests/request.models';
 import { userStatusTone } from '../requests/request-status';
 import { PurchasingCountService } from './purchasing-count.service';
-import { QUEUE_SORTS, QueueItem, QueueQuery, QueueSort } from './purchasing.models';
+import { QUEUE_SORTS, QueueFilterOptions, QueueItem, QueueQuery, QueueSort } from './purchasing.models';
 import { PurchasingApi } from './purchasing.api';
 
 type PageState = 'loading' | 'ready' | 'error';
@@ -29,15 +29,35 @@ const STATUSES = ['IN_PURCHASING_REVIEW', 'ASSIGNED_TO_BUYER', 'PURCHASING_RETUR
 const PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
 const MODES = ['DIRECT', 'CENTRALIZED', 'ON_BEHALF'] as const;
 
+function optionalId(params: ParamMap, key: string): number | null {
+  const raw = params.get(key);
+  if (!raw) {
+    return null;
+  }
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 /** Reads the queue query from the URL. Exported for tests. */
 export function queueQueryFromParams(params: ParamMap): QueueQuery {
   const sort = params.get('sort');
   const page = Number(params.get('page'));
+  const complete = params.get('complete');
   return {
     q: params.get('q')?.trim().slice(0, MAX_SEARCH_LENGTH) || null,
     status: STATUSES.includes(params.get('status') as (typeof STATUSES)[number]) ? params.get('status') : null,
     priority: PRIORITIES.includes(params.get('priority') as (typeof PRIORITIES)[number]) ? params.get('priority') : null,
     purchaseMode: MODES.includes(params.get('mode') as (typeof MODES)[number]) ? params.get('mode') : null,
+    buyingCompanyId: optionalId(params, 'company'),
+    categoryId: optionalId(params, 'category'),
+    countryCode: params.get('country')?.trim().toUpperCase().slice(0, 2) || null,
+    buyerUserId: optionalId(params, 'buyer'),
+    requesterUserId: optionalId(params, 'requester'),
+    requiredFrom: params.get('requiredFrom') || null,
+    requiredTo: params.get('requiredTo') || null,
+    amountMin: params.get('amountMin') || null,
+    amountMax: params.get('amountMax') || null,
+    complete: complete === 'true' ? true : complete === 'false' ? false : null,
     sort: (QUEUE_SORTS as readonly string[]).includes(sort ?? '') ? (sort as QueueSort) : 'requiredDate',
     direction: params.get('dir') === 'desc' ? 'desc' : 'asc',
     page: Number.isInteger(page) && page > 0 ? page : 0,
@@ -100,6 +120,75 @@ export function gapList(item: QueueItem): string {
             <option [value]="mode" [selected]="query().purchaseMode === mode">{{ 'purchasing.mode.' + mode | translate }}</option>
           }
         </select>
+      </div>
+      <div class="field">
+        <label for="queue-company">{{ 'purchasing.inbox.company' | translate }}</label>
+        <select id="queue-company" (change)="navigate({ company: $any($event.target).value || null, page: null })">
+          <option value="" [selected]="!query().buyingCompanyId">{{ 'purchasing.inbox.all' | translate }}</option>
+          @for (company of options()?.companies ?? []; track company.id) {
+            <option [value]="company.id" [selected]="query().buyingCompanyId === company.id">{{ company.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="queue-country">{{ 'purchasing.inbox.country' | translate }}</label>
+        <select id="queue-country" (change)="navigate({ country: $any($event.target).value || null, page: null })">
+          <option value="" [selected]="!query().countryCode">{{ 'purchasing.inbox.all' | translate }}</option>
+          @for (country of options()?.countries ?? []; track country) {
+            <option [value]="country" [selected]="query().countryCode === country">{{ country }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="queue-category">{{ 'purchasing.inbox.category' | translate }}</label>
+        <select id="queue-category" (change)="navigate({ category: $any($event.target).value || null, page: null })">
+          <option value="" [selected]="!query().categoryId">{{ 'purchasing.inbox.all' | translate }}</option>
+          @for (category of options()?.categories ?? []; track category.id) {
+            <option [value]="category.id" [selected]="query().categoryId === category.id">{{ category.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="queue-buyer">{{ 'purchasing.inbox.buyer' | translate }}</label>
+        <select id="queue-buyer" (change)="navigate({ buyer: $any($event.target).value || null, page: null })">
+          <option value="" [selected]="!query().buyerUserId">{{ 'purchasing.inbox.all' | translate }}</option>
+          @for (buyer of options()?.buyers ?? []; track buyer.id) {
+            <option [value]="buyer.id" [selected]="query().buyerUserId === buyer.id">{{ buyer.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="queue-requester">{{ 'purchasing.inbox.requester' | translate }}</label>
+        <select id="queue-requester" (change)="navigate({ requester: $any($event.target).value || null, page: null })">
+          <option value="" [selected]="!query().requesterUserId">{{ 'purchasing.inbox.all' | translate }}</option>
+          @for (requester of options()?.requesters ?? []; track requester.id) {
+            <option [value]="requester.id" [selected]="query().requesterUserId === requester.id">{{ requester.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="queue-complete">{{ 'purchasing.inbox.completeness' | translate }}</label>
+        <select id="queue-complete" (change)="navigate({ complete: $any($event.target).value || null, page: null })">
+          <option value="" [selected]="query().complete === null">{{ 'purchasing.inbox.all' | translate }}</option>
+          <option value="true" [selected]="query().complete === true">{{ 'purchasing.inbox.completeYes' | translate }}</option>
+          <option value="false" [selected]="query().complete === false">{{ 'purchasing.inbox.completeNo' | translate }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="queue-required-from">{{ 'purchasing.inbox.requiredFrom' | translate }}</label>
+        <input id="queue-required-from" type="date" [value]="query().requiredFrom ?? ''" (change)="navigate({ requiredFrom: $any($event.target).value || null, page: null })" />
+      </div>
+      <div class="field">
+        <label for="queue-required-to">{{ 'purchasing.inbox.requiredTo' | translate }}</label>
+        <input id="queue-required-to" type="date" [value]="query().requiredTo ?? ''" (change)="navigate({ requiredTo: $any($event.target).value || null, page: null })" />
+      </div>
+      <div class="field">
+        <label for="queue-amount-min">{{ 'purchasing.inbox.amountMin' | translate }}</label>
+        <input id="queue-amount-min" type="number" min="0" step="0.01" [value]="query().amountMin ?? ''" (change)="navigate({ amountMin: $any($event.target).value || null, page: null })" />
+      </div>
+      <div class="field">
+        <label for="queue-amount-max">{{ 'purchasing.inbox.amountMax' | translate }}</label>
+        <input id="queue-amount-max" type="number" min="0" step="0.01" [value]="query().amountMax ?? ''" (change)="navigate({ amountMax: $any($event.target).value || null, page: null })" />
       </div>
       <div class="field">
         <label for="queue-sort">{{ 'requests.list.sortBy' | translate }}</label>
@@ -212,6 +301,7 @@ export class PurchasingInboxPage {
   protected readonly search$ = new Subject<string>();
 
   protected readonly query = signal<QueueQuery>(queueQueryFromParams(this.route.snapshot.queryParamMap));
+  protected readonly options = signal<QueueFilterOptions | null>(null);
   protected readonly state = signal<PageState>('loading');
   protected readonly error = signal<string | null>(null);
   private readonly page = signal<Page<QueueItem> | null>(null);
@@ -223,6 +313,10 @@ export class PurchasingInboxPage {
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    this.api.filterOptions().pipe(takeUntilDestroyed(destroyRef)).subscribe({
+      next: (options) => this.options.set(options),
+      error: () => this.options.set({ companies: [], categories: [], buyers: [], requesters: [], countries: [] }),
+    });
     this.reload$
       .pipe(
         switchMap(() => {

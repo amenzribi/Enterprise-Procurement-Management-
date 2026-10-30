@@ -24,5 +24,15 @@ record Assignment(long id, long buyerUserId, String buyerName, long assignedByUs
 		String status, String reason, Instant assignedAt, Instant decidedAt) {
 }
 
-record ActionBody(Integer version, Long buyerUserId, String purchaseMode, String reason) {
+record ActionBody(Integer version, Long buyerUserId, String purchaseMode, String reason, String question) {
+}
+
+record FilterOptions(List<Ref> companies, List<Ref> categories, List<Ref> buyers, List<Ref> requesters,
+		List<String> countries) {
+}
+
+record QueueFilter(String q, Long buyingCompanyId, Long categoryId, String status, String priority, String purchaseType,
+		String purchaseMode, Long buyerUserId, Long requesterUserId, java.time.LocalDate requiredFrom,
+		java.time.LocalDate requiredTo, String countryCode, java.math.BigDecimal amountMin,
+		java.math.BigDecimal amountMax, Boolean complete, String sort, boolean descending, int page, int size) {
 }

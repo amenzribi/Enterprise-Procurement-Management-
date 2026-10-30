@@ -58,6 +58,12 @@ class BuyerAssignmentStore {
 				FROM buyer_assignment WHERE request_id = ? ORDER BY id DESC""", ROW, requestId);
 	}
 
+	List<Long> buyersWithAffinity(long companyId, long categoryId) {
+		return jdbc.queryForList(
+				"SELECT buyer_user_id FROM buyer_category_affinity WHERE company_id = ? AND category_id = ?", Long.class,
+				companyId, categoryId);
+	}
+
 	Map<Long, Integer> openWorkload(List<Long> buyerIds) {
 		if (buyerIds.isEmpty()) {
 			return Map.of();

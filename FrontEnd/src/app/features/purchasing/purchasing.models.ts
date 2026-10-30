@@ -11,6 +11,16 @@ export interface QueueQuery {
   status: string | null;
   priority: string | null;
   purchaseMode: string | null;
+  buyingCompanyId: number | null;
+  categoryId: number | null;
+  countryCode: string | null;
+  buyerUserId: number | null;
+  requesterUserId: number | null;
+  requiredFrom: string | null;
+  requiredTo: string | null;
+  amountMin: string | null;
+  amountMax: string | null;
+  complete: boolean | null;
   sort: QueueSort;
   direction: 'asc' | 'desc';
   page: number;
@@ -21,6 +31,14 @@ export interface QueueRef {
   id: number;
   code?: string;
   name: string;
+}
+
+export interface QueueFilterOptions {
+  companies: QueueRef[];
+  categories: QueueRef[];
+  buyers: QueueRef[];
+  requesters: QueueRef[];
+  countries: string[];
 }
 
 export interface QueueItem {
@@ -73,4 +91,5 @@ export interface PurchasingAction {
   buyerUserId?: number | null;
   purchaseMode?: string | null;
   reason?: string | null;
+  question?: string | null;
 }

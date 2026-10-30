@@ -24,13 +24,27 @@ const ITEM: QueueItem = {
 describe('queueQueryFromParams', () => {
   it('accepts only known filters and bounds the search text', () => {
     const query = queueQueryFromParams(
-      convertToParamMap({ status: 'DRAFT', sort: 'password', page: '-1', q: 'x'.repeat(300), mode: 'MIXED' }),
+      convertToParamMap({
+        status: 'DRAFT',
+        sort: 'password',
+        page: '-1',
+        q: 'x'.repeat(300),
+        mode: 'MIXED',
+        company: '9',
+        country: 'tn',
+        complete: 'true',
+        amountMin: '10',
+      }),
     );
     expect(query.status).toBeNull();
     expect(query.purchaseMode).toBeNull();
     expect(query.sort).toBe('requiredDate');
     expect(query.page).toBe(0);
     expect(query.q?.length).toBe(100);
+    expect(query.buyingCompanyId).toBe(9);
+    expect(query.countryCode).toBe('TN');
+    expect(query.complete).toBe(true);
+    expect(query.amountMin).toBe('10');
   });
 });
 
@@ -61,6 +75,13 @@ describe('PurchasingInboxPage', () => {
   });
 
   it('asks for the queue by required date and shows each request as a card', async () => {
+    http.expectOne('/api/v1/purchasing/queue/filter-options').flush({
+      companies: [],
+      categories: [],
+      buyers: [],
+      requesters: [],
+      countries: ['TN', 'FR'],
+    });
     const request = http.expectOne((call) => call.url === '/api/v1/purchasing/queue');
     expect(request.request.params.get('sort')).toBe('requiredDate');
     request.flush({ items: [ITEM], page: 0, size: 20, totalItems: 1 });
@@ -71,5 +92,7 @@ describe('PurchasingInboxPage', () => {
     expect(card.textContent).toContain('Sami');
     expect(card.textContent).toContain('purchasing.inbox.unassigned');
     expect(card.querySelector('a[href="/requests/42"]')).not.toBeNull();
+    expect(element().querySelector('#queue-country')).not.toBeNull();
+    expect(element().querySelector('#queue-amount-min')).not.toBeNull();
   });
 });

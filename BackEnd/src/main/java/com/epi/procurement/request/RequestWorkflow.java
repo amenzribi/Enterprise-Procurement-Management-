@@ -87,7 +87,8 @@ public class RequestWorkflow {
 
 	public record PurchasingQuery(String q, Long buyingCompanyId, Long categoryId, String status, String priority,
 			String purchaseType, String purchaseMode, Long buyerUserId, Long requesterUserId, LocalDate requiredFrom,
-			LocalDate requiredTo, String sort, boolean descending, int page, int size) {
+			LocalDate requiredTo, Collection<Long> requestingCompanyIds, java.math.BigDecimal amountMin,
+			java.math.BigDecimal amountMax, Boolean complete, String sort, boolean descending, int page, int size) {
 	}
 
 	private static Specification<PurchaseRequest> purchasingSpec(PurchasingQuery query) {
@@ -103,6 +104,14 @@ public class RequestWorkflow {
 			}
 			if (query.buyingCompanyId() != null) {
 				all.add(cb.equal(root.get("buyingCompanyId"), query.buyingCompanyId()));
+			}
+			if (query.requestingCompanyIds() != null) {
+				if (query.requestingCompanyIds().isEmpty()) {
+					all.add(cb.disjunction());
+				}
+				else {
+					all.add(root.get("requestingCompanyId").in(query.requestingCompanyIds()));
+				}
 			}
 			if (query.categoryId() != null) {
 				all.add(cb.equal(root.get("categoryId"), query.categoryId()));
@@ -128,6 +137,21 @@ public class RequestWorkflow {
 			}
 			if (query.requiredTo() != null) {
 				all.add(cb.lessThanOrEqualTo(root.get("requiredDate"), query.requiredTo()));
+			}
+			if (query.amountMin() != null) {
+				all.add(cb.greaterThanOrEqualTo(root.get("totalAmount"), query.amountMin()));
+			}
+			if (query.amountMax() != null) {
+				all.add(cb.lessThanOrEqualTo(root.get("totalAmount"), query.amountMax()));
+			}
+			if (query.complete() != null) {
+				var hasLines = q.subquery(Long.class);
+				var line = hasLines.from(PurchaseRequestLine.class);
+				hasLines.select(line.get("request").get("id")).where(cb.equal(line.get("request").get("id"), root.get("id")));
+				var completePred = cb.and(cb.isNotNull(root.get("title")), cb.notEqual(cb.trim(root.get("title")), ""),
+						cb.isNotNull(root.get("categoryId")), cb.isNotNull(root.get("requiredDate")),
+						cb.exists(hasLines));
+				all.add(Boolean.TRUE.equals(query.complete()) ? completePred : cb.not(completePred));
 			}
 			if (StringUtils.hasText(query.q())) {
 				String text = "%" + query.q().strip().toLowerCase(java.util.Locale.ROOT) + "%";
@@ -304,6 +328,63 @@ public class RequestWorkflow {
 		requests.saveAndFlush(request);
 		transitions.save(new RequestTransition(id, from, RequestStatus.PURCHASING_RETURNED,
 				request.getCurrentOwnerUserId(), actorUserId, now, reason));
+	}
+
+	/** Buyer opens sourcing (Sprint 4). Prerequisite: ASSIGNED_TO_BUYER with an accepted assignment. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterSourcing(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from != RequestStatus.ASSIGNED_TO_BUYER) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not ready for sourcing.");
+		}
+		request.transitionTo(RequestStatus.SOURCING, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.SOURCING, request.getCurrentOwnerUserId(),
+				actorUserId, now, "rfq-opened"));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void markQuotesReceived(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from != RequestStatus.SOURCING && from != RequestStatus.QUOTES_RECEIVED) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not in sourcing.");
+		}
+		if (from == RequestStatus.QUOTES_RECEIVED) {
+			return;
+		}
+		request.transitionTo(RequestStatus.QUOTES_RECEIVED, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.QUOTES_RECEIVED, request.getCurrentOwnerUserId(),
+				actorUserId, now, "quote-received"));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterTechnicalValidation(long id, long actorUserId, Instant now) {
+		transitionEvaluation(id, actorUserId, now, RequestStatus.QUOTES_RECEIVED, RequestStatus.TECHNICAL_VALIDATION,
+				"technical-validation");
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterCommercialValidation(long id, long actorUserId, Instant now) {
+		transitionEvaluation(id, actorUserId, now, RequestStatus.TECHNICAL_VALIDATION,
+				RequestStatus.COMMERCIAL_VALIDATION, "commercial-validation");
+	}
+
+	private void transitionEvaluation(long id, long actorUserId, Instant now, RequestStatus expected,
+			RequestStatus to, String reason) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from != expected) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not ready for " + to.name() + ".");
+		}
+		request.transitionTo(to, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, to, request.getCurrentOwnerUserId(), actorUserId, now, reason));
 	}
 
 	@Transactional(propagation = Propagation.MANDATORY)

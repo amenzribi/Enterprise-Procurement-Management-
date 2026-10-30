@@ -2,7 +2,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { idempotencyHeaders } from '../../core/api/idempotency';
-import { Assignment, BuyerOption, PurchasingAction, QueueItem, QueuePage, QueueQuery } from './purchasing.models';
+import {
+  Assignment,
+  BuyerOption,
+  PurchasingAction,
+  QueueFilterOptions,
+  QueueItem,
+  QueuePage,
+  QueueQuery,
+} from './purchasing.models';
 
 const API = '/api/v1/purchasing';
 
@@ -16,19 +24,32 @@ export class PurchasingApi {
       .set('dir', query.direction)
       .set('page', query.page)
       .set('size', query.size);
-    if (query.q) {
-      params = params.set('q', query.q);
-    }
-    if (query.status) {
-      params = params.set('status', query.status);
-    }
-    if (query.priority) {
-      params = params.set('priority', query.priority);
-    }
-    if (query.purchaseMode) {
-      params = params.set('purchaseMode', query.purchaseMode);
+    const set = (key: string, value: string | number | boolean | null | undefined) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params = params.set(key, String(value));
+      }
+    };
+    set('q', query.q);
+    set('status', query.status);
+    set('priority', query.priority);
+    set('purchaseMode', query.purchaseMode);
+    set('buyingCompanyId', query.buyingCompanyId);
+    set('categoryId', query.categoryId);
+    set('countryCode', query.countryCode);
+    set('buyerUserId', query.buyerUserId);
+    set('requesterUserId', query.requesterUserId);
+    set('requiredFrom', query.requiredFrom);
+    set('requiredTo', query.requiredTo);
+    set('amountMin', query.amountMin);
+    set('amountMax', query.amountMax);
+    if (query.complete !== null && query.complete !== undefined) {
+      params = params.set('complete', String(query.complete));
     }
     return this.http.get<QueuePage>(`${API}/queue`, { params });
+  }
+
+  filterOptions(): Observable<QueueFilterOptions> {
+    return this.http.get<QueueFilterOptions>(`${API}/queue/filter-options`);
   }
 
   count(): Observable<{ pending: number }> {
@@ -65,5 +86,9 @@ export class PurchasingApi {
 
   completenessReturn(requestId: number, body: PurchasingAction, key: string): Observable<QueueItem> {
     return this.http.post<QueueItem>(`${API}/requests/${requestId}/completeness-return`, body, idempotencyHeaders(key));
+  }
+
+  askQuestion(requestId: number, body: PurchasingAction, key: string): Observable<QueueItem> {
+    return this.http.post<QueueItem>(`${API}/requests/${requestId}/question`, body, idempotencyHeaders(key));
   }
 }

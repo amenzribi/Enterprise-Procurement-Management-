@@ -3,13 +3,18 @@ package com.epi.procurement.purchasing;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+
+import javax.sql.DataSource;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,7 +37,7 @@ import com.epi.procurement.request.RequestWorkflow;
 @Service
 class PurchasingService {
 
-	private static final String ENTITY = "PurchaseRequest";
+	private static final String ENTITY = "PURCHASE_REQUEST";
 
 	private final RequestWorkflow requests;
 
@@ -48,8 +53,11 @@ class PurchasingService {
 
 	private final Clock clock;
 
+	private final JdbcTemplate jdbc;
+
 	PurchasingService(RequestWorkflow requests, BuyerAssignmentStore assignments, OrganizationDirectory organization,
-			UserDirectory users, AuditLog auditLog, Notifications notifications, ObjectProvider<Clock> clock) {
+			UserDirectory users, AuditLog auditLog, Notifications notifications, ObjectProvider<Clock> clock,
+			DataSource dataSource) {
 		this.requests = requests;
 		this.assignments = assignments;
 		this.organization = organization;
@@ -57,12 +65,13 @@ class PurchasingService {
 		this.auditLog = auditLog;
 		this.notifications = notifications;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
+		this.jdbc = new JdbcTemplate(dataSource);
 	}
 
 	@Transactional(readOnly = true)
-	QueuePage queue(CurrentUser user, RequestWorkflow.PurchasingQuery query) {
+	QueuePage queue(CurrentUser user, QueueFilter filter) {
 		requirePurchasing(user);
-		Page<RequestSnapshot> page = requests.purchasingQueue(user, query);
+		Page<RequestSnapshot> page = requests.purchasingQueue(user, toQuery(user, filter));
 		List<QueueItem> items = page.getContent().stream().map(this::item).toList();
 		return new QueuePage(items, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
 	}
@@ -71,8 +80,57 @@ class PurchasingService {
 	Map<String, Long> count(CurrentUser user) {
 		requirePurchasing(user);
 		long n = requests.purchasingQueue(user, new RequestWorkflow.PurchasingQuery(null, null, null, null, null, null,
-				null, null, null, null, null, "requiredDate", false, 0, 1)).getTotalElements();
+				null, null, null, null, null, null, null, null, null, "requiredDate", false, 0, 1)).getTotalElements();
 		return Map.of("pending", n);
+	}
+
+	private RequestWorkflow.PurchasingQuery toQuery(CurrentUser user, QueueFilter filter) {
+		java.util.Collection<Long> requestingIds = null;
+		if (StringUtils.hasText(filter.countryCode())) {
+			requestingIds = jdbc.queryForList(
+					"SELECT id FROM company WHERE group_id = ? AND UPPER(country_code) = ? AND is_active = 1", Long.class,
+					user.groupId(), filter.countryCode().strip().toUpperCase(java.util.Locale.ROOT));
+		}
+		return new RequestWorkflow.PurchasingQuery(filter.q(), filter.buyingCompanyId(), filter.categoryId(),
+				filter.status(), filter.priority(), filter.purchaseType(), filter.purchaseMode(), filter.buyerUserId(),
+				filter.requesterUserId(), filter.requiredFrom(), filter.requiredTo(), requestingIds, filter.amountMin(),
+				filter.amountMax(), filter.complete(), filter.sort(), filter.descending(), filter.page(), filter.size());
+	}
+
+	@Transactional(readOnly = true)
+	FilterOptions filterOptions(CurrentUser user) {
+		requirePurchasing(user);
+		List<Ref> companies = organization.companiesOfGroup(user.groupId())
+			.stream()
+			.map(c -> new Ref(c.id(), c.code(), c.name()))
+			.toList();
+		List<Ref> categories = jdbc.query("""
+				SELECT id, code, name_en FROM request_category WHERE group_id = ? AND is_active = 1 ORDER BY code""",
+				(rs, i) -> new Ref(rs.getLong("id"), rs.getString("code"), rs.getString("name_en")), user.groupId());
+		Set<Long> buyerCompanyIds = new HashSet<>();
+		user.grants(Role.BUYER).forEach(g -> {
+			if (g.companyId() != null) {
+				buyerCompanyIds.add(g.companyId());
+			}
+		});
+		user.grants(Role.PURCHASING_MANAGER).forEach(g -> {
+			if (g.companyId() != null) {
+				buyerCompanyIds.add(g.companyId());
+			}
+		});
+		List<Ref> buyers = buyerCompanyIds.stream()
+			.flatMap(companyId -> users.searchUsers(user.groupId(), companyId, Role.BUYER.name(), null).stream())
+			.map(u -> new Ref(u.id(), "", u.displayName()))
+			.distinct()
+			.toList();
+		List<Ref> requesters = users.searchUsers(user.groupId(), null, Role.REQUESTER.name(), null)
+			.stream()
+			.map(u -> new Ref(u.id(), "", u.displayName()))
+			.toList();
+		List<String> countries = jdbc.queryForList(
+				"SELECT DISTINCT country_code FROM company WHERE group_id = ? AND is_active = 1 ORDER BY country_code",
+				String.class, user.groupId());
+		return new FilterOptions(companies, categories, buyers, requesters, countries);
 	}
 
 	@Transactional(readOnly = true)
@@ -81,8 +139,16 @@ class PurchasingService {
 		List<UserDirectory.UserListing> found = users.searchUsers(user.groupId(), companyId, Role.BUYER.name(), null);
 		List<Long> ids = found.stream().map(UserDirectory.UserListing::id).toList();
 		Map<Long, Integer> load = assignments.openWorkload(ids);
-		Long suggested = found.stream().min((a, b) -> Integer.compare(load.getOrDefault(a.id(), 0),
-				load.getOrDefault(b.id(), 0))).map(UserDirectory.UserListing::id).orElse(null);
+		Set<Long> affinity = categoryId == null ? Set.of()
+				: new HashSet<>(assignments.buyersWithAffinity(companyId, categoryId));
+		Long suggested = found.stream()
+			.filter(u -> affinity.isEmpty() || affinity.contains(u.id()))
+			.min((a, b) -> Integer.compare(load.getOrDefault(a.id(), 0), load.getOrDefault(b.id(), 0)))
+			.map(UserDirectory.UserListing::id)
+			.or(() -> found.stream()
+				.min((a, b) -> Integer.compare(load.getOrDefault(a.id(), 0), load.getOrDefault(b.id(), 0)))
+				.map(UserDirectory.UserListing::id))
+			.orElse(null);
 		return found.stream()
 			.map(u -> new BuyerOption(u.id(), u.displayName(), u.email(), load.getOrDefault(u.id(), 0),
 					Objects.equals(suggested, u.id())))
@@ -202,6 +268,40 @@ class PurchasingService {
 		request = requests.currentLocked(requestId);
 		audit(user, request, "PURCHASING_RETURNED", request.status(), reason.strip(), null);
 		notifyAuthors(request, "PURCHASING_RETURNED", user);
+		return item(request);
+	}
+
+	/**
+	 * Purchasing question to the requester (S3-AC-02): SLA-free, no status change, does not restart approval.
+	 */
+	@Transactional
+	QueueItem askQuestion(CurrentUser user, long requestId, Integer version, String question) {
+		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
+		requireVersion(version, request);
+		requirePurchasingOn(user, request);
+		if (!"IN_PURCHASING_REVIEW".equals(request.status()) && !"ASSIGNED_TO_BUYER".equals(request.status())) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not in purchasing.");
+		}
+		if (!StringUtils.hasText(question)) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("question", "required")));
+		}
+		String clean = question.strip();
+		if (clean.length() > 2000) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("question", "too-long")));
+		}
+		audit(user, request, "PURCHASING_QUESTION", request.status(), clean, null);
+		notifications.enqueue(new Notice("PURCHASING_QUESTION", request.requesterUserId(), request.id(),
+				Map.of("number", nullToEmpty(request.number()), "title", nullToEmpty(request.title()), "actor",
+						user.displayName(), "question", clean),
+				List.of(), List.of(new Notice.Action("mail.action.open", "/requests/" + request.id())),
+				"/requests/" + request.id()));
+		if (request.enteredByUserId() != request.requesterUserId()) {
+			notifications.enqueue(new Notice("PURCHASING_QUESTION", request.enteredByUserId(), request.id(),
+					Map.of("number", nullToEmpty(request.number()), "title", nullToEmpty(request.title()), "actor",
+							user.displayName(), "question", clean),
+					List.of(), List.of(new Notice.Action("mail.action.open", "/requests/" + request.id())),
+					"/requests/" + request.id()));
+		}
 		return item(request);
 	}
 

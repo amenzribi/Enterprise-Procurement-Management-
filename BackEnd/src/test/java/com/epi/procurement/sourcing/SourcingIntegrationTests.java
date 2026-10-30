@@ -86,6 +86,7 @@ class SourcingIntegrationTests extends SqlServerTestSupport {
 				List.of(Map.of("rfqLineId", rfqLineId, "quantity", 1, "unitPrice", 30))))).expectStatus(200);
 		assertThat((String) sami.get("/api/v1/requests/" + id).json("$.status")).isEqualTo("QUOTES_RECEIVED");
 		anon.post("/api/v1/quote-links/summary", "{\"token\":\"not-a-real-token\"}").expectStatus(404);
+		anon.post("/api/v1/quote-links/summary", "{\"token\":\"short\"}").expectStatus(404);
 	}
 
 	private long accept(long requestId) {

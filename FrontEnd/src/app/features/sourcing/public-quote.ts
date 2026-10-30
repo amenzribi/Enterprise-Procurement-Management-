@@ -69,6 +69,8 @@ export class PublicQuotePage {
       this.state.set('invalid');
       return;
     }
+    // Drop the fragment from the address bar after reading (S4SL-04), keep token in memory only.
+    history.replaceState(null, '', window.location.pathname + window.location.search);
     this.api.publicSummary(this.token).subscribe({
       next: (summary) => {
         this.summary.set(summary);
@@ -102,7 +104,12 @@ export class PublicQuotePage {
         },
         error: (error: unknown) => {
           this.busy.set(false);
-          this.error.set(toApiProblem(error).code);
+          const problem = toApiProblem(error);
+          if (problem.status === 404) {
+            this.state.set('invalid');
+            return;
+          }
+          this.error.set(problem.code);
         },
       });
   }

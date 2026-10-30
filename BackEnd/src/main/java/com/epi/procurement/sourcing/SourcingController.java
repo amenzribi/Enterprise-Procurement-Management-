@@ -48,11 +48,10 @@ class SourcingController {
 	}
 
 	@PostMapping("/rfqs/{rfqId}/suppliers/{rfqSupplierId}/link")
-	ResponseEntity<?> link(@PathVariable long rfqId, @PathVariable long rfqSupplierId,
-			@RequestHeader(name = Idempotency.HEADER, required = false) String key) {
-		CurrentUser user = currentUser.require();
-		return idempotency.execute("user:" + user.id(), key, "rfq-link|" + rfqId + "|" + rfqSupplierId,
-				() -> ResponseEntity.ok(sourcing.issueLink(user, rfqId, rfqSupplierId)));
+	LinkCreated link(@PathVariable long rfqId, @PathVariable long rfqSupplierId) {
+		// No Idempotency store: the response contains a plaintext token that must not sit in
+		// idempotency_record.response_json (S4SL-02). Double-clicks may issue a second token.
+		return sourcing.issueLink(currentUser.require(), rfqId, rfqSupplierId);
 	}
 
 	@PostMapping("/rfqs/{rfqId}/quotes")

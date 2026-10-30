@@ -1,5 +1,6 @@
 package com.epi.procurement.sourcing;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,12 +21,20 @@ class QuoteLinkController {
 	}
 
 	@PostMapping("/summary")
-	PublicSummary summary(@RequestBody PublicSummaryRequest body) {
-		return sourcing.publicSummary(body == null ? null : body.token());
+	ResponseEntity<PublicSummary> summary(@RequestBody PublicSummaryRequest body) {
+		return withLinkHeaders(ResponseEntity.ok(sourcing.publicSummary(body == null ? null : body.token())));
 	}
 
 	@PostMapping("/submit")
-	PublicSummary submit(@RequestBody PublicQuoteSubmit body) {
-		return sourcing.publicSubmit(body);
+	ResponseEntity<PublicSummary> submit(@RequestBody PublicQuoteSubmit body) {
+		return withLinkHeaders(ResponseEntity.ok(sourcing.publicSubmit(body)));
 	}
+
+	private static <T> ResponseEntity<T> withLinkHeaders(ResponseEntity<T> body) {
+		return ResponseEntity.status(body.getStatusCode())
+			.header("Cache-Control", "no-store")
+			.header("Referrer-Policy", "no-referrer")
+			.body(body.getBody());
+	}
+
 }

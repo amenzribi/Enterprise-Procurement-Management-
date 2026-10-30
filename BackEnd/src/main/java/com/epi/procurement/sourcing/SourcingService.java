@@ -173,7 +173,8 @@ class SourcingService {
 		TokenContext ctx = requireValidToken(body.token());
 		SourcingStore.RfqRow rfq = store.findRfq(ctx.supplier().rfqId()).orElseThrow(ApiProblemException::notFound);
 		if (!"OPEN".equals(rfq.status())) {
-			throw ApiProblemException.conflict("rfq-closed", "This RFQ no longer accepts quotes.");
+			// Neutral 404 for anonymous callers (S4SL-08) — do not reveal RFQ state.
+			throw ApiProblemException.notFound();
 		}
 		Instant now = clock.instant();
 		QuoteBody quoteBody = new QuoteBody(ctx.supplier().id(), body.currency(), body.validUntil(), body.leadTimeDays(),
@@ -352,7 +353,11 @@ class SourcingService {
 		if (!StringUtils.hasText(token)) {
 			throw ApiProblemException.notFound();
 		}
-		SourcingStore.TokenRow row = store.findToken(hash(token.strip())).orElseThrow(ApiProblemException::notFound);
+		String raw = token.strip();
+		if (raw.length() < 20 || raw.length() > 100) {
+			throw ApiProblemException.notFound();
+		}
+		SourcingStore.TokenRow row = store.findToken(hash(raw)).orElseThrow(ApiProblemException::notFound);
 		if (row.expiresAt().isBefore(clock.instant())) {
 			throw ApiProblemException.notFound();
 		}

@@ -24,9 +24,9 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-APR-03 | Delegation of authority matrix and dated absence delegation | §7.1 | — | MVP | S2 | Done (S2: approval rules as authority matrix, per-task and absence delegation) |
 | FR-APR-04 | SLA per step, reminders, escalation | §7.1 | — | MVP | S2 | Done (S2) |
 | FR-APR-05 | BPMN graphical designer | §7.1 | — | P2 | — | Deferred (ADR-005) |
-| FR-PUR-01 | Central inbox of approved requests with filters | §8 | US-05 | MVP | S3 | Done (S3: queue + API filters; inbox UI is a subset — see sprint-3-defects S3-D-01) |
+| FR-PUR-01 | Central inbox of approved requests with filters | §8 | US-05 | MVP | S3 | Done (S3 closure: queue API + inbox UI filters; S3-D-01 / S3-C1 closed) |
 | FR-PUR-02 | Completeness check and return to requester | §8 | — | MVP | S3 | Done (S3: gaps on the panel; completeness return → PURCHASING_RETURNED; resubmit skips approval) |
-| FR-PUR-03 | Rule-based assignment; buyer accepts or declines with reason | §8 | US-05 | MVP | S3 | Done (S3: PM assigns; suggestion = lowest open load; buyer accepts or returns) |
+| FR-PUR-03 | Rule-based assignment; buyer accepts or declines with reason | §8 | US-05 | MVP | S3 | Done (S3 closure: PM assigns; suggestion = category affinity then lowest open load; buyer accepts or returns; S3-D-02 / S3-C2 closed) |
 | FR-PUR-04 | Purchase mode per request: direct / centralised / on behalf | §3.7 | US-15 | MVP | S3 | Done (S3: charged company unchanged; MIXED may choose any of the three) |
 | FR-PUR-05 | Grouping similar requests from several subsidiaries into one RFQ | §8 | — | P2 | — | Deferred |
 | FR-PUR-06 | AI buyer suggestion | §8, §17 | — | P2 | — | Deferred |
@@ -36,7 +36,7 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-SRC-04 | Conversion to comparison currency, landed-cost estimate, comparison table | §9.2 | US-06 | MVP | S4 | Done (S4: ExchangeRates + landed components; missing prices explicit) |
 | FR-FX-01 | Currencies with minor units, exchange rates by date and source | §9.1, §15 | — | MVP | S0 currencies, S2 rates | Done (S2) |
 | FR-SRC-05 | AI reading of quotations | §9.2, §17 | — | P2 | — | Deferred |
-| FR-EVL-01 | Technical, commercial, management validation with thresholds and reasons | §10 | US-07 | MVP | S5 | Planned |
+| FR-EVL-01 | Technical, commercial, management validation with thresholds and reasons | §10 | US-07 | MVP | S4 tech/commercial, S5 award path | Partly done (S4: technical then commercial validation with comment; management committee / award remain S5 / P2) |
 | FR-EVL-02 | Committees, conflict-of-interest declarations, Arabic/French minutes | §10 | — | P2 | — | Deferred |
 | FR-ORD-01 | PO in platform or external reference, local/international, status tracking | §11 | — | MVP | S5 | Planned |
 | FR-ORD-02 | Payments, LCs, guarantees with expiry alerts | §11 | — | P2 | — | Deferred |

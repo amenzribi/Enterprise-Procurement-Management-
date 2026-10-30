@@ -23,3 +23,4 @@ Sami → Karim → Mehdi assigns Ines → Ines accepts → Ines opens RFQ (DEMO-
 - Pilot gate §15 unmet — production exposure of supplier links requires pen-test / pilot approval.
 - S2CR-08 Sprint 9; native Arabic review outstanding.
 - Independent QA/review of S3 and S4.
+- Self-labelled S3+S4 closure: [sprint-3-4-closure.md](sprint-3-4-closure.md). User UAT bound to [sprint-4-uat.md](sprint-4-uat.md) only.

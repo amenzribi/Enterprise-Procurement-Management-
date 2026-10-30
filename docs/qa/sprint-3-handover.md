@@ -30,4 +30,4 @@ Sami → Karim → Ines queue → Mehdi assigns Ines → Ines accepts. Claire ca
 - Native-speaker Arabic review.
 - Pilot gate §15 unmet (rollout only).
 - Independent QA / code review of Sprint 3.
-- Sprint 4 (RFQs) is the next roadmap sprint.
+- Consolidated S3+S4 self-closure: [sprint-3-4-closure.md](sprint-3-4-closure.md).

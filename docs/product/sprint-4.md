@@ -1,6 +1,6 @@
 # Sprint 4 — Quotes and evaluation
 
-**Status:** In implementation (local).  
+**Status:** Locally implemented 2026-10-30 (developer). Self-labelled S3+S4 closure in `docs/qa/sprint-3-4-closure.md`. Pilot gate unmet. Not independently reviewed.  
 **Edition:** Core.  
 **References:** Solution Guide v3.0 UC-10…UC-14; French spec §9–§10; register FR-SRC-02…04; roadmap S4.  
 **Depends on:** Sprint 3 purchasing (accepted buyer) and supplier register.  

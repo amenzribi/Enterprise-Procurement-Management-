@@ -45,11 +45,19 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 
 | # | Item | Req | Size |
 |---|---|---|---|
-| S3-C1 | Inbox UI filters still missing from S3-AC-01: country, category, amount band, requester, required date, assigned buyer, completeness (API already has company, category, type, buyer, requester, dates) | FR-PUR-01 | S |
-| S3-C2 | Buyer suggestion uses lowest open load only; no stored category affinity yet | FR-PUR-03 | S |
-| S3-C3 | Near-duplicate / grouping of similar needs, internal transfer, buy again | FR-REQ-03, G12 | M — confirm with pilot |
+| S3-C1 | ~~Inbox UI filters still missing from S3-AC-01~~ | FR-PUR-01 | S — **Done** in Sprint 3 closure (`e3c4747` / S3-D-01): API + UI expose country, category, amount band, requester, required date, assigned buyer, completeness (plus prior filters) |
+| S3-C2 | ~~Buyer suggestion uses lowest open load only~~ | FR-PUR-03 | S — **Done** in Sprint 3 closure (`e3c4747` / S3-D-02): `buyer_category_affinity` then lowest open load |
+| S3-C3 | Near-duplicate / grouping of similar needs, internal transfer, buy again | FR-REQ-03, G12 | M — confirm with pilot (**still open**) |
 
-## Sprint 4 onwards
+## Sprint 4 carry-over / residuals
 
-See [roadmap.md](roadmap.md). RFQs, quote comparison, AI, supplier portals, refacturing and live ERP APIs stay
-out of Sprint 3. Grouping of similar needs, internal transfer and "buy again" stay confirm-with-pilot (G12).
+| # | Item | Req | Size |
+|---|---|---|---|
+| S4-C1 | AI quotation reading (provider port + human review) | FR-SRC-05 | L — **Deferred P2** (not in S4 delivery) |
+| S4-C2 | Penetration test of public supplier quote links before any production exposure | S4-AC-03, NFR | M — blocked on pilot gate §15 + Sprint 9 security work |
+| S4-C3 | Fresh independent QA/reviewer pass on the same integrated S3+S4 revision | delivery rules | M — outstanding (self-labelled closure only; see [sprint-3-4-closure.md](../qa/sprint-3-4-closure.md)) |
+
+## Sprint 5 onwards
+
+See [roadmap.md](roadmap.md). Award / PO / supplier confirmation are Sprint 5. Grouping of similar needs,
+internal transfer and "buy again" stay confirm-with-pilot (G12). S2CR-08 stays Sprint 9. Pilot gate §15 unmet.

@@ -228,7 +228,9 @@
     "import-empty": "لا يحتوي الملف على صفوف بيانات.",
     "duplicate-code": "هذا الرمز مستخدم بالفعل.",
     "duplicate-supplier": "يوجد مورد بهذا الرمز أو المعرّف الضريبي بالفعل.",
-    "not-eligible": "لا يمكن إسناد المهمة إلى هذا الشخص."
+    "not-eligible": "لا يمكن إسناد المهمة إلى هذا الشخص.",
+    "po-not-confirmed": "أكد أمر الشراء قبل إنشاء شحنة.",
+    "quantity-exceeded": "كمية الشحن تتجاوز بند أمر الشراء."
   },
   "auth": {
     "signOut": "تسجيل الخروج",
@@ -1182,6 +1184,54 @@
       "ISSUED": "صادر",
       "CONFIRMED": "مؤكد",
       "CANCELLED": "ملغى"
+    }
+  },
+  "logistics": {
+    "actions": {
+      "title": "الشحنات",
+      "kind": "نوع الشحنة",
+      "carrier": "الناقل",
+      "create": "إنشاء شحنة",
+      "created": "تم إنشاء الشحنة",
+      "recordActual": "تسجيل التاريخ الفعلي",
+      "milestoneDone": "تم تحديث المعلم",
+      "late": "متأخر",
+      "docRef": "مرجع المستند",
+      "addDoc": "إضافة مستند نقل",
+      "docAdded": "تم حفظ مرجع المستند"
+    },
+    "kind": {
+      "LOCAL": "محلي",
+      "INTERNATIONAL": "دولي"
+    },
+    "status": {
+      "PLANNED": "مخطط",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "DELIVERED": "تم التسليم",
+      "CANCELLED": "ملغى"
+    },
+    "milestone": {
+      "ORDER_CONFIRMED": "تأكيد الطلب",
+      "DISPATCHED": "تم الإرسال",
+      "IN_TRANSIT_LOCAL": "في الطريق",
+      "DELIVERED": "تم التسليم",
+      "IN_PRODUCTION": "قيد الإنتاج",
+      "READY": "جاهز للشحن",
+      "SHIPPED": "تم الشحن",
+      "AT_PORT": "في الميناء",
+      "IN_CUSTOMS": "في الجمارك",
+      "IN_WAREHOUSE": "في المستودع"
+    },
+    "doc": {
+      "COMMERCIAL_INVOICE": "فاتورة تجارية",
+      "PACKING_LIST": "قائمة التعبئة",
+      "CERTIFICATE_OF_ORIGIN": "شهادة المنشأ",
+      "BILL_OF_LADING": "بوليصة الشحن",
+      "AIR_WAYBILL": "بوليصة شحن جوي",
+      "CUSTOMS": "مستند جمركي",
+      "DELIVERY_NOTE": "إذن تسليم",
+      "CMR": "وثيقة النقل البري CMR",
+      "OTHER": "أخرى"
     }
   }
 }

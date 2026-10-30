@@ -8,7 +8,7 @@ package com.epi.procurement.request;
  * statuses of the Solution Guide v3.0 §8 ({@link UserStatus}). Sprint 1 submissions are CREATED; from Sprint 2 a
  * submission enters IN_APPROVAL. "Ask a question" (spec §7.2) is a flag on the approval task, not a status.
  */
-enum RequestStatus {
+public enum RequestStatus {
 
 	DRAFT(Stage.REQUEST, true, UserStatus.DRAFT),
 	CREATED(Stage.REQUEST, true, UserStatus.SUBMITTED),

@@ -1,6 +1,6 @@
 # Sprint 5 — Award and purchase order
 
-**Status:** Locally delivered (developer). Not independently reviewed.  
+**Status:** Locally delivered (developer). Manual user acceptance **pending**. Not independently reviewed.  
 **Edition:** Core.  
 **References:** Solution Guide v3.0 UC-15…UC-17; register FR-EVL-01 (award gate), FR-ORD-01; roadmap S5.  
 **Depends on:** Sprint 4 commercial validation.  

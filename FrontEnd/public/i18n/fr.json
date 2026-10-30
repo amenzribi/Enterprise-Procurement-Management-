@@ -228,7 +228,9 @@
     "import-empty": "Le fichier n’a aucune ligne de données.",
     "duplicate-code": "Ce code est déjà utilisé.",
     "duplicate-supplier": "Un fournisseur avec ce code ou cet identifiant fiscal existe déjà.",
-    "not-eligible": "Cette personne ne peut pas recevoir l’affectation."
+    "not-eligible": "Cette personne ne peut pas recevoir l’affectation.",
+    "po-not-confirmed": "Confirmez le bon de commande avant de créer une expédition.",
+    "quantity-exceeded": "La quantité expédiée dépasserait la ligne du bon de commande."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -1182,6 +1184,54 @@
       "ISSUED": "Émis",
       "CONFIRMED": "Confirmé",
       "CANCELLED": "Annulé"
+    }
+  },
+  "logistics": {
+    "actions": {
+      "title": "Expéditions",
+      "kind": "Type d’expédition",
+      "carrier": "Transporteur",
+      "create": "Créer une expédition",
+      "created": "Expédition créée",
+      "recordActual": "Enregistrer la date réelle",
+      "milestoneDone": "Jalon mis à jour",
+      "late": "En retard",
+      "docRef": "Référence du document",
+      "addDoc": "Ajouter un document de transport",
+      "docAdded": "Référence du document enregistrée"
+    },
+    "kind": {
+      "LOCAL": "Locale",
+      "INTERNATIONAL": "Internationale"
+    },
+    "status": {
+      "PLANNED": "Planifiée",
+      "IN_PROGRESS": "En cours",
+      "DELIVERED": "Livrée",
+      "CANCELLED": "Annulée"
+    },
+    "milestone": {
+      "ORDER_CONFIRMED": "Commande confirmée",
+      "DISPATCHED": "Expédiée",
+      "IN_TRANSIT_LOCAL": "En transit",
+      "DELIVERED": "Livrée",
+      "IN_PRODUCTION": "En production",
+      "READY": "Prête à expédier",
+      "SHIPPED": "Expédiée",
+      "AT_PORT": "Au port",
+      "IN_CUSTOMS": "En douane",
+      "IN_WAREHOUSE": "En entrepôt"
+    },
+    "doc": {
+      "COMMERCIAL_INVOICE": "Facture commerciale",
+      "PACKING_LIST": "Liste de colisage",
+      "CERTIFICATE_OF_ORIGIN": "Certificat d’origine",
+      "BILL_OF_LADING": "Connaissement",
+      "AIR_WAYBILL": "Lettre de transport aérien",
+      "CUSTOMS": "Document douanier",
+      "DELIVERY_NOTE": "Bon de livraison",
+      "CMR": "CMR",
+      "OTHER": "Autre"
     }
   }
 }

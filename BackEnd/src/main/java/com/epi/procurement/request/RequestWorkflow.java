@@ -405,6 +405,34 @@ public class RequestWorkflow {
 				actorUserId, now, "purchase-order-issued"));
 	}
 
+	/**
+	 * Advances the request along shipment milestones (Sprint 6). Never enters {@link RequestStatus#ACCEPTED}
+	 * (receipt acceptance is Sprint 7). Idempotent when already at or beyond the target rank within shipment/receipt
+	 * delivery.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterShipmentStatus(long id, RequestStatus to, long actorUserId, Instant now, String reason) {
+		if (to.stage() != Stage.SHIPMENT && to != RequestStatus.ORDER_CONFIRMED && to != RequestStatus.DELIVERED) {
+			throw new IllegalArgumentException("Not a shipment target status: " + to);
+		}
+		if (to == RequestStatus.ACCEPTED || to.stage() == Stage.FINANCE || to.stage() == Stage.CLOSURE) {
+			throw new IllegalArgumentException("Shipment must not close or accept the request: " + to);
+		}
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from.rank() >= to.rank()) {
+			return;
+		}
+		if (from.rank() < RequestStatus.ORDERED.rank()) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not ordered.");
+		}
+		request.transitionTo(to, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, to, request.getCurrentOwnerUserId(), actorUserId, now,
+				reason == null ? "shipment-milestone" : reason));
+	}
+
 	private void transitionEvaluation(long id, long actorUserId, Instant now, RequestStatus expected,
 			RequestStatus to, String reason) {
 		PurchaseRequest request = requests.getForSystemUpdate(id);

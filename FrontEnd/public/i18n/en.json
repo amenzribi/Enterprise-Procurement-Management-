@@ -228,7 +228,9 @@
     "import-empty": "The file has no data rows.",
     "duplicate-code": "This code is already used.",
     "duplicate-supplier": "A supplier with this code or tax id already exists.",
-    "not-eligible": "This person cannot receive the assignment."
+    "not-eligible": "This person cannot receive the assignment.",
+    "po-not-confirmed": "Confirm the purchase order before creating a shipment.",
+    "quantity-exceeded": "Shipped quantity would exceed the purchase-order line."
   },
   "auth": {
     "signOut": "Sign out",
@@ -1182,6 +1184,54 @@
       "ISSUED": "Issued",
       "CONFIRMED": "Confirmed",
       "CANCELLED": "Cancelled"
+    }
+  },
+  "logistics": {
+    "actions": {
+      "title": "Shipments",
+      "kind": "Shipment type",
+      "carrier": "Carrier",
+      "create": "Create shipment",
+      "created": "Shipment created",
+      "recordActual": "Record actual date",
+      "milestoneDone": "Milestone updated",
+      "late": "Late",
+      "docRef": "Document reference",
+      "addDoc": "Add transport document",
+      "docAdded": "Document reference saved"
+    },
+    "kind": {
+      "LOCAL": "Local",
+      "INTERNATIONAL": "International"
+    },
+    "status": {
+      "PLANNED": "Planned",
+      "IN_PROGRESS": "In progress",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
+    },
+    "milestone": {
+      "ORDER_CONFIRMED": "Order confirmed",
+      "DISPATCHED": "Dispatched",
+      "IN_TRANSIT_LOCAL": "In transit",
+      "DELIVERED": "Delivered",
+      "IN_PRODUCTION": "In production",
+      "READY": "Ready to ship",
+      "SHIPPED": "Shipped",
+      "AT_PORT": "At port",
+      "IN_CUSTOMS": "In customs",
+      "IN_WAREHOUSE": "In warehouse"
+    },
+    "doc": {
+      "COMMERCIAL_INVOICE": "Commercial invoice",
+      "PACKING_LIST": "Packing list",
+      "CERTIFICATE_OF_ORIGIN": "Certificate of origin",
+      "BILL_OF_LADING": "Bill of lading",
+      "AIR_WAYBILL": "Air waybill",
+      "CUSTOMS": "Customs document",
+      "DELIVERY_NOTE": "Delivery note",
+      "CMR": "CMR",
+      "OTHER": "Other"
     }
   }
 }

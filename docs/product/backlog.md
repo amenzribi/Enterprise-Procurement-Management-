@@ -59,5 +59,7 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 
 ## Sprint 5 onwards
 
-See [roadmap.md](roadmap.md). Award / PO / supplier confirmation are Sprint 5. Grouping of similar needs,
-internal transfer and "buy again" stay confirm-with-pilot (G12). S2CR-08 stays Sprint 9. Pilot gate §15 unmet.
+See [roadmap.md](roadmap.md). Award / PO / supplier confirmation are Sprint 5 (manual UAT pending). Shipment
+tracking (local/international milestones, document references, delay flags) is Sprint 6 without AI (manual UAT
+pending). Receiving / invoicing remain Sprint 7. Grouping of similar needs, internal transfer and "buy again"
+stay confirm-with-pilot (G12). S2CR-08 stays Sprint 9. Native-speaker Arabic review outstanding. Pilot gate §15 unmet.

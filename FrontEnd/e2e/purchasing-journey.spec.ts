@@ -21,7 +21,9 @@ test('Sami → Karim → Ines queue → Mehdi assigns → Ines accepts (EN)', as
   const ines = await newUserPage(browser);
   await signIn(ines, USERS.buyer, 'en', '/purchasing');
   await expect(ines.getByRole('heading', { level: 1, name: t('en', 'purchasing.inbox.title') })).toBeVisible();
-  await expect(ines.locator('.card', { hasText: request.number })).toBeVisible();
+  // Search by number: a busy demo queue paginates and the new card may not be on page 1.
+  await ines.locator('#queue-search').fill(request.number!);
+  await expect(ines.locator('.card', { hasText: request.number })).toBeVisible({ timeout: 15_000 });
 
   const mehdi = await newUserPage(browser);
   await signIn(mehdi, USERS.purchasingManager, 'en', `/requests/${request.id}`);

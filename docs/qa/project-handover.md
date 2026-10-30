@@ -9,7 +9,7 @@ Updated 2026-10-30 after Sprint 7 local delivery. Developer self-labelled eviden
 | `ca429f0` | Sprint 5 baseline: award snapshot immutability IT |
 | `ca9c024` | Sprint 6 shipments (V11) |
 | `aaf951d` | Handover hash for S6 |
-| *(Sprint 7)* | Receipts V12 + receipt module + UI + e2e (see `git log`) |
+| `d82cc1a` | Sprint 7 receipts (V12) + invoice/closure + e2e |
 | Ahead of `origin/main` | Do not push until asked |
 
 ## Running now (this machine)

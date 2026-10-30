@@ -2,6 +2,7 @@ package com.epi.procurement.ordering;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -107,6 +108,50 @@ class OrderingIntegrationTests extends SqlServerTestSupport {
 				"{\"requestVersion\":" + version + ",\"quotationId\":" + otherQuote
 						+ ",\"reason\":\"Wrong request quote\"}")
 			.expectStatus(422);
+	}
+
+	@Test
+	void awardSnapshotSurvivesQuoteChangeAndPreservesChargedCompany() {
+		long id = commerciallyValidated("Snapshot seals");
+		ApiClient ines = signedIn("buyer@demo.local");
+		long quoteId = ((Number) ines.get("/api/v1/sourcing/requests/" + id + "/rfq").json("$.quotes[0].id"))
+			.longValue();
+		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		ines.post("/api/v1/ordering/requests/" + id + "/award",
+				"{\"requestVersion\":" + version + ",\"quotationId\":" + quoteId
+						+ ",\"reason\":\"Award before quote edit\"}")
+			.expectStatus(200);
+		BigDecimal awardedUnit = jdbc.queryForObject(
+				"SELECT unit_price FROM award_line WHERE award_id = (SELECT id FROM award WHERE request_id = ?)",
+				BigDecimal.class, id);
+		assertThat(awardedUnit).isEqualByComparingTo("25");
+
+		// Post-award quote mutation via API is rejected (request left sourcing); simulate a later quotation edit
+		// at the data layer to prove the award snapshot stays frozen.
+		jdbc.update("UPDATE quotation_line SET unit_price = 99, line_amount = 99 WHERE quotation_id = ?", quoteId);
+		jdbc.update("UPDATE quotation SET merchandise_amount = 99 WHERE id = ?", quoteId);
+		assertThat(jdbc.queryForObject(
+				"SELECT unit_price FROM award_line WHERE award_id = (SELECT id FROM award WHERE request_id = ?)",
+				BigDecimal.class, id)).isEqualByComparingTo("25");
+		assertThat(jdbc.queryForObject(
+				"SELECT merchandise_amount FROM award WHERE request_id = ?", BigDecimal.class, id))
+			.isEqualByComparingTo("25");
+
+		Long charged = jdbc.queryForObject("SELECT charged_company_id FROM purchase_request WHERE id = ?", Long.class,
+				id);
+		Long buying = jdbc.queryForObject("SELECT buying_company_id FROM purchase_request WHERE id = ?", Long.class, id);
+		version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		ApiClient.Response po = ines.post("/api/v1/ordering/requests/" + id + "/purchase-order",
+				"{\"requestVersion\":" + version + ",\"paymentTerms\":\"Net 30\"}").expectStatus(200);
+		assertThat(((Number) po.json("$.id")).longValue()).isPositive();
+		assertThat(jdbc.queryForObject("SELECT charged_company_id FROM purchase_order WHERE request_id = ?", Long.class,
+				id)).isEqualTo(charged);
+		assertThat(jdbc.queryForObject("SELECT buying_company_id FROM purchase_order WHERE request_id = ?", Long.class,
+				id)).isEqualTo(buying);
+		assertThat(charged).isNotEqualTo(buying);
+
+		ines.post("/api/v1/ordering/requests/" + id + "/purchase-order",
+				"{\"requestVersion\":" + version + "}").expectStatus(409);
 	}
 
 	@Test

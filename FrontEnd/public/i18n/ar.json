@@ -1116,5 +1116,45 @@
       "title": "لا صفوف في النتيجة",
       "message": "لم يحتوِ الملف على صفوف بيانات."
     }
+  },
+  "sourcing": {
+    "actions": {
+      "title": "التوريد",
+      "kind": "نوع طلب العرض",
+      "supplier": "المورد",
+      "create": "فتح طلب العرض",
+      "unitPrice": "سعر الوحدة",
+      "submitQuote": "إدخال عرض سعر",
+      "copyLink": "نسخ رابط المورد",
+      "linkCopied": "تم نسخ الرابط",
+      "created": "فُتح طلب العرض",
+      "quoteSaved": "حُفظ عرض السعر",
+      "comparison": "المقارنة",
+      "landed": "التكلفة الواصلة",
+      "missing": "ناقص",
+      "techComment": "تعليق تقني",
+      "commComment": "تعليق تجاري",
+      "validateTechnical": "تسجيل المصادقة التقنية",
+      "validateCommercial": "تسجيل المصادقة التجارية",
+      "techDone": "سُجّلت المصادقة التقنية",
+      "commDone": "سُجّلت المصادقة التجارية"
+    },
+    "kind": {
+      "QUICK": "عرض سريع",
+      "STANDARD": "طلب عرض قياسي"
+    },
+    "status": {
+      "OPEN": "مفتوح",
+      "CLOSED": "مغلق"
+    },
+    "public": {
+      "title": "عرض سعر المورد",
+      "description": "أدخل عرضك لهذا الطلب. لا يلزم حساب.",
+      "invalidTitle": "الرابط غير صالح",
+      "invalidMessage": "انتهت صلاحية الرابط أو أنه غير صحيح.",
+      "alreadySubmitted": "تم استلام عرضك. شكراً.",
+      "currency": "العملة",
+      "submit": "إرسال العرض"
+    }
   }
 }

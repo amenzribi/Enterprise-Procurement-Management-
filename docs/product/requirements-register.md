@@ -31,9 +31,9 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-PUR-05 | Grouping similar requests from several subsidiaries into one RFQ | §8 | — | P2 | — | Deferred |
 | FR-PUR-06 | AI buyer suggestion | §8, §17 | — | P2 | — | Deferred |
 | FR-SRC-01 | Supplier registry (local by country, international), categories | §14 | — | MVP | S3 list/register, S4 RFQ | Done (S3: register and list, SHARED/COMPANY). RFQs remain S4. |
-| FR-SRC-02 | RFQ local (quick quote) and international | §9.1 | — | MVP | S4 | Planned |
-| FR-SRC-03 | Manual quotation entry with currency, lead time, payment terms, Incoterm, validity, compliance | §9.2 | US-06 | MVP | S4 | Planned |
-| FR-SRC-04 | Conversion to comparison currency, landed-cost estimate, comparison table | §9.2 | US-06 | MVP | S4 | Planned |
+| FR-SRC-02 | RFQ local (quick quote) and international | §9.1 | — | MVP | S4 | Done (S4: QUICK/STANDARD RFQ + secure supplier link) |
+| FR-SRC-03 | Manual quotation entry with currency, lead time, payment terms, Incoterm, validity, compliance | §9.2 | US-06 | MVP | S4 | Done (S4: buyer + supplier-link entry; compliance flags thin) |
+| FR-SRC-04 | Conversion to comparison currency, landed-cost estimate, comparison table | §9.2 | US-06 | MVP | S4 | Done (S4: ExchangeRates + landed components; missing prices explicit) |
 | FR-FX-01 | Currencies with minor units, exchange rates by date and source | §9.1, §15 | — | MVP | S0 currencies, S2 rates | Done (S2) |
 | FR-SRC-05 | AI reading of quotations | §9.2, §17 | — | P2 | — | Deferred |
 | FR-EVL-01 | Technical, commercial, management validation with thresholds and reasons | §10 | US-07 | MVP | S5 | Planned |

@@ -1116,5 +1116,45 @@
       "title": "Aucune ligne dans le résultat",
       "message": "Le fichier ne contenait pas de lignes de données."
     }
+  },
+  "sourcing": {
+    "actions": {
+      "title": "Consultation",
+      "kind": "Type de consultation",
+      "supplier": "Fournisseur",
+      "create": "Ouvrir la consultation",
+      "unitPrice": "Prix unitaire",
+      "submitQuote": "Saisir un devis",
+      "copyLink": "Copier le lien fournisseur",
+      "linkCopied": "Lien copié",
+      "created": "Consultation ouverte",
+      "quoteSaved": "Devis enregistré",
+      "comparison": "Comparaison",
+      "landed": "Coût rendu",
+      "missing": "Manquant",
+      "techComment": "Commentaire technique",
+      "commComment": "Commentaire commercial",
+      "validateTechnical": "Enregistrer la validation technique",
+      "validateCommercial": "Enregistrer la validation commerciale",
+      "techDone": "Validation technique enregistrée",
+      "commDone": "Validation commerciale enregistrée"
+    },
+    "kind": {
+      "QUICK": "Devis rapide",
+      "STANDARD": "Consultation standard"
+    },
+    "status": {
+      "OPEN": "Ouverte",
+      "CLOSED": "Clôturée"
+    },
+    "public": {
+      "title": "Devis fournisseur",
+      "description": "Saisissez votre offre. Aucun compte n’est requis.",
+      "invalidTitle": "Lien non valide",
+      "invalidMessage": "Ce lien a expiré ou est incorrect.",
+      "alreadySubmitted": "Votre devis a été reçu. Merci.",
+      "currency": "Devise",
+      "submit": "Envoyer le devis"
+    }
   }
 }

@@ -18,6 +18,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/approvals/one-tap-approval').then((m) => m.OneTapApprovalPage),
   },
   {
+    // Supplier quote link (S4-AC-03): no account; token in the URL fragment.
+    path: 'q',
+    title: 'sourcing.public.title',
+    loadComponent: () => import('./features/sourcing/public-quote').then((m) => m.PublicQuotePage),
+  },
+  {
     // Everything else is the signed-in workspace (S1-AC-01, S1-AC-13).
     path: '',
     component: Shell,

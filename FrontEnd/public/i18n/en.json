@@ -1116,5 +1116,45 @@
       "title": "No row in the result",
       "message": "The file did not contain data rows."
     }
+  },
+  "sourcing": {
+    "actions": {
+      "title": "Sourcing",
+      "kind": "RFQ type",
+      "supplier": "Supplier",
+      "create": "Open RFQ",
+      "unitPrice": "Unit price",
+      "submitQuote": "Enter quotation",
+      "copyLink": "Copy supplier link",
+      "linkCopied": "Link copied",
+      "created": "RFQ opened",
+      "quoteSaved": "Quotation saved",
+      "comparison": "Comparison",
+      "landed": "Landed cost",
+      "missing": "Missing",
+      "techComment": "Technical comment",
+      "commComment": "Commercial comment",
+      "validateTechnical": "Record technical validation",
+      "validateCommercial": "Record commercial validation",
+      "techDone": "Technical validation recorded",
+      "commDone": "Commercial validation recorded"
+    },
+    "kind": {
+      "QUICK": "Quick quote",
+      "STANDARD": "Standard RFQ"
+    },
+    "status": {
+      "OPEN": "Open",
+      "CLOSED": "Closed"
+    },
+    "public": {
+      "title": "Supplier quotation",
+      "description": "Enter your offer for this request. No account is required.",
+      "invalidTitle": "This link is not valid",
+      "invalidMessage": "The quotation link has expired or is incorrect.",
+      "alreadySubmitted": "Your quotation was received. Thank you.",
+      "currency": "Currency",
+      "submit": "Submit quotation"
+    }
   }
 }

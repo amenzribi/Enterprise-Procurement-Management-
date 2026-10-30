@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Revision | Closure corrections on top of `a24500e` / hash note `30e35b9`. Commit hash recorded after commit. |
+| Revision | **`e3c47470bc91374da17f3251b75cc8544b168347`** (`e3c4747`), on top of `a24500e` / hash note `30e35b9`. |
 | Date | 2026-10-30 |
 | Environment | Windows 11; SQL Server `procurement_test` (DB-IT) and `procurement_dev` (manual/e2e). Ports **8081** / **4300** for app; 8080/4200 untouched. Demo DB not wiped. |
 | Tester | Developer. **Not** an independent QA or reviewer run. |

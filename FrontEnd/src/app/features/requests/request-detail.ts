@@ -15,6 +15,7 @@ import { StatusBadge } from '../../shared/ui/status-badge';
 import { elapsedText } from '../../shared/relative-time';
 import { ApprovalActions } from '../approvals/approval-actions';
 import { PurchasingActions } from '../purchasing/purchasing-actions';
+import { SourcingActions } from '../sourcing/sourcing-actions';
 import { ApprovalCountService } from '../approvals/approval-count.service';
 import { ApprovalTracker } from '../approvals/approval-tracker';
 import { ApprovalView } from '../approvals/approval.models';
@@ -37,7 +38,7 @@ export { elapsedText } from '../../shared/relative-time';
 @Component({
   selector: 'app-request-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, PurchasingActions, RouterLink, Skeleton, StatusBadge, TranslatePipe],
+  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, PurchasingActions, RouterLink, Skeleton, SourcingActions, StatusBadge, TranslatePipe],
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
 })

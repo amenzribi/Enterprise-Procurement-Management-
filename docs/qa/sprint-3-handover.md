@@ -8,7 +8,7 @@ Local closure revision, 2026-10-30, on top of feature commit `a24500e` and hash 
 |---|---|
 | `a24500e` (`a24500ef35d3fb371a5f45cdf68044c6b3a16166`) | Sprint 3 feature delivery |
 | `30e35b9` | Docs-only note that recorded `a24500e` in the handover |
-| Closure commit | See [sprint-3-test-results.md](sprint-3-test-results.md) after `git log -1` |
+| Closure commit | `e3c4747` (`e3c47470bc91374da17f3251b75cc8544b168347`) |
 
 ## What closed
 

@@ -433,6 +433,81 @@ public class RequestWorkflow {
 				reason == null ? "shipment-milestone" : reason));
 	}
 
+	/**
+	 * Receipt / acceptance statuses (Sprint 7). Never closes the request (closure is explicit).
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterReceiptStatus(long id, RequestStatus to, long actorUserId, Instant now, String reason) {
+		if (to != RequestStatus.PARTIALLY_RECEIVED && to != RequestStatus.NON_CONFORMING
+				&& to != RequestStatus.ACCEPTED) {
+			throw new IllegalArgumentException("Not a receipt target status: " + to);
+		}
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from.rank() >= to.rank() && from != RequestStatus.NON_CONFORMING
+				&& !(from == RequestStatus.PARTIALLY_RECEIVED && to == RequestStatus.NON_CONFORMING)) {
+			if (from == to) {
+				return;
+			}
+			if (from.rank() > to.rank() && to != RequestStatus.NON_CONFORMING) {
+				return;
+			}
+		}
+		if (from.rank() < RequestStatus.DELIVERED.rank() && to != RequestStatus.ACCEPTED) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not delivered.");
+		}
+		if (to == RequestStatus.ACCEPTED && from.rank() < RequestStatus.ORDERED.rank()) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not ready for acceptance.");
+		}
+		Long owner = request.getAssignedBuyerUserId() != null ? request.getAssignedBuyerUserId()
+				: request.getRequesterUserId();
+		request.transitionTo(to, owner, now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, to, request.getCurrentOwnerUserId(), actorUserId, now,
+				reason == null ? "receipt" : reason));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterFinanceStatus(long id, RequestStatus to, long actorUserId, Instant now, String reason) {
+		if (to != RequestStatus.INVOICED && to != RequestStatus.PAYMENT_PENDING && to != RequestStatus.PAID) {
+			throw new IllegalArgumentException("Not a finance target status: " + to);
+		}
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from.rank() < RequestStatus.ACCEPTED.rank()) {
+			throw ApiProblemException.conflict("invalid-state", "Accept the receipt before finance status.");
+		}
+		if (from.rank() >= to.rank()) {
+			return;
+		}
+		request.transitionTo(to, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, to, request.getCurrentOwnerUserId(), actorUserId, now,
+				reason == null ? "finance" : reason));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void closeRequest(long id, long actorUserId, Instant now, String reason) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from == RequestStatus.CLOSED) {
+			return;
+		}
+		if (from.rank() < RequestStatus.ACCEPTED.rank()) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not ready to close.");
+		}
+		if (from == RequestStatus.CANCELLED) {
+			throw ApiProblemException.conflict("invalid-state", "A cancelled request cannot be closed.");
+		}
+		request.transitionTo(RequestStatus.CLOSED, actorUserId, now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.CLOSED, request.getCurrentOwnerUserId(),
+				actorUserId, now, reason == null ? "closure-confirmed" : reason));
+	}
+
 	private void transitionEvaluation(long id, long actorUserId, Instant now, RequestStatus expected,
 			RequestStatus to, String reason) {
 		PurchaseRequest request = requests.getForSystemUpdate(id);

@@ -71,7 +71,7 @@ public enum RequestStatus {
 		return lineStatus;
 	}
 
-	int rank() {
+	public int rank() {
 		return ordinal() + 1;
 	}
 

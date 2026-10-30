@@ -27,6 +27,8 @@ import jakarta.persistence.criteria.Subquery;
  * <li>Participants (approvers and delegates with a task on the request, Sprint 2): the request, once submitted.</li>
  * <li>BUYER and PURCHASING_MANAGER: non-draft requests whose {@code buying_company_id} is a company of their
  * grant, from {@code IN_PURCHASING_REVIEW} onwards (Sprint 3). ADMIN still sees no business requests.</li>
+ * <li>RECEIVER: non-draft requests whose requesting or charged company matches their grant, from shipment /
+ * receipt stages onwards (Sprint 7).</li>
  * </ul>
  * Drafts are never visible to anyone but their requester and entered-by user. Authors edit drafts and requests
  * returned for revision (S2DR-04); only drafts can be discarded.
@@ -122,7 +124,7 @@ class RequestAccessPolicy {
 							RequestStatus.PURCHASING_RETURNED),
 				root.get("stage")
 					.in(Stage.SOURCING, Stage.EVALUATION, Stage.COMMITMENT, Stage.SHIPMENT, Stage.RECEIPT,
-							Stage.FINANCE));
+							Stage.FINANCE, Stage.CLOSURE));
 		for (RoleGrant grant : user.grants(Role.BUYER)) {
 			if (grant.companyId() != null) {
 				any.add(cb.and(purchasing, cb.equal(root.get("buyingCompanyId"), grant.companyId())));
@@ -131,6 +133,13 @@ class RequestAccessPolicy {
 		for (RoleGrant grant : user.grants(Role.PURCHASING_MANAGER)) {
 			if (grant.companyId() != null) {
 				any.add(cb.and(purchasing, cb.equal(root.get("buyingCompanyId"), grant.companyId())));
+			}
+		}
+		Predicate receiving = root.get("stage").in(Stage.SHIPMENT, Stage.RECEIPT, Stage.FINANCE, Stage.CLOSURE);
+		for (RoleGrant grant : user.grants(Role.RECEIVER)) {
+			if (grant.companyId() != null) {
+				any.add(cb.and(notDraft, receiving, cb.or(cb.equal(root.get("requestingCompanyId"), grant.companyId()),
+						cb.equal(root.get("chargedCompanyId"), grant.companyId()))));
 			}
 		}
 		return cb.or(any.toArray(Predicate[]::new));

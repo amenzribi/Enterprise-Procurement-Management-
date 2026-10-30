@@ -230,7 +230,10 @@
     "duplicate-supplier": "A supplier with this code or tax id already exists.",
     "not-eligible": "This person cannot receive the assignment.",
     "po-not-confirmed": "Confirm the purchase order before creating a shipment.",
-    "quantity-exceeded": "Shipped quantity would exceed the purchase-order line."
+    "quantity-exceeded": "Shipped quantity would exceed the purchase-order line.",
+    "closure-not-ready": "Closure conditions are not met yet.",
+    "already-invoiced": "A final invoice is already recorded.",
+    "already-accepted": "Service acceptance is already recorded."
   },
   "auth": {
     "signOut": "Sign out",
@@ -1232,6 +1235,50 @@
       "DELIVERY_NOTE": "Delivery note",
       "CMR": "CMR",
       "OTHER": "Other"
+    }
+  },
+  "receipt": {
+    "actions": {
+      "title": "Receipt and closure",
+      "note": "Receipt note",
+      "photoRef": "Photo / evidence reference",
+      "photoHint": "Enter a reference only (metadata). Upload real files under Attachments if needed.",
+      "record": "Record goods receipt",
+      "recorded": "Goods receipt recorded",
+      "confirm": "Confirm acceptance",
+      "confirmed": "Receipt confirmed",
+      "received": "Received",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "invoice": "Invoice",
+      "invoiceNumber": "Invoice number",
+      "invoiceAmount": "Invoice amount",
+      "docRef": "Invoice document reference",
+      "attestMatch": "I attest that the order, receipt and invoice agree (manual check)",
+      "matchAttested": "Match attested",
+      "recordInvoice": "Record final invoice",
+      "invoiceSaved": "Invoice recorded",
+      "rating": "Supplier score (1–5)",
+      "waiver": "Waiver note for outstanding quantity (optional)",
+      "close": "Confirm closure",
+      "closed": "This request is closed",
+      "closedToast": "Request closed",
+      "closureMissing": "Still needed"
+    },
+    "status": {
+      "RECORDED": "Recorded",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled"
+    },
+    "condition": {
+      "OK": "OK",
+      "DAMAGED": "Damaged",
+      "MISSING": "Missing",
+      "NON_CONFORMING": "Non-conforming"
+    },
+    "payment": {
+      "PENDING": "Payment pending",
+      "PAID": "Paid"
     }
   }
 }

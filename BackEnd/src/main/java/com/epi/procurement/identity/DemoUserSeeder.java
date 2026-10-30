@@ -55,6 +55,8 @@ class DemoUserSeeder implements ApplicationRunner {
 					List.of(new Grant(Role.REQUESTER, true, false))),
 			new DemoUser("manager.fr@demo.local", "Julien Moreau (Demo)", "DEMO-FR-PLT", "DEMO-LYON", "DEMO-MAINT", "fr",
 					List.of(new Grant(Role.DEPARTMENT_MANAGER, true, true))),
+			new DemoUser("receiver.tn@demo.local", "Omar Mansouri (Demo)", "DEMO-TN-PLT", "DEMO-SFAX", "DEMO-MAINT",
+					"en", List.of(new Grant(Role.RECEIVER, true, false))),
 			new DemoUser("buyer@demo.local", "Ines Jaziri (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH", "en",
 					List.of(new Grant(Role.BUYER, true, false))),
 			new DemoUser("purchasing.manager@demo.local", "Mehdi Khelifi (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH",

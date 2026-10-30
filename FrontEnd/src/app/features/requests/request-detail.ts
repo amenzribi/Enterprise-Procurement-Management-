@@ -17,6 +17,7 @@ import { ApprovalActions } from '../approvals/approval-actions';
 import { PurchasingActions } from '../purchasing/purchasing-actions';
 import { OrderingActions } from '../ordering/ordering-actions';
 import { LogisticsActions } from '../logistics/logistics-actions';
+import { ReceiptActions } from '../receipt/receipt-actions';
 import { SourcingActions } from '../sourcing/sourcing-actions';
 import { ApprovalCountService } from '../approvals/approval-count.service';
 import { ApprovalTracker } from '../approvals/approval-tracker';
@@ -40,7 +41,7 @@ export { elapsedText } from '../../shared/relative-time';
 @Component({
   selector: 'app-request-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LogisticsActions, OrderingActions, PurchasingActions, RouterLink, Skeleton, SourcingActions, StatusBadge, TranslatePipe],
+  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RouterLink, Skeleton, SourcingActions, StatusBadge, TranslatePipe],
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
 })

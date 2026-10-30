@@ -210,7 +210,7 @@ class AuthenticationIntegrationTests extends SqlServerTestSupport {
 	void demoAccountsHaveDistinctPasswordHashes() {
 		assertThat(jdbc.queryForObject("""
 				SELECT COUNT(DISTINCT c.password_hash) FROM user_credential c
-				JOIN user_account u ON u.id = c.user_id WHERE u.is_demo = 1""", Integer.class)).isEqualTo(11);
+				JOIN user_account u ON u.id = c.user_id WHERE u.is_demo = 1""", Integer.class)).isEqualTo(12);
 	}
 
 	@Test

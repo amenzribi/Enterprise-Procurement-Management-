@@ -230,7 +230,10 @@
     "duplicate-supplier": "Un fournisseur avec ce code ou cet identifiant fiscal existe déjà.",
     "not-eligible": "Cette personne ne peut pas recevoir l’affectation.",
     "po-not-confirmed": "Confirmez le bon de commande avant de créer une expédition.",
-    "quantity-exceeded": "La quantité expédiée dépasserait la ligne du bon de commande."
+    "quantity-exceeded": "La quantité expédiée dépasserait la ligne du bon de commande.",
+    "closure-not-ready": "Les conditions de clôture ne sont pas encore remplies.",
+    "already-invoiced": "Une facture finale est déjà enregistrée.",
+    "already-accepted": "L’acceptation de prestation est déjà enregistrée."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -1232,6 +1235,50 @@
       "DELIVERY_NOTE": "Bon de livraison",
       "CMR": "CMR",
       "OTHER": "Autre"
+    }
+  },
+  "receipt": {
+    "actions": {
+      "title": "Réception et clôture",
+      "note": "Note de réception",
+      "photoRef": "Référence photo / preuve",
+      "photoHint": "Saisissez une référence uniquement (métadonnées). Déposez les vrais fichiers sous Pièces jointes si besoin.",
+      "record": "Enregistrer la réception",
+      "recorded": "Réception enregistrée",
+      "confirm": "Confirmer l’acceptation",
+      "confirmed": "Réception confirmée",
+      "received": "Reçu",
+      "accepted": "Accepté",
+      "rejected": "Refusé",
+      "invoice": "Facture",
+      "invoiceNumber": "Numéro de facture",
+      "invoiceAmount": "Montant de la facture",
+      "docRef": "Référence du document de facture",
+      "attestMatch": "J’atteste que la commande, la réception et la facture concordent (contrôle manuel)",
+      "matchAttested": "Concordance attestée",
+      "recordInvoice": "Enregistrer la facture finale",
+      "invoiceSaved": "Facture enregistrée",
+      "rating": "Note fournisseur (1–5)",
+      "waiver": "Note de dérogation pour quantité restante (optionnel)",
+      "close": "Confirmer la clôture",
+      "closed": "Cette demande est clôturée",
+      "closedToast": "Demande clôturée",
+      "closureMissing": "Encore nécessaire"
+    },
+    "status": {
+      "RECORDED": "Enregistrée",
+      "CONFIRMED": "Confirmée",
+      "CANCELLED": "Annulée"
+    },
+    "condition": {
+      "OK": "Conforme",
+      "DAMAGED": "Endommagé",
+      "MISSING": "Manquant",
+      "NON_CONFORMING": "Non conforme"
+    },
+    "payment": {
+      "PENDING": "Paiement en attente",
+      "PAID": "Payé"
     }
   }
 }

@@ -10,7 +10,7 @@ Updated 2026-10-30 after Sprint 6 local delivery. Developer self-labelled eviden
 | `e1da662` | Purchasing e2e queue search when paginated |
 | `c64f2e4` | Supplier-link security review reconciliation |
 | `ca429f0` | Sprint 5 baseline: award snapshot immutability IT |
-| *(Sprint 6 commit)* | Shipments V11 + logistics module + UI + e2e (see `git log`) |
+| `ca9c024` | Sprint 6 shipments (V11) + logistics module + UI + e2e |
 | Ahead of `origin/main` | Do not push until asked |
 
 ## Running now (this machine)

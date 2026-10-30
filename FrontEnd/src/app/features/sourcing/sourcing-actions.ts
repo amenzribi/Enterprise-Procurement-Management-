@@ -300,6 +300,10 @@ export class SourcingActions {
     this.api.getRfq(requestId).subscribe({
       next: (rfq) => {
         this.rfq.set(rfq);
+        if (!rfq) {
+          this.comparison.set(null);
+          return;
+        }
         this.api.comparison(rfq.id).subscribe({
           next: (cmp) => this.comparison.set(cmp),
           error: () => this.comparison.set(null),

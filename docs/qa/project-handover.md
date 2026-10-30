@@ -12,7 +12,7 @@ Updated 2026-10-30 after Sprint 5 local delivery. Developer self-labelled eviden
 | `c59f56d` | Handover after S3 close / S4 delivery |
 | `5d8e0b0` | Sprint 4 UAT + self-labelled S3–4 closure docs |
 | `f732bef` | S4 supplier-link security harden (S4SL-02/04/05/06/08) |
-| *(S5 commit)* | Award + purchase orders (this handover updated after commit) |
+| 9c7b354 | Award + purchase orders (this handover updated after commit) |
 | Ahead of `origin/main` | Do not push until asked |
 
 ## Running now (this machine)

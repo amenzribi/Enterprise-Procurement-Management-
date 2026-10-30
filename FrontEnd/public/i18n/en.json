@@ -1156,5 +1156,32 @@
       "currency": "Currency",
       "submit": "Submit quotation"
     }
+  },
+  "ordering": {
+    "actions": {
+      "title": "Award and purchase order",
+      "quotation": "Quotation to award",
+      "chooseQuote": "Choose a quotation",
+      "reason": "Selection reason",
+      "award": "Award supplier",
+      "awarded": "Supplier awarded",
+      "awardedAt": "Award recorded",
+      "paymentTerms": "Payment terms",
+      "incoterm": "Incoterm",
+      "deliveryAddress": "Delivery address",
+      "createPo": "Create purchase order draft",
+      "poCreated": "Purchase order draft created",
+      "issue": "Issue purchase order",
+      "issued": "Purchase order issued",
+      "confirmationNote": "Supplier confirmation note",
+      "confirm": "Record supplier confirmation",
+      "confirmed": "Supplier confirmation recorded"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled"
+    }
   }
 }

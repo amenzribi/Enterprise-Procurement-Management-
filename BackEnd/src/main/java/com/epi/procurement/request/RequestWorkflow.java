@@ -374,6 +374,37 @@ public class RequestWorkflow {
 				RequestStatus.COMMERCIAL_VALIDATION, "commercial-validation");
 	}
 
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterAwarded(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from != RequestStatus.COMMERCIAL_VALIDATION && from != RequestStatus.MANAGEMENT_VALIDATION) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not ready for award.");
+		}
+		request.transitionTo(RequestStatus.AWARDED, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.AWARDED, request.getCurrentOwnerUserId(),
+				actorUserId, now, "award-recorded"));
+	}
+
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void enterOrdered(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus from = request.getStatus();
+		if (from != RequestStatus.AWARDED && from != RequestStatus.ORDERED) {
+			throw ApiProblemException.conflict("invalid-state", "The request is not awarded.");
+		}
+		if (from == RequestStatus.ORDERED) {
+			return;
+		}
+		request.transitionTo(RequestStatus.ORDERED, request.getAssignedBuyerUserId(), now);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+		transitions.save(new RequestTransition(id, from, RequestStatus.ORDERED, request.getCurrentOwnerUserId(),
+				actorUserId, now, "purchase-order-issued"));
+	}
+
 	private void transitionEvaluation(long id, long actorUserId, Instant now, RequestStatus expected,
 			RequestStatus to, String reason) {
 		PurchaseRequest request = requests.getForSystemUpdate(id);

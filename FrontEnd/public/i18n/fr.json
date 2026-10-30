@@ -1156,5 +1156,32 @@
       "currency": "Devise",
       "submit": "Envoyer le devis"
     }
+  },
+  "ordering": {
+    "actions": {
+      "title": "Attribution et bon de commande",
+      "quotation": "Offre à attribuer",
+      "chooseQuote": "Choisir une offre",
+      "reason": "Motif de sélection",
+      "award": "Attribuer au fournisseur",
+      "awarded": "Fournisseur attribué",
+      "awardedAt": "Attribution enregistrée",
+      "paymentTerms": "Conditions de paiement",
+      "incoterm": "Incoterm",
+      "deliveryAddress": "Adresse de livraison",
+      "createPo": "Créer le brouillon de commande",
+      "poCreated": "Brouillon de commande créé",
+      "issue": "Émettre le bon de commande",
+      "issued": "Bon de commande émis",
+      "confirmationNote": "Note de confirmation fournisseur",
+      "confirm": "Enregistrer la confirmation fournisseur",
+      "confirmed": "Confirmation fournisseur enregistrée"
+    },
+    "status": {
+      "DRAFT": "Brouillon",
+      "ISSUED": "Émis",
+      "CONFIRMED": "Confirmé",
+      "CANCELLED": "Annulé"
+    }
   }
 }

@@ -1156,5 +1156,32 @@
       "currency": "العملة",
       "submit": "إرسال العرض"
     }
+  },
+  "ordering": {
+    "actions": {
+      "title": "الترسية وأمر الشراء",
+      "quotation": "العرض المراد ترسيته",
+      "chooseQuote": "اختر عرضاً",
+      "reason": "سبب الاختيار",
+      "award": "ترسية المورد",
+      "awarded": "تمت ترسية المورد",
+      "awardedAt": "سُجّلت الترسية",
+      "paymentTerms": "شروط الدفع",
+      "incoterm": "شرط التسليم",
+      "deliveryAddress": "عنوان التسليم",
+      "createPo": "إنشاء مسودة أمر شراء",
+      "poCreated": "تم إنشاء مسودة أمر الشراء",
+      "issue": "إصدار أمر الشراء",
+      "issued": "تم إصدار أمر الشراء",
+      "confirmationNote": "ملاحظة تأكيد المورد",
+      "confirm": "تسجيل تأكيد المورد",
+      "confirmed": "تم تسجيل تأكيد المورد"
+    },
+    "status": {
+      "DRAFT": "مسودة",
+      "ISSUED": "صادر",
+      "CONFIRMED": "مؤكد",
+      "CANCELLED": "ملغى"
+    }
   }
 }

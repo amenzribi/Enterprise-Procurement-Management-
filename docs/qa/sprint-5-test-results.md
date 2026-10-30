@@ -16,6 +16,7 @@
 | Frontend unit | `npm test` | **201/201** |
 | Frontend build | `npm run build` | Pass (initial bundle budget warning ~289 B over 500 kB) |
 | Secrets scan (S5 paths) | Pattern search for password/secret/apiKey in ordering + V10 | No secrets |
+| Playwright e2e (`E2E_BASE_URL=http://localhost:4300`) | `npm run e2e` | First run: **27 passed**, 1 failed (queue card off page 1). After `e1da662` search fix: purchasing-journey **pass**. |
 
 ## Ordering IT coverage
 

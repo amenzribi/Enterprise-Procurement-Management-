@@ -10,7 +10,7 @@ Updated 2026-10-31 after Sprint 8 local delivery. Developer self-labelled eviden
 | `0f5f7cf` / `03eebe1` | S7 handover / Playwright evidence |
 | `a3f56a1` | Baseline: ordering e2e timeout 180s |
 | `281c6d9` | Sprint 8 dashboards, audit pack, ERP CSV |
-| *(follow-up)* | Ordering e2e asserts durable PO panel state; handover hashes |
+| `d12eb2b` | Ordering e2e durable PO assertions + S8 evidence note |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **user work** — leave uncommitted unless Mohamed asks.

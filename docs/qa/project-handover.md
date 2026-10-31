@@ -8,7 +8,7 @@ Updated 2026-10-31 after Sprint 12 local delivery (demo/disabled assistant). Dev
 |---|---|
 | `6046316` / `d9d9458` | Sprint 10 GLOBAL_ADMIN |
 | `c0c4cb1` / `83ac01c` | Sprint 11 messaging + V14 + e2e note |
-| *(Sprint 12 commit — see git log after commit)* | Assistant module + V15 + ADR-012 |
+| `b967b3e` | Sprint 12 assistant + V15 + ADR-012 (demo/disabled) |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **CRLF-only / user work** — leave uncommitted unless Mohamed asks. **Do not edit applied V7.**

@@ -7,7 +7,9 @@ Updated 2026-10-31 after **Sprint 13** (verification / reconciliation / consiste
 | Commit | Role |
 |---|---|
 | `b967b3e` / `fabfe96` | Sprint 12 assistant + handover |
-| *(Sprint 13 commits — see `git log`)* | Security fixes, UI honesty, QA pack |
+| `4616e83` | S13 security: contact invite + PO milestones |
+| `2e54c53` | S13 UI: Core journey no longer “planned” |
+| `69331a2` | S13 docs: matrix, review, acceptance, brief |
 | Ahead of `origin/main` | Do not push until asked |
 
 **Unrelated dirty tree** (purchasing/supplier/org/import/V7/frontend/docs): classified **CRLF-only** — leave uncommitted. **Do not edit applied V7.**

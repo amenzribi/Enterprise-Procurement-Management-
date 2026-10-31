@@ -6,6 +6,8 @@ import { USERS, createAndSubmit, decide, newUserPage, signIn, t, uniqueTitle } f
  * in-app supplier confirmation (buyer) → shipment → milestones → receipt → invoice → close.
  */
 test('Award → PO → ship → receipt → invoice → close (EN)', async ({ page, browser }) => {
+  // Full S5–S7 path opens several browser contexts; keep well above the default 60s suite timeout.
+  test.setTimeout(180_000);
   await signIn(page, USERS.requesterTn, 'en');
   const request = await createAndSubmit(page, 'en', uniqueTitle('Order and ship'));
   await expect(page.locator('.dossier-status')).toContainText(t('en', 'requests.userStatus.SUBMITTED'));

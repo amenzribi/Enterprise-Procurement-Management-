@@ -38,21 +38,23 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-SRC-05 | AI reading of quotations | §9.2, §17 | — | P2 | — | Deferred |
 | FR-EVL-01 | Technical, commercial, management validation with thresholds and reasons | §10 | US-07 | MVP | S4 tech/commercial, S5 award path | Partly done (S4: technical then commercial validation with comment; management committee / award remain S5 / P2) |
 | FR-EVL-02 | Committees, conflict-of-interest declarations, Arabic/French minutes | §10 | — | P2 | — | Deferred |
-| FR-ORD-01 | PO in platform or external reference, local/international, status tracking | §11 | — | MVP | S5 | Planned |
-| FR-ORD-02 | Payments, LCs, guarantees with expiry alerts | §11 | — | P2 | — | Deferred |
-| FR-LOG-01 | Shipment milestones local/international, planned vs actual, late alerts | §12.1 | US-08 | MVP | S5 | Planned |
-| FR-LOG-02 | Transport documents attached and tracked | §12.2 | US-08 | MVP | S6 | Planned |
-| FR-RCV-01 | Receipt full/partial/non-conforming with photos; service acceptance | §13 | US-09 | MVP | S6 | Planned |
-| FR-RCV-02 | Closure conditions (assumption A7) | §13 | — | MVP | S6 | Planned |
-| FR-RCV-04 | Manual final-invoice capture (number, amount, currency, document) | §13 | — | MVP | S6 | Planned |
-| FR-RCV-03 | Three-way match PO/receipt/invoice | §13 | — | P2 | — | Deferred |
+| FR-ORD-01 | PO in platform or external reference, local/international, status tracking | §11 | — | MVP | S5 | Done (S5: PO on request dossier; supplier confirmation; payment milestones tracking) |
+| FR-ORD-02 | Payments, LCs, guarantees with expiry alerts | §11 | — | P2 | — | Deferred (milestones Core; LC/guarantees Trading) |
+| FR-LOG-01 | Shipment milestones local/international, planned vs actual, late alerts | §12.1 | US-08 | MVP | S6 | Done (S6: milestones + delay flags; AI arrival ML deferred) |
+| FR-LOG-02 | Transport documents attached and tracked | §12.2 | US-08 | MVP | S6 | Done (S6: document references; AI reading deferred) |
+| FR-RCV-01 | Receipt full/partial/non-conforming with photos; service acceptance | §13 | US-09 | MVP | S7 | Done (S7: goods receipt + service acceptance; evidence as references) |
+| FR-RCV-02 | Closure conditions (assumption A7) | §13 | — | MVP | S7 | Done (S7: user-confirmed closure + lite score) |
+| FR-RCV-04 | Manual final-invoice capture (number, amount, currency, document) | §13 | — | MVP | S7 | Done (S7: manual invoice + match attest) |
+| FR-RCV-03 | Three-way match PO/receipt/invoice | §13 | — | P2 | — | Deferred (algorithmic); manual attest in S7 |
+| FR-MSG-01 | Buyer–supplier contextual messaging (internal vs external) | ADR-011 | — | MVP | S11 | Done (S11; attachments deferred) |
+| FR-AI-02 | Internal assistant (find/explain/summarise/draft-for-review) | ADR-012 | — | MVP | S12 | Partial — demo/disabled only; live provider pending |
 | FR-DSH-01 | Pipeline indicators and filters | §16.1 | — | MVP | S8 | Done (S8: pipeline by userStatus + open amounts by currency; company isolation) |
 | FR-DSH-02 | Management "where / who / how much / late / when" view | §16.2 | US-10 | MVP | S8 | Done (S8: paginated management list + CEO company panel + audit pack PDF) |
 | FR-AUD-01 | Complete decision history per request | §7.2, §24 | US-11 | MVP | S0 table, S2 view | Done (S2: request tracker and approval history) |
 | FR-ERP-01 | Export approved requests and POs (CSV/Excel) | §21.1 | US-12 | MVP | S8 | Done (S8: UTF-8 CSV file export for PM/ADMIN/GROUP_MANAGEMENT; no live connector) |
 | FR-ERP-02 | Import suppliers, articles, statuses (CSV/Excel) | §21.1 | US-12 | MVP | S3 wizard, S7/S8 ERP files | Done (S3: authorised CSV wizard for SUPPLIER and ORGANISATION). Live ERP connectors remain deferred. |
 | FR-ERP-03 | API connectors (SAP, Oracle, Dynamics, Sage, Odoo) | §21.2–§21.4 | — | P2 | — | Deferred |
-| FR-AI-01 | Free text → structured draft request, human-reviewed | §6.2, §17 | US-02 | MVP | S8 (roadmap) | Blocked — no approved AI hosting/provider (same class as deferred S4/S6/S7 AI). Not delivered in S8. |
+| FR-AI-01 | Free text → structured draft request, human-reviewed | §6.2, §17 | US-02 | MVP | S8 (roadmap) | Blocked — no approved AI hosting/provider. Not delivered in S8; distinct from S12 assistant. |
 | FR-EXT-01 | External customer requests, sales quotes, customer orders | §3.4, §17 M17 | US-13, US-14 | P2 | — | Deferred |
 | FR-FIN-01 | Internal recharging of centralised purchases | §3.3, §23 | US-16 | P2 | — | Deferred |
 | FR-BUD-01 | Budget lines, pre-commitment, commitment, consumption | §15 | — | P2 | — | Deferred |

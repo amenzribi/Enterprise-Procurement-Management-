@@ -26,6 +26,7 @@ re-validated if the team differs.
 | S10 | Global administration | GLOBAL_ADMIN: users, activation, roles/membership, password setup/reset/change, session revocation, audit. Extends identity — not a parallel IAM. | FR-IAM-* extension | Locally implemented 2026-10-31 (developer). Manual UAT pending for S5–S10. Pilot gate unmet. Not independently reviewed. |
 | S11 | Buyer–supplier communication | Contextual RFQ/PO messaging; SUPPLIER_CONTACT portal; internal vs external; unread; notifications; attachments deferred | New (requested) | Locally implemented 2026-10-31 (developer). Manual UAT pending for S5–S11. Pilot gate unmet. Not independently reviewed. |
 | S12 | Internal AI assistant (demo/disabled) | Status/explain/find/summarise/draft-for-review; permissions + citations; no autonomous actions; live provider pending ADR-012 | FR-AI-* / UC-02 class | Locally implemented 2026-10-31 (developer, demo mode). Live provider unmet. Manual UAT pending for S5–S12. |
+| S13 | Full-system verification | Requirements matrix, cross-module review, defect fixes, UI consistency, acceptance pack — no new feature sprint | Traceability | In progress 2026-10-31 (developer). Manual UAT pending for S5–S13. |
 | After | Add-ons | Trading (external customers, sales offers, LC, intercompany billing), Enterprise (budget, supplier portal, integrity, ERP APIs), Teams/WhatsApp approval channels, PostgreSQL support | UC-29, UC-30 | By demand |
 
 Add-ons follow the editions of the Solution Guide v3.0 §14 (Trading, Enterprise) and are scheduled by client demand.

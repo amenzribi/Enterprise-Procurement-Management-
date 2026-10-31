@@ -206,6 +206,11 @@ class MessagingService {
 				throw new ApiProblemException(HttpStatus.CONFLICT, "contact-exists",
 						"This contact is already authorised for the supplier.");
 			}
+			// SUPPLIER_CONTACT is portal-only: never attach it to an internal/privileged account.
+			if (store.userHasNonSupplierContactRoles(userId)) {
+				throw new ApiProblemException(HttpStatus.CONFLICT, "account-not-eligible",
+						"This e-mail already belongs to an internal account and cannot become a supplier contact.");
+			}
 			store.grantSupplierContactRole(userId);
 		}
 		else {
@@ -338,8 +343,8 @@ class MessagingService {
 		if (!(actor.hasRole(Role.BUYER) || actor.hasRole(Role.PURCHASING_MANAGER))) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden", "Not authorised.");
 		}
-		store.findSupplier(supplierId)
-			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "Supplier not found."));
+		store.findVisibleSupplier(supplierId, actor.groupId(), actor.companyId())
+			.orElseThrow(ApiProblemException::notFound);
 	}
 
 	private boolean canAccessBuyerConversation(CurrentUser actor, long buyingCompanyId, long requestId) {

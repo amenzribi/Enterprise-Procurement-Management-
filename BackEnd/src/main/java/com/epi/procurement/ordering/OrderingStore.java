@@ -162,22 +162,38 @@ class OrderingStore {
 				actorId, note, poId);
 	}
 
-	void updateDraftPo(long poId, String paymentTerms, String incoterm, LocalDate requiredDate, String deliveryAddress) {
-		jdbc.update("""
+	/** @return rows updated (0 when the PO is no longer a draft) */
+	int updateDraftPo(long poId, String paymentTerms, String incoterm, LocalDate requiredDate, String deliveryAddress) {
+		return jdbc.update("""
 				UPDATE purchase_order SET payment_terms = ?, incoterm = ?, required_date = ?, delivery_address = ?,
 				version = version + 1 WHERE id = ? AND status = 'DRAFT'""", paymentTerms, incoterm, requiredDate,
 				deliveryAddress, poId);
 	}
 
-	void replaceMilestones(long poId, List<MilestoneBody> milestones) {
-		jdbc.update("DELETE FROM po_payment_milestone WHERE purchase_order_id = ?", poId);
+	/**
+	 * Replaces milestones only while the PO is still DRAFT (guards issue races). Deletes are joined to
+	 * {@code status = 'DRAFT'} so an issued PO cannot lose its milestones.
+	 *
+	 * @return false when the PO is not a draft
+	 */
+	boolean replaceMilestones(long poId, List<MilestoneBody> milestones) {
+		jdbc.update("""
+				DELETE m FROM po_payment_milestone m
+				INNER JOIN purchase_order po ON po.id = m.purchase_order_id AND po.status = 'DRAFT'
+				WHERE m.purchase_order_id = ?""", poId);
+		Integer draft = jdbc.queryForObject("SELECT COUNT(*) FROM purchase_order WHERE id = ? AND status = 'DRAFT'",
+				Integer.class, poId);
+		if (draft == null || draft == 0) {
+			return false;
+		}
 		if (milestones == null) {
-			return;
+			return true;
 		}
 		for (MilestoneBody m : milestones) {
 			insertMilestone(poId, m.label(), m.dueDate(), m.amount(), m.currency(),
 					m.status() == null ? "PLANNED" : m.status());
 		}
+		return true;
 	}
 
 	boolean supplierActive(long supplierId) {

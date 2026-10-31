@@ -147,6 +147,25 @@ class MessagingStore {
 			.findFirst();
 	}
 
+	/** Same visibility rules as the supplier register (group + SHARED / owning / linked company). */
+	Optional<SupplierRef> findVisibleSupplier(long supplierId, long groupId, long companyId) {
+		return jdbc.query("""
+				SELECT s.id, s.code, s.legal_name FROM supplier s
+				WHERE s.id = ? AND s.group_id = ?
+				  AND (s.visibility = 'SHARED' OR s.owning_company_id = ?
+				       OR EXISTS (SELECT 1 FROM supplier_company sc
+				                  WHERE sc.supplier_id = s.id AND sc.company_id = ?))""",
+				(rs, i) -> new SupplierRef(rs.getLong(1), rs.getString(2), rs.getString(3)), supplierId, groupId,
+				companyId, companyId).stream().findFirst();
+	}
+
+	boolean userHasNonSupplierContactRoles(long userId) {
+		Integer n = jdbc.queryForObject(
+				"SELECT COUNT(*) FROM user_role WHERE user_id = ? AND role <> 'SUPPLIER_CONTACT'", Integer.class,
+				userId);
+		return n != null && n > 0;
+	}
+
 	int countUnread(long conversationId, long userId, boolean supplierView) {
 		Long lastRead = jdbc.query("""
 				SELECT last_read_message_id FROM conversation_participant

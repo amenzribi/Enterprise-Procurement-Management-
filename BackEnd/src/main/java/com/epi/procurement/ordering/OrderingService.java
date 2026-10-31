@@ -187,10 +187,14 @@ class OrderingService {
 		String paymentTerms = StringUtils.hasText(body.paymentTerms()) ? body.paymentTerms().strip() : null;
 		String incoterm = StringUtils.hasText(body.incoterm()) ? body.incoterm().strip() : null;
 		String delivery = StringUtils.hasText(body.deliveryAddress()) ? body.deliveryAddress().strip() : null;
-		store.updateDraftPo(poId, paymentTerms, incoterm, body.requiredDate(), delivery);
+		if (store.updateDraftPo(poId, paymentTerms, incoterm, body.requiredDate(), delivery) != 1) {
+			throw ApiProblemException.conflict("po-not-draft", "Only a draft purchase order can be edited.");
+		}
 		if (body.milestones() != null) {
 			validateMilestones(body.milestones(), po.currency());
-			store.replaceMilestones(poId, body.milestones());
+			if (!store.replaceMilestones(poId, body.milestones())) {
+				throw ApiProblemException.conflict("po-not-draft", "Only a draft purchase order can be edited.");
+			}
 		}
 		audit(user, request, "PO_DRAFT_UPDATED", request.status(), null, "{\"poId\":" + poId + "}");
 		return toPo(store.findPo(poId).orElseThrow());

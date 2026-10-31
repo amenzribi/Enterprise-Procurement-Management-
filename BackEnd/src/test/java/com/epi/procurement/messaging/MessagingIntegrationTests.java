@@ -90,6 +90,19 @@ class MessagingIntegrationTests extends SqlServerTestSupport {
 	}
 
 	@Test
+	void inviteRejectsInternalAccountsAndUnknownSuppliers() {
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		assertThat(ines
+			.post("/api/v1/messaging/suppliers/" + skf + "/contacts",
+					"{\"email\":\"buyer@demo.local\",\"displayName\":\"Should fail\"}")
+			.expectStatus(409)
+			.code()).isEqualTo("account-not-eligible");
+		assertThat(ines.get("/api/v1/messaging/suppliers/999999001/contacts").expectStatus(404).code())
+			.isEqualTo("not-found");
+	}
+
+	@Test
 	void revokeRemovesSupplierAccess() {
 		ApiClient sami = signedIn("requester.tn@demo.local");
 		long requestId = accept(assign(approve(submit(sami, request("Messaging revoke")))));

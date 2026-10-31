@@ -37,11 +37,20 @@ class MeAssembler {
 		return new MeResponse(user.id(), user.email(), user.displayName(), company, department,
 				user.roles().stream().map(Role::name).toList(), permissions(user), user.preferredLanguage(),
 				expiresAt(session), settings.session().idleTimeout().toSeconds(),
-				settings.session().absoluteTimeout().toSeconds(), user.demo());
+				settings.session().absoluteTimeout().toSeconds(), user.demo(), user.mustChangePassword());
 	}
 
 	static List<String> permissions(CurrentUser user) {
 		List<String> permissions = new ArrayList<>();
+		if (user.isGlobalAdmin()) {
+			permissions.add("USER_ADMIN");
+			permissions.add("USER_ADMIN_GLOBAL");
+			permissions.add("ORG_ADMIN");
+			permissions.add("SYSTEM_ADMIN");
+		}
+		if (user.hasRole(Role.ADMIN) && !permissions.contains("USER_ADMIN")) {
+			permissions.add("USER_ADMIN");
+		}
 		if (user.hasRole(Role.REQUESTER) || user.hasRole(Role.ENTER_ON_BEHALF)) {
 			permissions.add("REQUEST_CREATE");
 		}

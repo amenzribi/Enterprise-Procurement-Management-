@@ -62,9 +62,11 @@ class SecurityConfiguration {
 			.addFilterAfter(sessionTimeouts, SecurityContextHolderFilter.class)
 			.addFilterAfter(new CurrentUserRefresh(users, securityContextRepository,
 					environment.acceptsProfiles(Profiles.of("demo"))), SessionTimeouts.class)
+			.addFilterAfter(new MustChangePasswordFilter(), CurrentUserRefresh.class)
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset/redeem").permitAll()
 				// One-tap e-mail approval (S2-AC-07): the token in the body authenticates the single action.
 				.requestMatchers(HttpMethod.POST, "/api/v1/approval-links/summary", "/api/v1/approval-links/approve")
 				.permitAll()
@@ -73,7 +75,8 @@ class SecurityConfiguration {
 				.permitAll()
 				.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
 				.requestMatchers("/error").permitAll()
-				.requestMatchers(API_DOC_PATHS.toArray(String[]::new)).hasRole(Role.ADMIN.name())
+				.requestMatchers(API_DOC_PATHS.toArray(String[]::new)).hasAnyRole(Role.ADMIN.name(),
+						Role.GLOBAL_ADMIN.name())
 				.anyRequest().authenticated());
 		return http.build();
 	}

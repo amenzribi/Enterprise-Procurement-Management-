@@ -71,6 +71,9 @@ app:
       max-failures-per-address: 50
       window: 15m
       block-duration: 15m
+    # Sprint 10 password setup/reset (public redeem is rate-limited with proxy-aware client address).
+    password-reset-ttl: PT24H
+    password-reset-rate-limit-per-minute: 20
   request:
     max-lines: 100
   # Base URL of the Angular application, used in e-mail links (one-tap approval, request pages).

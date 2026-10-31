@@ -10,7 +10,7 @@ import java.util.List;
  */
 record MeResponse(long id, String email, String displayName, Ref company, Ref department, List<String> roles,
 		List<String> permissions, String preferredLanguage, Instant sessionExpiresAt, long idleTimeoutSeconds,
-		long absoluteTimeoutSeconds, boolean demo) {
+		long absoluteTimeoutSeconds, boolean demo, boolean mustChangePassword) {
 
 	record Ref(long id, String code, String name) {
 	}

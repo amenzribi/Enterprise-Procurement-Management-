@@ -103,6 +103,7 @@ class AuthController {
 
 		HttpSession session = request.getSession(true);
 		SessionTimeouts.start(session, clock.instant(), settings.session());
+		SessionCredentials.bind(session, user.credentialsVersion());
 		renderCsrfToken(request);
 		return me.assemble(user, session);
 	}

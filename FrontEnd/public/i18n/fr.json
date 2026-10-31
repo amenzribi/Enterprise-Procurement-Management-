@@ -48,7 +48,9 @@
       "dashboards": "Tableaux de bord",
       "approvalRules": "Règles de validation",
       "exchangeRates": "Taux de change",
-      "import": "Import des données"
+      "import": "Import des données",
+      "users": "Utilisateurs",
+      "changePassword": "Changer le mot de passe"
     },
     "plannedSprint": "Sprint {{sprint}}",
     "pendingCount": "{{count}} en attente de votre décision"
@@ -187,7 +189,8 @@
   "common": {
     "dismiss": "Fermer",
     "cancel": "Annuler",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "search": "Rechercher"
   },
   "errors": {
     "network-error": "Le serveur est injoignable. Vérifiez votre connexion puis réessayez.",
@@ -1316,5 +1319,63 @@
       "lateYes": "En retard",
       "lateNo": "À l’heure"
     }
+  },
+  "usersAdmin": {
+    "title": "Administration des utilisateurs",
+    "description": "Creer des comptes, attribuer des roles, activer ou desactiver, et envoyer les liens de configuration.",
+    "list": "Utilisateurs",
+    "search": "Rechercher par nom ou e-mail",
+    "create": "Creer un utilisateur",
+    "createSubmit": "Creer et envoyer le lien",
+    "email": "E-mail",
+    "displayName": "Nom affiche",
+    "company": "Societe de rattachement",
+    "language": "Langue",
+    "status": "Statut",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "created": "Utilisateur cree. Un e-mail de configuration a ete mis en file.",
+    "activate": "Activer",
+    "deactivate": "Desactiver",
+    "activated": "Compte active.",
+    "deactivated": "Compte desactive.",
+    "deactivatedWithOpenWork": "Compte desactive. Les validations ou achats ouverts n ont pas ete reassignes.",
+    "resetPassword": "Envoyer une reinitialisation",
+    "resetIssued": "E-mail de reinitialisation mis en file (dossier mail local en demo).",
+    "revokeSessions": "Revoquer les sessions",
+    "sessionsRevoked": "Sessions revoquees pour ce compte.",
+    "roles": "Roles",
+    "role": "Role",
+    "grantCompany": "Societe (si requis)",
+    "addRole": "Ajouter le role",
+    "removeRole": "Retirer",
+    "roleAdded": "Role ajoute.",
+    "roleRemoved": "Role retire.",
+    "openWork": "Travail ouvert : {{approvals}} validation(s), {{buying}} affectation(s) achat. Pas de reaffectation automatique.",
+    "loadError": "Impossible de charger l administration des utilisateurs.",
+    "empty": {
+      "title": "Aucun utilisateur",
+      "message": "Modifiez la recherche ou creez un utilisateur."
+    }
+  },
+  "passwordSetup": {
+    "title": "Choisir un mot de passe",
+    "description": "Ce lien a usage unique definit votre mot de passe.",
+    "newPassword": "Nouveau mot de passe",
+    "confirm": "Confirmer",
+    "submit": "Enregistrer",
+    "mismatch": "Les mots de passe ne correspondent pas.",
+    "invalid": "Ce lien est invalide ou deja utilise.",
+    "done": "Mot de passe enregistre. Vous pouvez vous connecter."
+  },
+  "changePassword": {
+    "title": "Changer le mot de passe",
+    "description": "Choisissez un nouveau mot de passe. Les autres sessions seront deconnectees.",
+    "current": "Mot de passe actuel",
+    "next": "Nouveau mot de passe",
+    "confirm": "Confirmer",
+    "submit": "Mettre a jour",
+    "mismatch": "Les mots de passe ne correspondent pas.",
+    "done": "Mot de passe mis a jour."
   }
 }

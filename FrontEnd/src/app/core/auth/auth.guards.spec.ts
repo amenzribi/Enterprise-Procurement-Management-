@@ -8,9 +8,15 @@ import { safeReturnUrl } from './safe-return-url';
 describe('auth guards', () => {
   const authenticated = signal(false);
 
+  const me = signal<{ mustChangePassword?: boolean } | null>(null);
+
   beforeEach(() => {
+    me.set(null);
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: AuthService, useValue: { isAuthenticated: authenticated } }],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { isAuthenticated: authenticated, me } },
+      ],
     });
   });
 

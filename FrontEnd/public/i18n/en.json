@@ -48,7 +48,9 @@
       "dashboards": "Dashboards",
       "approvalRules": "Approval rules",
       "exchangeRates": "Exchange rates",
-      "import": "Master-data import"
+      "import": "Master-data import",
+      "users": "Users",
+      "changePassword": "Change password"
     },
     "plannedSprint": "Sprint {{sprint}}",
     "pendingCount": "{{count}} waiting for your decision"
@@ -187,7 +189,8 @@
   "common": {
     "dismiss": "Dismiss",
     "cancel": "Cancel",
-    "retry": "Try again"
+    "retry": "Try again",
+    "search": "Search"
   },
   "errors": {
     "network-error": "The server could not be reached. Check your connection and try again.",
@@ -1316,5 +1319,63 @@
       "lateYes": "Late",
       "lateNo": "On time"
     }
+  },
+  "usersAdmin": {
+    "title": "User administration",
+    "description": "Create accounts, assign company roles, activate or deactivate users, and issue password setup links.",
+    "list": "Users",
+    "search": "Search by name or e-mail",
+    "create": "Create user",
+    "createSubmit": "Create and send setup link",
+    "email": "E-mail",
+    "displayName": "Display name",
+    "company": "Home company",
+    "language": "Language",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "created": "User created. A setup e-mail was queued.",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "activated": "Account activated.",
+    "deactivated": "Account deactivated.",
+    "deactivatedWithOpenWork": "Account deactivated. Open approvals or buying assignments were not reassigned.",
+    "resetPassword": "Send password reset",
+    "resetIssued": "Password reset e-mail queued (check the local mail folder in demo).",
+    "revokeSessions": "Revoke sessions",
+    "sessionsRevoked": "Sessions revoked for this account.",
+    "roles": "Role grants",
+    "role": "Role",
+    "grantCompany": "Company (if required)",
+    "addRole": "Add role",
+    "removeRole": "Remove",
+    "roleAdded": "Role granted.",
+    "roleRemoved": "Role removed.",
+    "openWork": "Open work: {{approvals}} approval(s), {{buying}} buying assignment(s). These are not reassigned automatically.",
+    "loadError": "User administration could not be loaded.",
+    "empty": {
+      "title": "No users found",
+      "message": "Try another search or create a user."
+    }
+  },
+  "passwordSetup": {
+    "title": "Choose a password",
+    "description": "This one-time link sets your password and signs you in next.",
+    "newPassword": "New password",
+    "confirm": "Confirm password",
+    "submit": "Save password",
+    "mismatch": "The two passwords do not match.",
+    "invalid": "This link is not valid or has already been used.",
+    "done": "Password saved. You can sign in."
+  },
+  "changePassword": {
+    "title": "Change password",
+    "description": "Choose a new password for your account. Other sessions will be signed out.",
+    "current": "Current password",
+    "next": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Update password",
+    "mismatch": "The two passwords do not match.",
+    "done": "Password updated."
   }
 }

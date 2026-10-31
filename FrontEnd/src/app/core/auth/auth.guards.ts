@@ -5,10 +5,14 @@ import { AuthService } from './auth.service';
 
 /** Pages of the workspace require a signed-in user; others are sent to sign-in and brought back afterwards. */
 export const authGuard: CanActivateFn = (_route, state) => {
-  if (inject(AuthService).isAuthenticated()) {
-    return true;
+  const auth = inject(AuthService);
+  if (!auth.isAuthenticated()) {
+    return inject(Router).createUrlTree(['/sign-in'], { queryParams: { returnUrl: state.url } });
   }
-  return inject(Router).createUrlTree(['/sign-in'], { queryParams: { returnUrl: state.url } });
+  if (auth.me()?.mustChangePassword && !state.url.startsWith('/account/password')) {
+    return inject(Router).createUrlTree(['/account/password']);
+  }
+  return true;
 };
 
 /** A signed-in user opening the sign-in page goes straight to their requests. */

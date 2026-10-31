@@ -66,7 +66,9 @@ class DemoUserSeeder implements ApplicationRunner {
 							new Grant(Role.MANAGEMENT_APPROVER, "DEMO-TN-PLT"),
 							new Grant(Role.MANAGEMENT_APPROVER, "DEMO-FR-PLT"))),
 			new DemoUser("admin@demo.local", "Platform Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
-					List.of(new Grant(Role.ADMIN, false, false))));
+					List.of(new Grant(Role.ADMIN, false, false))),
+			new DemoUser("global.admin@demo.local", "Global Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
+					List.of(new Grant(Role.GLOBAL_ADMIN, false, false))));
 
 	private final JdbcTemplate jdbc;
 

@@ -186,12 +186,35 @@ public class UserDirectory {
 			.toList();
 		return jdbc.query("""
 				SELECT u.id, u.email, u.display_name, u.company_id, c.group_id, u.department_id, u.site_id,
-				       u.preferred_language, u.is_demo, u.is_active
-				FROM user_account u JOIN company c ON c.id = u.company_id
-				WHERE u.id = ? AND u.is_active = 1""", (rs, i) -> new CurrentUser(rs.getLong("id"), rs.getString("email"),
-				rs.getString("display_name"), rs.getLong("company_id"), rs.getLong("group_id"),
-				rs.getObject("department_id", Long.class), rs.getObject("site_id", Long.class),
-				rs.getString("preferred_language"), rs.getBoolean("is_demo"), grants), userId).stream().findFirst();
+				       u.preferred_language, u.is_demo, u.is_active, u.credentials_version,
+				       ISNULL(c2.must_change_password, 0) AS must_change_password
+				FROM user_account u
+				JOIN company c ON c.id = u.company_id
+				LEFT JOIN user_credential c2 ON c2.user_id = u.id
+				WHERE u.id = ? AND u.is_active = 1""",
+				(rs, i) -> new CurrentUser(rs.getLong("id"), rs.getString("email"), rs.getString("display_name"),
+						rs.getLong("company_id"), rs.getLong("group_id"), rs.getObject("department_id", Long.class),
+						rs.getObject("site_id", Long.class), rs.getString("preferred_language"),
+						rs.getBoolean("is_demo"), rs.getInt("credentials_version"),
+						rs.getBoolean("must_change_password"), grants),
+				userId).stream().findFirst();
+	}
+
+	/** Active GLOBAL_ADMIN accounts (for last-admin protection). */
+	public int countActiveGlobalAdmins() {
+		Integer count = jdbc.queryForObject("""
+				SELECT COUNT(DISTINCT u.id) FROM user_account u
+				JOIN user_role r ON r.user_id = u.id AND r.role = 'GLOBAL_ADMIN'
+				WHERE u.is_active = 1""", Integer.class);
+		return count == null ? 0 : count;
+	}
+
+	public boolean isActiveGlobalAdmin(long userId) {
+		Integer count = jdbc.queryForObject("""
+				SELECT COUNT(*) FROM user_account u
+				JOIN user_role r ON r.user_id = u.id AND r.role = 'GLOBAL_ADMIN'
+				WHERE u.id = ? AND u.is_active = 1""", Integer.class, userId);
+		return count != null && count > 0;
 	}
 
 }

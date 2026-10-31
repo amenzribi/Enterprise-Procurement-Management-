@@ -51,7 +51,7 @@ class SignInServiceTests {
 
 	private void account(String email, boolean active, boolean demo) {
 		given(credentials.findByEmail(email))
-			.willReturn(Optional.of(new CredentialStore.StoredCredential(7L, email, hash, active, demo)));
+			.willReturn(Optional.of(new CredentialStore.StoredCredential(7L, email, hash, active, demo, 1, false)));
 	}
 
 	@Test

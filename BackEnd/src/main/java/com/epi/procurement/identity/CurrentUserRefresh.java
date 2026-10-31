@@ -26,6 +26,9 @@ import jakarta.servlet.http.HttpSession;
  * docs, actuator health details) therefore see a revoked role at once instead of at the end of the session, and a
  * deactivated account - or a demo account once the demo profile is off - is signed out immediately.
  * <p>
+ * Sprint 10: sessions whose {@link SessionCredentials} epoch no longer matches {@code credentials_version} are
+ * invalidated (password change / reset / deactivation).
+ * <p>
  * The loaded user is cached for the request, so {@link CurrentUserProvider} does not query again.
  */
 final class CurrentUserRefresh extends OncePerRequestFilter {
@@ -48,8 +51,11 @@ final class CurrentUserRefresh extends OncePerRequestFilter {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser principal) {
 			Optional<CurrentUser> user = users.loadCurrentUser(principal.userId()).filter(u -> !u.demo() || demoActive);
-			if (user.isEmpty()) {
-				HttpSession session = request.getSession(false);
+			HttpSession session = request.getSession(false);
+			Integer sessionVersion = session == null ? null : SessionCredentials.version(session);
+			boolean versionOk = user.isPresent() && sessionVersion != null
+					&& sessionVersion == user.get().credentialsVersion();
+			if (user.isEmpty() || !versionOk) {
 				if (session != null) {
 					session.invalidate();
 				}
@@ -60,7 +66,8 @@ final class CurrentUserRefresh extends OncePerRequestFilter {
 				List<SimpleGrantedAuthority> authorities = authorities(user.get());
 				if (!sameAuthorities(authentication, authorities)) {
 					SecurityContext context = SecurityContextHolder.getContext();
-					context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, authorities));
+					context.setAuthentication(
+							UsernamePasswordAuthenticationToken.authenticated(principal, null, authorities));
 					contextRepository.saveContext(context, request, response);
 				}
 			}

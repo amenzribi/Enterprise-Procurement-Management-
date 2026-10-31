@@ -60,8 +60,10 @@ export const NAVIGATION: NavGroup[] = [
       { key: 'approvalRules', icon: 'settings', route: '/admin/approval-rules', permission: 'SYSTEM_ADMIN' },
       { key: 'exchangeRates', icon: 'coins', route: '/admin/exchange-rates', permission: 'SYSTEM_ADMIN' },
       { key: 'organization', icon: 'building', route: '/admin/organization', permission: 'ORG_ADMIN' },
+      { key: 'users', icon: 'users', route: '/admin/users', permission: 'USER_ADMIN' },
       { key: 'suppliers', icon: 'users', route: '/suppliers', permission: 'SUPPLIER_READ' },
       { key: 'import', icon: 'upload', route: '/admin/import', permission: 'IMPORT_RUN' },
+      { key: 'changePassword', icon: 'settings', route: '/account/password' },
     ],
   },
 ];

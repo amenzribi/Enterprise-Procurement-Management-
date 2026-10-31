@@ -9,7 +9,8 @@ import java.util.Set;
  * never from client-supplied identifiers (ADR-007).
  */
 public record CurrentUser(long id, String email, String displayName, long companyId, long groupId, Long departmentId,
-		Long siteId, String preferredLanguage, boolean demo, List<RoleGrant> grants) {
+		Long siteId, String preferredLanguage, boolean demo, int credentialsVersion, boolean mustChangePassword,
+		List<RoleGrant> grants) {
 
 	public CurrentUser {
 		grants = List.copyOf(grants);
@@ -31,6 +32,10 @@ public record CurrentUser(long id, String email, String displayName, long compan
 		Set<Role> roles = EnumSet.noneOf(Role.class);
 		grants.forEach(g -> roles.add(g.role()));
 		return roles;
+	}
+
+	public boolean isGlobalAdmin() {
+		return hasRole(Role.GLOBAL_ADMIN);
 	}
 
 }

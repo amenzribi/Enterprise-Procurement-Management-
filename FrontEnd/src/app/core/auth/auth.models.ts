@@ -10,6 +10,7 @@ export const ROLES = [
   'RECEIVER',
   'GROUP_MANAGEMENT',
   'ADMIN',
+  'GLOBAL_ADMIN',
 ] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -31,6 +32,8 @@ export const PERMISSIONS = [
   'ORG_ADMIN',
   'IMPORT_RUN',
   'SYSTEM_ADMIN',
+  'USER_ADMIN',
+  'USER_ADMIN_GLOBAL',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -56,6 +59,8 @@ export interface Me {
   absoluteTimeoutSeconds?: number | null;
   /** True for demonstration accounts (available only with the demo profile). */
   demo?: boolean;
+  /** Sprint 10: account must change password before other APIs. */
+  mustChangePassword?: boolean;
 }
 
 export function hasPermission(me: Me | null, permission: Permission): boolean {

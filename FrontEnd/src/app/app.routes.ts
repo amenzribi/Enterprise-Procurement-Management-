@@ -24,6 +24,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/sourcing/public-quote').then((m) => m.PublicQuotePage),
   },
   {
+    // Password setup/reset from e-mail (S10-AC-04): token in the URL fragment.
+    path: 'p',
+    title: 'passwordSetup.title',
+    loadComponent: () => import('./features/auth/password-setup').then((m) => m.PasswordSetupPage),
+  },
+  {
     // Everything else is the signed-in workspace (S1-AC-01, S1-AC-13).
     path: '',
     component: Shell,
@@ -31,6 +37,17 @@ export const routes: Routes = [
     canActivateChild: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'requests' },
+      {
+        path: 'account/password',
+        title: 'changePassword.title',
+        loadComponent: () => import('./features/auth/change-password').then((m) => m.ChangePasswordPage),
+      },
+      {
+        path: 'admin/users',
+        title: 'usersAdmin.title',
+        canActivate: [permissionGuard('USER_ADMIN')],
+        loadComponent: () => import('./features/admin/users-admin').then((m) => m.UsersAdminPage),
+      },
       {
         path: 'overview',
         title: 'nav.items.overview',

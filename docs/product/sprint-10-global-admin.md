@@ -1,28 +1,21 @@
-# Sprint 10 (proposed) — Global administration
+# Sprint 10 — Global administration
 
-**Status:** Proposal only — not delivered. Requested 2026-10-31.  
-**Why not Sprint 9:** S9 delivers deferred link-security (S2CR-08 / supplier-link). Full GLOBAL_ADMIN is a coherent identity vertical (schema, reset tokens, session epoch, UI, last-admin protection) that must not be half-shipped.
+**Status:** Locally delivered (developer). Manual UAT pending. Pilot gate unmet.  
+**See also:** [sprint-10.md](sprint-10.md) for acceptance criteria, permission matrix and lifecycle policy.
 
-## Objective
+## Delivered
 
-Installation-scoped `GLOBAL_ADMIN` manages users and organisational grants without becoming an unscoped procurement data viewer.
-
-## Acceptance criteria (draft)
-
-| ID | Criterion |
-|---|---|
-| S10-AC-01 | Role `GLOBAL_ADMIN`; cannot be granted by company ORG_ADMIN. |
-| S10-AC-02 | Create user; activate/deactivate; company membership + role grants. |
-| S10-AC-03 | Secure bootstrap for first GLOBAL_ADMIN (env-based, no default production password). |
-| S10-AC-04 | Password change; admin-initiated reset (expiring single-use token or must-change temp); never display stored passwords. |
-| S10-AC-05 | Session revocation / credentials version after reset or deactivation. |
-| S10-AC-06 | Cannot deactivate or demote the last active GLOBAL_ADMIN. |
-| S10-AC-07 | Audit role/membership/status/reset actions without secrets in payloads. |
-| S10-AC-08 | Admin UI EN/FR/AR; GLOBAL_ADMIN does not auto-gain all company request visibility (ADR-007 preserved). |
+- Role `GLOBAL_ADMIN` (group-wide); company `ADMIN` cannot grant it.
+- Admin API `/api/v1/admin/accounts` + UI `/admin/users`.
+- Password change; setup/reset via expiring single-use e-mail links (`/p#token`); credentials version session revocation.
+- Demo account `global.admin@demo.local` via `DEMO_USER_PASSWORD`.
+- Production one-shot bootstrap via `GLOBAL_ADMIN_BOOTSTRAP_PASSWORD` + `GLOBAL_ADMIN_BOOTSTRAP_EMAIL` when no GLOBAL_ADMIN exists.
+- EN/FR/AR UI; ADR-007 preserved (GLOBAL_ADMIN is not an unscoped procurement viewer).
 
 ## Bootstrap (real install)
 
-1. Set a one-time env secret (e.g. `GLOBAL_ADMIN_BOOTSTRAP_PASSWORD`) only for first start.  
-2. Application creates inactive-or-must-change admin if none exists.  
-3. Clear the env var after first successful sign-in and password change.  
-4. Demo: `global.admin@demo.local` via `DEMO_USER_PASSWORD` / same temp-file mechanism — **only with demo profile**.
+1. Ensure at least one company exists.  
+2. Set `GLOBAL_ADMIN_BOOTSTRAP_PASSWORD` (and optional `GLOBAL_ADMIN_BOOTSTRAP_EMAIL`) for a single start.  
+3. Application creates/activates GLOBAL_ADMIN with must-change password and records `identity_bootstrap`.  
+4. Clear the env var; sign in and change password.  
+5. Never enable a default production password. Demo profile uses `DemoUserSeeder` instead.

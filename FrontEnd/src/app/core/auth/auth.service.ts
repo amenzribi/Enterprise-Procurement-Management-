@@ -86,6 +86,9 @@ export class AuthService {
         } else {
           this.applyAccountLanguage(me);
         }
+        if (me.mustChangePassword) {
+          void this.router.navigateByUrl('/account/password');
+        }
       }),
     );
   }

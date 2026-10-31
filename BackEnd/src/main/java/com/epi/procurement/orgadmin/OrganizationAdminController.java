@@ -96,6 +96,6 @@ class OrganizationAdminController {
 
 	private static OrganizationAdmin.Actor actor(CurrentUser user) {
 		return new OrganizationAdmin.Actor(user.id(), user.displayName(), user.companyId(), user.groupId(),
-				user.hasRole(Role.ADMIN));
+				user.hasRole(Role.ADMIN) || user.isGlobalAdmin());
 	}
 }

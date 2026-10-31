@@ -53,15 +53,20 @@ test('Award → PO → ship → receipt → invoice → close (EN)', async ({ pa
   await ordering.locator('#award-quote').selectOption({ index: 1 });
   await ordering.locator('#award-reason').fill('Best landed cost for seals');
   await ordering.getByRole('button', { name: t('en', 'ordering.actions.award') }).click();
-  await expect(ines.getByText(t('en', 'ordering.actions.awarded')).first()).toBeVisible();
+  await expect(ordering.getByRole('button', { name: t('en', 'ordering.actions.createPo') })).toBeVisible({
+    timeout: 15_000,
+  });
 
   await ordering.getByRole('button', { name: t('en', 'ordering.actions.createPo') }).click();
-  await expect(ines.getByText(t('en', 'ordering.actions.poCreated')).first()).toBeVisible();
+  // Assert durable panel state (Issue), not only the ephemeral toast that can clear under suite load.
+  await expect(ordering.getByRole('button', { name: t('en', 'ordering.actions.issue') })).toBeVisible({
+    timeout: 15_000,
+  });
   await ordering.getByRole('button', { name: t('en', 'ordering.actions.issue') }).click();
-  await expect(ines.getByText(t('en', 'ordering.actions.issued')).first()).toBeVisible();
+  await expect(ordering.locator('#po-confirm-note')).toBeVisible({ timeout: 15_000 });
   await ordering.locator('#po-confirm-note').fill('Supplier OK (demo)');
   await ordering.getByRole('button', { name: t('en', 'ordering.actions.confirm') }).click();
-  await expect(ines.getByText(t('en', 'ordering.actions.confirmed')).first()).toBeVisible();
+  await expect(ines.locator('app-logistics-actions')).toBeVisible({ timeout: 15_000 });
 
   const logistics = ines.locator('app-logistics-actions');
   await expect(logistics).toBeVisible();

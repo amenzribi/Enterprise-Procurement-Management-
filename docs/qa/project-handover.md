@@ -8,7 +8,9 @@ Updated 2026-10-31 after Sprint 8 local delivery. Developer self-labelled eviden
 |---|---|
 | `d82cc1a` | Sprint 7 receipts (V12) + invoice/closure + e2e |
 | `0f5f7cf` / `03eebe1` | S7 handover / Playwright evidence |
-| *(Sprint 8)* | Dashboards, audit pack, ERP CSV — see `git log` after commit |
+| `a3f56a1` | Baseline: ordering e2e timeout 180s |
+| `281c6d9` | Sprint 8 dashboards, audit pack, ERP CSV |
+| *(follow-up)* | Ordering e2e asserts durable PO panel state; handover hashes |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **user work** — leave uncommitted unless Mohamed asks.

@@ -15,7 +15,7 @@
 | Frontend lint | `cd FrontEnd; npm run lint` | Passed |
 | Frontend unit tests | `npm test` | **202 passed** (28 files) |
 | Frontend build | `npm run build` | Passed; initial bundle **501.05 kB** vs 500 kB budget (**warning only**, not raised) |
-| E2E | `npm run e2e` with `E2E_BASE_URL=http://localhost:4300` against backend `:8081` | First full run: **30 passed, 1 failed** (ordering journey hit 60s suite timeout after closing successfully). Raised journey timeout to 180s; focused re-run of ordering + dashboards: **3 passed**. Full suite expected **31 passed** with that fix. |
+| E2E | `npm run e2e` with `E2E_BASE_URL=http://localhost:4300` against backend `:8081` | After timeout raise: ordering+dashboards **3/3**. Full suite under load: **30 passed, 1 failed** once (ephemeral PO toast). Assertions switched to durable Issue/confirm UI; ordering journey re-run **passed**. Dashboards e2e **passed**. Flake fix does not weaken business checks. |
 | Secrets scan | ripgrep for password/token patterns on Sprint 8 paths | Clean (no hardcoded demo passwords) |
 
 ## Scope covered by automated checks

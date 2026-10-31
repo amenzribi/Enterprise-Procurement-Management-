@@ -92,6 +92,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/purchasing/purchasing-inbox').then((m) => m.PurchasingInboxPage),
       },
       {
+        path: 'messages',
+        title: 'messaging.buyer.title',
+        canActivate: [permissionGuard('MESSAGING_BUYER')],
+        loadComponent: () => import('./features/messaging/buyer-messages-page').then((m) => m.BuyerMessagesPage),
+      },
+      {
+        path: 'supplier/messages',
+        title: 'messaging.portal.title',
+        canActivate: [permissionGuard('MESSAGING_SUPPLIER')],
+        loadComponent: () => import('./features/messaging/supplier-messages-page').then((m) => m.SupplierMessagesPage),
+      },
+      {
+        path: 'supplier/messages/:id',
+        title: 'messaging.portal.title',
+        canActivate: [permissionGuard('MESSAGING_SUPPLIER')],
+        loadComponent: () => import('./features/messaging/supplier-messages-page').then((m) => m.SupplierMessagesPage),
+      },
+      {
         path: 'dashboards',
         title: 'dashboards.title',
         canActivate: [permissionGuard('DASHBOARD_VIEW')],

@@ -11,6 +11,7 @@ export const ROLES = [
   'GROUP_MANAGEMENT',
   'ADMIN',
   'GLOBAL_ADMIN',
+  'SUPPLIER_CONTACT',
 ] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -34,6 +35,8 @@ export const PERMISSIONS = [
   'SYSTEM_ADMIN',
   'USER_ADMIN',
   'USER_ADMIN_GLOBAL',
+  'MESSAGING_BUYER',
+  'MESSAGING_SUPPLIER',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

@@ -63,6 +63,7 @@ class SecurityConfiguration {
 			.addFilterAfter(new CurrentUserRefresh(users, securityContextRepository,
 					environment.acceptsProfiles(Profiles.of("demo"))), SessionTimeouts.class)
 			.addFilterAfter(new MustChangePasswordFilter(), CurrentUserRefresh.class)
+			.addFilterAfter(new SupplierPortalRestrictionFilter(), MustChangePasswordFilter.class)
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()

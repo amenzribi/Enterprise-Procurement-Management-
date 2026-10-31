@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 /**
  * Local password credentials. Lookup is by e-mail, case-insensitively.
  */
-interface CredentialStore {
+public interface CredentialStore {
 
 	Optional<StoredCredential> findByEmail(String email);
 

@@ -39,6 +39,8 @@
       "requests": "Demandes d’achat",
       "approvals": "Validations",
       "purchasingInbox": "Boîte achats",
+      "messages": "Messages fournisseurs",
+      "supplierMessages": "Portail fournisseur",
       "sourcing": "Consultations",
       "purchaseOrders": "Commandes",
       "receipts": "Réceptions",
@@ -1377,5 +1379,39 @@
     "submit": "Mettre a jour",
     "mismatch": "Les mots de passe ne correspondent pas.",
     "done": "Mot de passe mis a jour."
+  },
+  "messaging": {
+    "panel": {
+      "title": "Conversation fournisseur",
+      "hint": "Les messages externes sont visibles par le contact fournisseur. Les notes internes restent chez les achats.",
+      "open": "Ouvrir la conversation"
+    },
+    "status": {
+      "OPEN": "Ouverte",
+      "CLOSED": "Fermee"
+    },
+    "audience": {
+      "INTERNAL": "Note interne",
+      "EXTERNAL": "Visible fournisseur"
+    },
+    "audienceLabel": "Audience",
+    "internalWarn": "Les notes internes ne sont jamais montrees au fournisseur.",
+    "body": "Message",
+    "send": "Envoyer",
+    "sent": "Message envoye.",
+    "empty": "Aucun message.",
+    "unread": "{{count}} non lu(s)",
+    "readOnly": "Cette conversation est en lecture seule.",
+    "buyer": {
+      "title": "Messages fournisseurs",
+      "subtitle": "Conversations liees a vos RFQ et commandes.",
+      "emptyHint": "Ouvrez une conversation depuis une RFQ sur le dossier."
+    },
+    "portal": {
+      "title": "Messagerie fournisseur",
+      "subtitle": "Messages avec votre acheteur autorise.",
+      "list": "Conversations",
+      "pick": "Selectionnez une conversation."
+    }
   }
 }

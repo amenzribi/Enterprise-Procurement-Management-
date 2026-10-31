@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/notifications/notification.servi
 import { Button } from '../../shared/ui/button';
 import { PurchaseRequest } from '../requests/request.models';
 import { SuppliersApi } from '../suppliers/suppliers.api';
+import { ConversationPanel } from '../messaging/conversation-panel';
 import { ComparisonView, RfqDetail } from './sourcing.models';
 import { SourcingApi } from './sourcing.api';
 
@@ -17,7 +18,7 @@ import { SourcingApi } from './sourcing.api';
 @Component({
   selector: 'app-sourcing-actions',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, TranslatePipe],
+  imports: [Button, ConversationPanel, TranslatePipe],
   template: `
     @if (visible()) {
       <section class="panel decide" aria-labelledby="sourcing-title">
@@ -93,6 +94,12 @@ import { SourcingApi } from './sourcing.api';
             </form>
           }
           <p class="error small" role="alert">@if (error(); as code) { {{ 'errors.' + code | translate }} }</p>
+
+          @if (rfq(); as r) {
+            @if (r.suppliers[0]; as s) {
+              <app-conversation-panel contextType="RFQ" [contextId]="r.id" [supplierId]="s.supplierId" />
+            }
+          }
         }
       </section>
     }

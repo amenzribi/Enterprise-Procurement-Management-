@@ -21,7 +21,8 @@ import com.epi.procurement.platform.web.ApiProblemException;
 @Service
 public class UserAdminService {
 
-	private static final Set<Role> COMPANY_ADMIN_FORBIDDEN = Set.of(Role.GLOBAL_ADMIN, Role.ADMIN, Role.GROUP_MANAGEMENT);
+	private static final Set<Role> COMPANY_ADMIN_FORBIDDEN = Set.of(Role.GLOBAL_ADMIN, Role.ADMIN, Role.GROUP_MANAGEMENT,
+			Role.SUPPLIER_CONTACT);
 
 	private final UserAdminStore store;
 
@@ -201,6 +202,10 @@ public class UserAdminService {
 		assertCanManage(actor, account);
 		Role role = Role.parse(grant.role() == null ? "" : grant.role().trim().toUpperCase(Locale.ROOT))
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-role", "Unsupported role."));
+		if (role == Role.SUPPLIER_CONTACT) {
+			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-role",
+					"Supplier contacts are invited from messaging, not user administration.");
+		}
 		if (!actor.isGlobalAdmin()) {
 			if (COMPANY_ADMIN_FORBIDDEN.contains(role) || role == Role.GLOBAL_ADMIN) {
 				throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",

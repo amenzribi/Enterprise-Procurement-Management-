@@ -42,6 +42,10 @@ class MeAssembler {
 
 	static List<String> permissions(CurrentUser user) {
 		List<String> permissions = new ArrayList<>();
+		if (user.hasRole(Role.SUPPLIER_CONTACT)) {
+			permissions.add("MESSAGING_SUPPLIER");
+			return permissions;
+		}
 		if (user.isGlobalAdmin()) {
 			permissions.add("USER_ADMIN");
 			permissions.add("USER_ADMIN_GLOBAL");
@@ -68,6 +72,7 @@ class MeAssembler {
 		}
 		if (user.hasRole(Role.BUYER) || user.hasRole(Role.PURCHASING_MANAGER)) {
 			permissions.add("PURCHASING_ACT");
+			permissions.add("MESSAGING_BUYER");
 		}
 		if (user.hasRole(Role.PURCHASING_MANAGER)) {
 			permissions.add("PURCHASING_MANAGE");

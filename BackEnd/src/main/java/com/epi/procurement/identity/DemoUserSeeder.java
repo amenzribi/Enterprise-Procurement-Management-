@@ -68,7 +68,9 @@ class DemoUserSeeder implements ApplicationRunner {
 			new DemoUser("admin@demo.local", "Platform Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
 					List.of(new Grant(Role.ADMIN, false, false))),
 			new DemoUser("global.admin@demo.local", "Global Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
-					List.of(new Grant(Role.GLOBAL_ADMIN, false, false))));
+					List.of(new Grant(Role.GLOBAL_ADMIN, false, false))),
+			new DemoUser("contact.skf@demo.local", "SKF Contact (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH", "en",
+					List.of(new Grant(Role.SUPPLIER_CONTACT, false, false))));
 
 	private final JdbcTemplate jdbc;
 
@@ -108,7 +110,10 @@ class DemoUserSeeder implements ApplicationRunner {
 		boolean generated = !StringUtils.hasText(configuredPassword);
 		String password = generated ? randomPassword() : configuredPassword;
 		// One hash per account: same password, distinct salts (QA1-D-05).
-		transaction.executeWithoutResult(tx -> USERS.forEach(user -> seed(user, passwordEncoder.encode(password))));
+		transaction.executeWithoutResult(tx -> {
+			USERS.forEach(user -> seed(user, passwordEncoder.encode(password)));
+			linkDemoSupplierContact();
+		});
 		if (generated) {
 			// Printed to the console only (not through the logging system, which may write to files).
 			System.out.println("""
@@ -156,6 +161,30 @@ class DemoUserSeeder implements ApplicationRunner {
 			jdbc.update("INSERT INTO user_role (user_id, role, company_id, department_id) VALUES (?, ?, ?, ?)", userId,
 					grant.role().name(), grantCompany, grant.departmentScoped() ? departmentId : null);
 		}
+	}
+
+	/** Sprint 11: ensure demo SKF contact membership (idempotent). */
+	private void linkDemoSupplierContact() {
+		Long userId = jdbc.query("SELECT id FROM user_account WHERE email = ?",
+				rs -> rs.next() ? rs.getLong(1) : null, "contact.skf@demo.local");
+		Long supplierId = jdbc.query("SELECT id FROM supplier WHERE code = ?", rs -> rs.next() ? rs.getLong(1) : null,
+				"DEMO-SKF");
+		if (userId == null || supplierId == null) {
+			return;
+		}
+		Integer existing = jdbc.queryForObject(
+				"SELECT COUNT(*) FROM supplier_contact WHERE supplier_id = ? AND user_id = ?", Integer.class, supplierId,
+				userId);
+		if (existing != null && existing > 0) {
+			jdbc.update("""
+					UPDATE supplier_contact SET is_active = 1, revoked_at = NULL, revoked_by_user_id = NULL,
+					       display_label = N'SKF Contact (Demo)'
+					WHERE supplier_id = ? AND user_id = ?""", supplierId, userId);
+			return;
+		}
+		jdbc.update("""
+				INSERT INTO supplier_contact (supplier_id, user_id, display_label, is_active)
+				VALUES (?, ?, N'SKF Contact (Demo)', 1)""", supplierId, userId);
 	}
 
 	private static String randomPassword() {

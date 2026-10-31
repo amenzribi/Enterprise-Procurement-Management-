@@ -10,16 +10,21 @@ import java.util.Optional;
 public enum Role {
 
 	REQUESTER, ENTER_ON_BEHALF, DEPARTMENT_MANAGER, BUDGET_APPROVER, MANAGEMENT_APPROVER, BUYER, PURCHASING_MANAGER,
-	RECEIVER, GROUP_MANAGEMENT, ADMIN, GLOBAL_ADMIN;
+	RECEIVER, GROUP_MANAGEMENT, ADMIN, GLOBAL_ADMIN, SUPPLIER_CONTACT;
 
 	/** Installation-scoped administration (Sprint 10). Group-wide grant only. */
 	public boolean isGlobalAdmin() {
 		return this == GLOBAL_ADMIN;
 	}
 
+	/** External supplier portal principal (Sprint 11). Group-wide grant; access gated by supplier_contact. */
+	public boolean isSupplierContact() {
+		return this == SUPPLIER_CONTACT;
+	}
+
 	/** Roles that may be granted with company_id NULL. */
 	public boolean isGroupWide() {
-		return this == GROUP_MANAGEMENT || this == ADMIN || this == GLOBAL_ADMIN;
+		return this == GROUP_MANAGEMENT || this == ADMIN || this == GLOBAL_ADMIN || this == SUPPLIER_CONTACT;
 	}
 
 	/** Roles that can hold approval tasks (approval rule stages and escalation). */

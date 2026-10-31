@@ -39,6 +39,8 @@
       "requests": "Purchase requests",
       "approvals": "Approvals",
       "purchasingInbox": "Purchasing inbox",
+      "messages": "Supplier messages",
+      "supplierMessages": "Supplier portal",
       "sourcing": "Sourcing",
       "purchaseOrders": "Purchase orders",
       "receipts": "Receipts",
@@ -1377,5 +1379,39 @@
     "submit": "Update password",
     "mismatch": "The two passwords do not match.",
     "done": "Password updated."
+  },
+  "messaging": {
+    "panel": {
+      "title": "Supplier conversation",
+      "hint": "External messages are visible to the supplier contact. Internal notes stay with purchasing.",
+      "open": "Open conversation"
+    },
+    "status": {
+      "OPEN": "Open",
+      "CLOSED": "Closed"
+    },
+    "audience": {
+      "INTERNAL": "Internal note",
+      "EXTERNAL": "Visible to supplier"
+    },
+    "audienceLabel": "Audience",
+    "internalWarn": "Internal notes are never shown to the supplier.",
+    "body": "Message",
+    "send": "Send message",
+    "sent": "Message sent.",
+    "empty": "No messages yet.",
+    "unread": "{{count}} unread",
+    "readOnly": "This conversation is read-only.",
+    "buyer": {
+      "title": "Supplier messages",
+      "subtitle": "Conversations linked to your RFQs and purchase orders.",
+      "emptyHint": "Open a conversation from an RFQ on a request dossier."
+    },
+    "portal": {
+      "title": "Supplier messaging",
+      "subtitle": "Messages with your authorised buyer for each RFQ or purchase order.",
+      "list": "Conversations",
+      "pick": "Select a conversation."
+    }
   }
 }

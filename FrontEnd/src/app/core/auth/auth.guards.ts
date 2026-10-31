@@ -15,9 +15,15 @@ export const authGuard: CanActivateFn = (_route, state) => {
   return true;
 };
 
-/** A signed-in user opening the sign-in page goes straight to their requests. */
-export const guestGuard: CanActivateFn = () =>
-  inject(AuthService).isAuthenticated() ? inject(Router).createUrlTree(['/requests']) : true;
+/** A signed-in user opening the sign-in page goes straight to their workspace home. */
+export const guestGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  if (!auth.isAuthenticated()) {
+    return true;
+  }
+  const home = hasPermission(auth.me(), 'MESSAGING_SUPPLIER') ? '/supplier/messages' : '/requests';
+  return inject(Router).createUrlTree([home]);
+};
 
 /**
  * Hides pages of a permission the user does not hold behind the not-found page. The server enforces access on every

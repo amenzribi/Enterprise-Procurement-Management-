@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Revision | local Sprint 10 commits (see handover) |
+| Revision | `6046316` (+ handover hash note) |
 | Date | 2026-10-31 |
 | Label | Developer self-checks — **not** independent QA/reviewer sign-off |
 | Manual UAT | Pending for Sprints 5–10 |
@@ -15,7 +15,7 @@
 | Frontend lint | `npm run lint` | **Pass** |
 | Frontend unit | `npm test` | **Pass** — 28 files / **202** tests |
 | Frontend build | `npm run build` | **Pass** (initial bundle budget warning ~+2.4 kB over 500 kB — pre-existing class) |
-| E2E | `$env:E2E_BASE_URL='http://localhost:4300'; npm run e2e` | Recorded after S10 restart |
+| E2E | `npm run e2e` against http://localhost:4300 → :8081 | **Pass** — **31** passed (9.5m), including approvals, purchasing, ordering, dashboards, session, accessibility EN/FR/AR |
 | Secrets scan | Grep on Sprint 10 paths for hardcoded passwords / private keys | **Pass** — no matches |
 
 ## Coverage vs S10-AC

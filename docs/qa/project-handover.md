@@ -7,7 +7,7 @@ Updated 2026-10-31 after Sprint 10 local delivery. Developer self-labelled evide
 | Commit | Role |
 |---|---|
 | `fbb1afd` / `58487d3` / `2ce95d8` / `97cc3bb` | Sprint 9 security + docs |
-| *(Sprint 10 commits — see git log)* | GLOBAL_ADMIN identity + admin UI + V13 + QA docs |
+| `6046316` | Sprint 10 GLOBAL_ADMIN + V13 + admin UI/docs |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **CRLF-only / user work** — leave uncommitted unless Mohamed asks. **Do not edit applied V7.**

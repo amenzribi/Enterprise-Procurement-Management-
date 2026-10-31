@@ -1,16 +1,14 @@
 # Project handover (current)
 
-Updated 2026-10-31 after Sprint 8 local delivery. Developer self-labelled evidence only — **not** independent QA/reviewer sign-off.
+Updated 2026-10-31 after Sprint 9 local delivery. Developer self-labelled evidence only — **not** independent QA/reviewer sign-off.
 
 ## Git (local only — not pushed)
 
 | Commit | Role |
 |---|---|
-| `d82cc1a` | Sprint 7 receipts (V12) + invoice/closure + e2e |
-| `0f5f7cf` / `03eebe1` | S7 handover / Playwright evidence |
-| `a3f56a1` | Baseline: ordering e2e timeout 180s |
-| `281c6d9` | Sprint 8 dashboards, audit pack, ERP CSV |
-| `d12eb2b` | Ordering e2e durable PO assertions + S8 evidence note |
+| `281c6d9` / `d12eb2b` / `0b39925` | Sprint 8 delivery + evidence / handover |
+| `fbb1afd` | Sprint 9: trusted-proxy rate limits + supplier-link revoke/redaction/ITs |
+| *(docs commit following)* | Sprint 9 plan, QA reports, proposed S10–S12, handover |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **user work** — leave uncommitted unless Mohamed asks.
@@ -19,28 +17,34 @@ Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **user wor
 
 - Frontend: **http://localhost:4300** (`ng serve --port 4300 --proxy-config proxy.conf.8081.json`)
 - Backend health: **http://localhost:8081/actuator/health**
-- Profiles: `dev,demo`; DB: SQL Server `procurement_dev`; Flyway through **V12** (no new migration in S8)
-- Demo password: `%TEMP%\epi-e2e-pw.txt` (`DEMO_USER_PASSWORD`). Never commit.
+- Profiles: `dev,demo`; DB: SQL Server `procurement_dev`; Flyway through **V12** (no new migration in S9)
+- Trusted proxies: `APP_TRUSTED_PROXIES` / `app.security.trusted-proxies` (empty by default — forwarded headers ignored)
+- Demo password: `%TEMP%\epi-e2e-pw.txt` (`DEMO_USER_PASSWORD`). Never commit or print.
 - Demo users include `receiver.tn@demo.local` (Omar) and `ceo@demo.local` (Hedi, GROUP_MANAGEMENT)
 
 ## Docs
 
-- Combined manual scenarios (S5–S8): [sprint-5-6-7-8-manual-scenarios.md](sprint-5-6-7-8-manual-scenarios.md)
-- Sprint 8 plan: [sprint-8.md](../product/sprint-8.md)
-- Sprint 8 test evidence: [sprint-8-test-results.md](sprint-8-test-results.md)
+- Combined manual scenarios (S5–S9): [sprint-5-6-7-8-9-manual-scenarios.md](sprint-5-6-7-8-9-manual-scenarios.md)
+- Sprint 9 plan: [sprint-9.md](../product/sprint-9.md)
+- Sprint 9 automated verification: [sprint-9-automated-verification.md](sprint-9-automated-verification.md)
+- Sprint 9 manual plan: [sprint-9-manual-test-plan.md](sprint-9-manual-test-plan.md)
+- Proposed S10 GLOBAL_ADMIN: [sprint-10-global-admin.md](../product/sprint-10-global-admin.md)
+- Proposed S11 messaging: [sprint-11-supplier-communication.md](../product/sprint-11-supplier-communication.md)
+- Proposed S12 AI: [sprint-12-ai-assistant.md](../product/sprint-12-ai-assistant.md)
 
 ## Manual acceptance
 
-- Sprint 5 user acceptance: **pending** (Mohamed)
-- Sprint 6 user acceptance: **pending** (Mohamed)
-- Sprint 7 user acceptance: **pending** (Mohamed)
-- Sprint 8 user acceptance: **pending** (Mohamed)
+- Sprint 5–9 user acceptance: **pending** (Mohamed) — do not mark passed without explicit confirmation
+- Combined manual testing at end of S5–9 journey: **pending**
+- Full-system / design review (Codex or Claude): **pending** (after UAT)
 
 ## Residual / next
 
 - Independent QA/review on the integrated revision
-- S2CR-08 / supplier-link follow-ups → Sprint 9
+- **Next product sprint: proposed Sprint 10 — GLOBAL_ADMIN** (not started)
 - Native-speaker Arabic review outstanding
-- §15 pilot gate **unmet**
-- AI request draft (FR-AI-01) blocked — no provider
-- Next product sprint: **S9 pilot readiness** (not started in this session)
+- §15 pilot gate **unmet** (blocks pen-test production exposure, training, go-live, real supplier send)
+- MFA (FR-IAM-04) blocked on IdP decision
+- NFR-01 load measure / NFR-10 restore drill unmet
+- AI request draft / assistant blocked — no hosting/provider ADR
+- Do **not** claim Core complete merely because numbered S0–S9 local delivery ends; add-ons and gates remain

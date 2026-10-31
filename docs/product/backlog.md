@@ -36,7 +36,7 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 
 | # | Item | Req | Size |
 |---|---|---|---|
-| S2-C1 | S2CR-08: proxy-aware client address for one-tap rate limits (trusted-proxy list + per-token limit) | S2-AC-07 | S — **Sprint 9** |
+| S2-C1 | S2CR-08: proxy-aware client address for one-tap rate limits (trusted-proxy list + per-token limit) | S2-AC-07 | S — **Done** in Sprint 9 (`ClientAddressResolver` + shared `RequestRateLimiter`) |
 | S2-C2 | Native-speaker review of Arabic UI and e-mail texts | NFR-11, S2DR-13 | S |
 | S2-C3 | Admin action to re-route an `ABSENCE_UNRESOLVED` task without waiting for escalation (RR-10) | FR-APR-03 | S |
 | S2-C4 | Bind parameters in `ApprovalStore` SQL that currently concatenates numeric ids (RR-07) | NFR-05 | S |
@@ -59,10 +59,6 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 
 ## Sprint 5 onwards
 
-See [roadmap.md](roadmap.md). Award / PO / supplier confirmation are Sprint 5 (manual UAT pending). Shipment
-tracking (local/international milestones, document references, delay flags) is Sprint 6 without AI (manual UAT
-pending). Receiving / manual invoice / user-confirmed closure are Sprint 7 (manual UAT pending). Visibility
-dashboards, audit pack PDF and ERP **file** CSV export are Sprint 8 (manual UAT pending; AI request draft
-blocked — no provider; live ERP connectors remain deferred). Grouping of similar needs, internal transfer and
-"buy again" stay confirm-with-pilot (G12). S2CR-08 stays Sprint 9. Native-speaker Arabic review outstanding.
-Pilot gate §15 unmet.
+See [roadmap.md](roadmap.md). S5–S8 locally delivered (manual UAT pending). Sprint 9: S2CR-08 + supplier-link
+hardening. **Proposed** S10 GLOBAL_ADMIN, S11 buyer–supplier communication, S12 AI assistant (hosting blocked).
+Grouping / internal transfer / buy again stay G12. Native-speaker Arabic review outstanding. Pilot gate §15 unmet.

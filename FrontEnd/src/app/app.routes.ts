@@ -98,6 +98,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/messaging/buyer-messages-page').then((m) => m.BuyerMessagesPage),
       },
       {
+        path: 'assistant',
+        title: 'assistant.title',
+        canActivate: [permissionGuard('ASSISTANT_USE')],
+        loadComponent: () => import('./features/assistant/assistant-page').then((m) => m.AssistantPage),
+      },
+      {
         path: 'supplier/messages',
         title: 'messaging.portal.title',
         canActivate: [permissionGuard('MESSAGING_SUPPLIER')],

@@ -73,6 +73,7 @@ class MeAssembler {
 		if (user.hasRole(Role.BUYER) || user.hasRole(Role.PURCHASING_MANAGER)) {
 			permissions.add("PURCHASING_ACT");
 			permissions.add("MESSAGING_BUYER");
+			permissions.add("ASSISTANT_USE");
 		}
 		if (user.hasRole(Role.PURCHASING_MANAGER)) {
 			permissions.add("PURCHASING_MANAGE");

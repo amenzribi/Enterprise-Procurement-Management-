@@ -99,6 +99,13 @@ app:
     enabled: true
     outbox-delay: PT15S
     reminder-delay: PT1M
+  # Sprint 12 assistant (ADR-012). Default disabled — no external model calls.
+  assistant:
+    mode: ${APP_ASSISTANT_MODE:disabled}
+    timeout: PT20S
+    rate-limit-per-minute: 30
+    max-question-chars: 2000
+    max-context-chars: 12000
 
 management:
   health:

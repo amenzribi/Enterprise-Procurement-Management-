@@ -1,18 +1,20 @@
-# Sprint 12 (proposed) — Internal AI procurement assistant
+# Sprint 12 — Internal AI procurement assistant
 
-**Status:** Proposal. Priority 2 after communication foundations. **Blocked** until AI hosting/provider ADR (same class as FR-AI-01).
+**Status:** Locally implemented with disabled/demo providers (see `sprint-12.md`, ADR-012). **Production provider pending approval.** Manual UAT pending.
 
-## Direction (requested)
+## Direction (delivered in demo mode)
 
 First users: buyers and purchasing managers within authorised scope.
 
-Initial uses: explain status; find authorised records; summarise dossier/documents; draft questions/supplier messages for **human** review.
+Initial uses: explain status; find authorised records; summarise dossier / authorised conversation text; draft supplier messages for **human** review.
 
-## Hard requirements
+Document OCR and live models remain deferred.
 
-- Company and document permissions; cite underlying records.
-- Distinguish generated answers from recorded facts.
+## Hard requirements (enforced)
+
+- Company permissions; cite underlying records; no existence leak.
+- Distinguish generated answers from recorded facts; demo labelled.
 - No autonomous approve/award/issue/pay/close/send.
-- Treat uploads and supplier content as untrusted.
-- No external AI service while hosting undecided.
-- Human buyer–supplier communication must remain usable without AI.
+- Treat supplier/retrieved content as untrusted.
+- No external AI service until hosting approved (ADR-012).
+- Messaging remains usable with assistant disabled.

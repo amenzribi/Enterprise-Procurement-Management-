@@ -37,6 +37,7 @@ export const PERMISSIONS = [
   'USER_ADMIN_GLOBAL',
   'MESSAGING_BUYER',
   'MESSAGING_SUPPLIER',
+  'ASSISTANT_USE',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

@@ -40,6 +40,7 @@ export const NAVIGATION: NavGroup[] = [
       { key: 'approvals', icon: 'circle-check', route: '/approvals', badge: 'approvals' },
       { key: 'purchasingInbox', icon: 'inbox', route: '/purchasing', permission: 'PURCHASING_ACT', badge: 'purchasing' },
       { key: 'messages', icon: 'inbox', route: '/messages', permission: 'MESSAGING_BUYER' },
+      { key: 'assistant', icon: 'activity', route: '/assistant', permission: 'ASSISTANT_USE' },
       { key: 'supplierMessages', icon: 'inbox', route: '/supplier/messages', permission: 'MESSAGING_SUPPLIER' },
       { key: 'sourcing', icon: 'scale', plannedSprint: 4 },
     ],

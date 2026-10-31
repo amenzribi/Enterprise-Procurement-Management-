@@ -20,3 +20,5 @@ app:
   demo:
     # Test-only password for the demo accounts created by DemoUserSeeder (not a secret).
     user-password: Test-Only-Demo-Password-1
+  assistant:
+    mode: demo

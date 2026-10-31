@@ -40,6 +40,7 @@
       "approvals": "Validations",
       "purchasingInbox": "Boîte achats",
       "messages": "Messages fournisseurs",
+      "assistant": "Assistant",
       "supplierMessages": "Portail fournisseur",
       "sourcing": "Consultations",
       "purchaseOrders": "Commandes",
@@ -1379,6 +1380,27 @@
     "submit": "Mettre a jour",
     "mismatch": "Les mots de passe ne correspondent pas.",
     "done": "Mot de passe mis a jour."
+  },
+  "assistant": {
+    "title": "Assistant achats",
+    "subtitle": "Posez des questions sur les demandes et commandes autorisees. Le mode demo utilise un adaptateur local — pas un modele IA en direct.",
+    "modeLabel": "Mode fournisseur",
+    "unavailable": "L'assistant n'est pas disponible dans cette configuration.",
+    "starters": "Questions suggerees",
+    "starter": {
+      "status": "Ou en est ma demande ?",
+      "pos": "Commandes en attente de confirmation",
+      "summarize": "Resumer un dossier",
+      "draft": "Brouillon de relance fournisseur"
+    },
+    "question": "Votre question",
+    "ask": "Demander",
+    "thinking": "Traitement…",
+    "sources": "Sources",
+    "draftHint": "Ce brouillon n'est pas envoye. Copiez-le dans la messagerie et relisez avant envoi.",
+    "copyDraft": "Copier le brouillon",
+    "draftCopied": "Brouillon copie.",
+    "draftCopyFailed": "Impossible de copier le brouillon."
   },
   "messaging": {
     "panel": {

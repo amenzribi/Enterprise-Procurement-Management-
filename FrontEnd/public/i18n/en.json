@@ -40,6 +40,7 @@
       "approvals": "Approvals",
       "purchasingInbox": "Purchasing inbox",
       "messages": "Supplier messages",
+      "assistant": "Assistant",
       "supplierMessages": "Supplier portal",
       "sourcing": "Sourcing",
       "purchaseOrders": "Purchase orders",
@@ -1379,6 +1380,27 @@
     "submit": "Update password",
     "mismatch": "The two passwords do not match.",
     "done": "Password updated."
+  },
+  "assistant": {
+    "title": "Procurement assistant",
+    "subtitle": "Ask about authorised requests and purchase orders. Demo mode uses a local adapter — not a live AI model.",
+    "modeLabel": "Provider mode",
+    "unavailable": "The assistant is not available in this configuration.",
+    "starters": "Suggested questions",
+    "starter": {
+      "status": "Where is my request?",
+      "pos": "POs awaiting confirmation",
+      "summarize": "Summarise a dossier",
+      "draft": "Draft supplier follow-up"
+    },
+    "question": "Your question",
+    "ask": "Ask",
+    "thinking": "Working…",
+    "sources": "Sources",
+    "draftHint": "This draft is not sent. Copy it into messaging and review before sending.",
+    "copyDraft": "Copy draft",
+    "draftCopied": "Draft copied.",
+    "draftCopyFailed": "Could not copy the draft."
   },
   "messaging": {
     "panel": {

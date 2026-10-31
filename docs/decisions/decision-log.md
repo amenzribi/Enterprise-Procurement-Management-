@@ -15,6 +15,7 @@ Architecture decisions. Significant ones have their own ADR file; smaller ones a
 | ADR-009 | 2026-10-24 | E-mail notifications through a transactional outbox | Accepted |
 | ADR-010 | 2026-10-25 | Adopt Java 25 LTS | Rejected (client kept Java 21) |
 | ADR-011 | 2026-10-31 | Supplier messaging + SUPPLIER_CONTACT identity — [ADR-011-supplier-messaging.md](ADR-011-supplier-messaging.md) | Accepted |
+| ADR-012 | 2026-10-31 | AI assistant hosting options; provider-neutral port; demo/disabled default — [ADR-012-ai-assistant-hosting.md](ADR-012-ai-assistant-hosting.md) | Accepted (provider pending) |
 
 ## ADR-002 Modular monolith with Spring Modulith
 

@@ -7,7 +7,7 @@ Updated 2026-10-31 after Sprint 11 local delivery. Developer self-labelled evide
 | Commit | Role |
 |---|---|
 | `6046316` / `d9d9458` | Sprint 10 GLOBAL_ADMIN |
-| *(Sprint 11 commits — see git log)* | Messaging + V14 + SUPPLIER_CONTACT portal |
+| `c0c4cb1` | Sprint 11 messaging + V14 + SUPPLIER_CONTACT portal |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **CRLF-only / user work** — leave uncommitted unless Mohamed asks. **Do not edit applied V7.**

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Revision | (pending commit — see handover) |
+| Revision | `c0c4cb1` |
 | Date | 2026-10-31 |
 | Label | Developer self-checks — **not** independent QA/reviewer sign-off |
 | Manual UAT | Pending for Sprints 5–11 |

@@ -49,14 +49,29 @@ record ValidateBody(Integer requestVersion, String comment) {
 }
 
 record LinkCreated(String token, String path, Instant expiresAt) {
+
+	@Override
+	public String toString() {
+		return "LinkCreated[token=***,path=" + path + ",expiresAt=" + expiresAt + "]";
+	}
 }
 
 record PublicSummaryRequest(String token) {
+
+	@Override
+	public String toString() {
+		return "PublicSummaryRequest[token=***]";
+	}
 }
 
 record PublicQuoteSubmit(String token, String currency, LocalDate validUntil, Integer leadTimeDays, String paymentTerms,
 		String incoterm, BigDecimal freightAmount, BigDecimal dutyAmount, BigDecimal otherAmount, String notes,
 		List<QuoteLineBody> lines) {
+
+	@Override
+	public String toString() {
+		return "PublicQuoteSubmit[token=***,currency=" + currency + "]";
+	}
 }
 
 record PublicSummary(String title, String kind, String supplierName, LocalDate expiresHint, List<RfqLineView> lines,

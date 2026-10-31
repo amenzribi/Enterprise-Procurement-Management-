@@ -92,6 +92,13 @@ class SourcingStore {
 		jdbc.update("UPDATE quote_link_token SET used_at = ? WHERE id = ? AND used_at IS NULL", UtcTimes.db(now), id);
 	}
 
+	/** S4SL-09 / S9-AC-03: expire every still-valid token for this invitation before issuing a replacement. */
+	int expireActiveTokens(long rfqSupplierId, Instant now) {
+		return jdbc.update("""
+				UPDATE quote_link_token SET expires_at = ? WHERE rfq_supplier_id = ? AND expires_at > ?""",
+				UtcTimes.db(now), rfqSupplierId, UtcTimes.db(now));
+	}
+
 	Optional<QuoteRow> findQuoteByRfqSupplier(long rfqSupplierId) {
 		return jdbc.query("SELECT * FROM quotation WHERE rfq_supplier_id = ?", QUOTE, rfqSupplierId).stream().findFirst();
 	}

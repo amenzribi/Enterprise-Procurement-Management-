@@ -126,6 +126,7 @@ class SourcingService {
 			throw ApiProblemException.notFound();
 		}
 		Instant now = clock.instant();
+		store.expireActiveTokens(rfqSupplierId, now);
 		byte[] raw = new byte[32];
 		RANDOM.nextBytes(raw);
 		String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
@@ -417,6 +418,16 @@ class SourcingService {
 						"actor", actor.displayName()),
 				List.of(), List.of(new Notice.Action("mail.action.open", "/requests/" + request.id())),
 				"/requests/" + request.id()));
+	}
+
+	/** Hex fingerprint for rate-limit buckets (never log alongside the raw token). */
+	static String tokenFingerprint(String token) {
+		byte[] digest = hash(token);
+		StringBuilder hex = new StringBuilder(32);
+		for (int i = 0; i < 16; i++) {
+			hex.append(String.format("%02x", digest[i]));
+		}
+		return hex.toString();
 	}
 
 	private static byte[] hash(String token) {

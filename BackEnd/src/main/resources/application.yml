@@ -61,6 +61,8 @@ app:
   security:
     # Secure cookies (HTTPS only). Disabled by the dev/local/test profiles, which run over plain HTTP.
     cookie-secure: true
+    # Immediate TCP peers allowed to supply X-Forwarded-For / Forwarded (S2CR-08). Empty = never trust headers.
+    trusted-proxies: ${APP_TRUSTED_PROXIES:}
     session:
       idle-timeout: 30m
       absolute-timeout: 8h
@@ -86,6 +88,10 @@ app:
     # Minutes per SLA "hour" of an approval rule stage; tests may shorten it (QA hook A1).
     sla-unit-minutes: 60
     link-rate-limit-per-minute: 30
+    link-rate-limit-per-token-per-minute: 10
+  sourcing:
+    quote-link-rate-limit-per-minute: 30
+    quote-link-rate-limit-per-token-per-minute: 10
   jobs:
     enabled: true
     outbox-delay: PT15S

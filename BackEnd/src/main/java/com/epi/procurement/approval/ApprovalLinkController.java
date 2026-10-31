@@ -1,16 +1,9 @@
 package com.epi.procurement.approval;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -18,15 +11,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.epi.procurement.identity.CurrentUserProvider;
-import com.epi.procurement.platform.web.ApiProblemException;
+import com.epi.procurement.platform.web.ClientAddressResolver;
 import com.epi.procurement.platform.web.Idempotency;
+import com.epi.procurement.platform.web.RequestRateLimiter;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * One-tap e-mail approval endpoints (S2-AC-07, S2DR-07). The token is posted in the body (it comes from the URL
- * fragment, never from the path or query), CSRF still applies, responses are {@code no-store} with
- * {@code Referrer-Policy: no-referrer}, and both calls are rate-limited per client address.
+ * One-tap e-mail approval endpoints (S2-AC-07, S2DR-07, S9-AC-01/02). The token is posted in the body (URL
+ * fragment, never path/query). CSRF applies; responses are {@code no-store}. Rate limits use a proxy-aware
+ * client address and a per-token fingerprint.
  */
 @RestController
 @RequestMapping("/api/v1/approval-links")
@@ -38,24 +32,30 @@ class ApprovalLinkController {
 
 	private final Idempotency idempotency;
 
-	private final Clock clock;
+	private final ClientAddressResolver addresses;
+
+	private final RequestRateLimiter rateLimiter;
 
 	private final int limitPerMinute;
 
-	private final Map<String, Window> windows = new ConcurrentHashMap<>();
+	private final int limitPerTokenPerMinute;
 
 	ApprovalLinkController(ApprovalLinks links, CurrentUserProvider currentUser, Idempotency idempotency,
-			ObjectProvider<Clock> clock, @Value("${app.approval.link-rate-limit-per-minute:30}") int limitPerMinute) {
+			ClientAddressResolver addresses, RequestRateLimiter rateLimiter,
+			@Value("${app.approval.link-rate-limit-per-minute:30}") int limitPerMinute,
+			@Value("${app.approval.link-rate-limit-per-token-per-minute:10}") int limitPerTokenPerMinute) {
 		this.links = links;
 		this.currentUser = currentUser;
 		this.idempotency = idempotency;
-		this.clock = clock.getIfAvailable(Clock::systemUTC);
+		this.addresses = addresses;
+		this.rateLimiter = rateLimiter;
 		this.limitPerMinute = limitPerMinute;
+		this.limitPerTokenPerMinute = limitPerTokenPerMinute;
 	}
 
 	@PostMapping("/summary")
 	ResponseEntity<ApprovalViews.LinkSummary> summary(@RequestBody TokenBody body, HttpServletRequest request) {
-		throttle(request);
+		throttle(request, body == null ? null : body.token());
 		ApprovalViews.LinkSummary summary = links.summary(body.token(),
 				ApprovalLinks.sessionUser(currentUser.current()));
 		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header("Referrer-Policy", "no-referrer").body(summary);
@@ -64,7 +64,7 @@ class ApprovalLinkController {
 	@PostMapping("/approve")
 	ResponseEntity<?> approve(@RequestBody TokenBody body, HttpServletRequest request,
 			@RequestHeader(name = Idempotency.HEADER, required = false) String key) {
-		throttle(request);
+		throttle(request, body == null ? null : body.token());
 		String actor = "link:" + (body.token() == null ? "" : LinkTokens.hash(body.token()).substring(0, 32));
 		ResponseEntity<?> result = idempotency.execute(actor, key, "approve-link", () -> ResponseEntity
 			.ok(links.approve(body.token(), ApprovalLinks.sessionUser(currentUser.current()))));
@@ -75,17 +75,13 @@ class ApprovalLinkController {
 			.body(result.getBody());
 	}
 
-	private void throttle(HttpServletRequest request) {
-		Instant now = clock.instant();
-		if (windows.size() > 10_000) {
-			windows.entrySet().removeIf(e -> e.getValue().start().plus(Duration.ofMinutes(1)).isBefore(now));
-		}
-		Window window = windows.compute(request.getRemoteAddr(), (address, current) -> current == null
-				|| current.start().plus(Duration.ofMinutes(1)).isBefore(now) ? new Window(now, 1)
-						: new Window(current.start(), current.count() + 1));
-		if (window.count() > limitPerMinute) {
-			throw new ApiProblemException(HttpStatus.TOO_MANY_REQUESTS, "too-many-requests",
-					"Too many attempts. Please wait a minute.");
+	private void throttle(HttpServletRequest request, String token) {
+		String address = addresses.resolve(request);
+		rateLimiter.check("approval-link:addr:" + address, limitPerMinute);
+		if (StringUtils.hasText(token)) {
+			String fingerprint = LinkTokens.hash(token.strip());
+			rateLimiter.check("approval-link:token:" + fingerprint.substring(0, Math.min(32, fingerprint.length())),
+					limitPerTokenPerMinute);
 		}
 	}
 
@@ -93,13 +89,9 @@ class ApprovalLinkController {
 
 		@Override
 		public String toString() {
-			// Never print the token (logs, idempotency fingerprints).
 			return "TokenBody[***]";
 		}
 
-	}
-
-	private record Window(Instant start, int count) {
 	}
 
 }

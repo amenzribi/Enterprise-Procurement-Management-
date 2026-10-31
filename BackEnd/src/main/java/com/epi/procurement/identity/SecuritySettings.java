@@ -7,7 +7,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * Security parameters ({@code app.security.*}). Defaults are the production values from Sprint 1 (S1-AC-01,
- * S1DR-03); tests shorten them (QA assumptions T-1, T-2).
+ * S1DR-03); tests shorten them (QA assumptions T-1, T-2). Trusted proxies for rate limits are configured as
+ * {@code app.security.trusted-proxies} (comma-separated) and read by {@code ClientAddressResolver}.
  */
 @ConfigurationProperties("app.security")
 record SecuritySettings(@DefaultValue Session session, @DefaultValue Login login,

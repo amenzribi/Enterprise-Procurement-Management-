@@ -89,6 +89,37 @@ class SourcingIntegrationTests extends SqlServerTestSupport {
 		anon.post("/api/v1/quote-links/summary", "{\"token\":\"short\"}").expectStatus(404);
 	}
 
+	@Test
+	void reissueQuoteLinkRevokesPreviousTokenAndClosedRfqIsNeutral404() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = accept(assign(approve(submit(sami, request("Revoke link")))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+		long rfqId = ((Number) rfq.json("$.id")).longValue();
+		long rfqSupplierId = ((Number) rfq.json("$.suppliers[0].id")).longValue();
+		long rfqLineId = ((Number) rfq.json("$.lines[0].id")).longValue();
+
+		String first = ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/suppliers/" + rfqSupplierId + "/link", "{}")
+			.expectStatus(200)
+			.json("$.token");
+		String second = ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/suppliers/" + rfqSupplierId + "/link", "{}")
+			.expectStatus(200)
+			.json("$.token");
+		assertThat(second).isNotEqualTo(first);
+
+		ApiClient anon = client();
+		anon.csrf();
+		anon.post("/api/v1/quote-links/summary", "{\"token\":" + JSON.writeValueAsString(first) + "}").expectStatus(404);
+		anon.post("/api/v1/quote-links/summary", "{\"token\":" + JSON.writeValueAsString(second) + "}").expectStatus(200);
+
+		ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/close", "{}").expectStatus(200);
+		anon.post("/api/v1/quote-links/submit", JSON.writeValueAsString(Map.of("token", second, "currency", "EUR",
+				"freightAmount", 0, "dutyAmount", 0, "otherAmount", 0, "lines",
+				List.of(Map.of("rfqLineId", rfqLineId, "quantity", 1, "unitPrice", 22))))).expectStatus(404);
+	}
+
 	private long accept(long requestId) {
 		ApiClient ines = signedIn("buyer@demo.local");
 		int version = ((Number) ines.get("/api/v1/requests/" + requestId).json("$.version")).intValue();

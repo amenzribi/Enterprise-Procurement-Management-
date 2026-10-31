@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.epi.procurement.audit.AuditLog;
 import com.epi.procurement.audit.AuditRecord;
 import com.epi.procurement.platform.web.ApiProblemException;
+import com.epi.procurement.platform.web.ClientAddressResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -52,12 +53,14 @@ class AuthController {
 
 	private final AuditLog auditLog;
 
+	private final ClientAddressResolver addresses;
+
 	private final Clock clock;
 
 	AuthController(SignInService signIn, UserDirectory users, MeAssembler me,
 			SessionAuthenticationStrategy sessionStrategy, HttpSessionSecurityContextRepository contextRepository,
 			CookieCsrfTokenRepository csrfTokenRepository, SecuritySettings settings, AuditLog auditLog,
-			ObjectProvider<Clock> clock) {
+			ClientAddressResolver addresses, ObjectProvider<Clock> clock) {
 		this.signIn = signIn;
 		this.users = users;
 		this.me = me;
@@ -66,6 +69,7 @@ class AuthController {
 		this.csrfTokenRepository = csrfTokenRepository;
 		this.settings = settings;
 		this.auditLog = auditLog;
+		this.addresses = addresses;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
 	}
 
@@ -81,7 +85,7 @@ class AuthController {
 
 	@PostMapping("/login")
 	MeResponse login(@RequestBody LoginRequest body, HttpServletRequest request, HttpServletResponse response) {
-		AuthenticatedUser principal = signIn.signIn(body.email(), body.password(), request.getRemoteAddr())
+		AuthenticatedUser principal = signIn.signIn(body.email(), body.password(), addresses.resolve(request))
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.UNAUTHORIZED, "invalid-credentials",
 					"The e-mail or password is incorrect."));
 		CurrentUser user = users.loadCurrentUser(principal.userId())

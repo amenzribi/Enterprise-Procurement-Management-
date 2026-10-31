@@ -151,7 +151,19 @@ import { JOURNEY_STAGES, findNavItem } from '../../layout/navigation';
   `,
 })
 export class OverviewPage {
-  protected readonly available = ['signIn', 'requests', 'approvals', 'purchasing', 'isolation', 'shell', 'languages', 'statusCheck'] as const;
+  protected readonly available = [
+    'signIn',
+    'requests',
+    'approvals',
+    'purchasing',
+    'sourcingToReceipt',
+    'messaging',
+    'dashboards',
+    'isolation',
+    'shell',
+    'languages',
+    'statusCheck',
+  ] as const;
   /** Stage sprints come from the navigation, the single source of the roadmap shown in the interface. */
   protected readonly journey = JOURNEY_STAGES.map((stage) => ({
     key: stage.key,

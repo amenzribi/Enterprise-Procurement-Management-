@@ -71,14 +71,17 @@
         "requests": "Create, save and submit multi-line purchase requests with a unique number",
         "isolation": "Each user sees only the requests of their company and role",
         "approvals": "Approval circuits per company, one-tap approval from e-mail and a request tracker",
-        "purchasing": "Central buying queue, buyer assignment, supplier register and organisation import"
+        "purchasing": "Central buying queue, buyer assignment, supplier register and organisation import",
+        "sourcingToReceipt": "Quotations, awards, purchase orders, shipments, receipts, invoices and closure on the request dossier",
+        "messaging": "Buyer–supplier messaging with internal notes kept internal",
+        "dashboards": "Pipeline and management views, audit pack and ERP file export"
       },
       "checkConnection": "Check the connection",
       "openRequests": "Open my requests"
     },
     "journey": {
-      "title": "What comes next",
-      "description": "The purchasing journey is delivered stage by stage, each one complete before the next begins.",
+      "title": "Purchasing journey",
+      "description": "Each stage is available in this Core build. Open a request to act on sourcing, orders, logistics and receipt.",
       "stages": {
         "request": "Create and submit a purchase request",
         "approval": "Approve, reject or return for revision",

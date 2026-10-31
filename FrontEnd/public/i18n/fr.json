@@ -71,14 +71,17 @@
         "requests": "Création, enregistrement et soumission de demandes d’achat multi-lignes avec un numéro unique",
         "isolation": "Chaque utilisateur ne voit que les demandes de sa société et de son rôle",
         "approvals": "Circuits de validation par société, validation en un geste depuis l’e-mail et suivi de la demande",
-        "purchasing": "File d’achats centrale, affectation d’un acheteur, registre fournisseurs et import organisationnel"
+        "purchasing": "File d’achats centrale, affectation d’un acheteur, registre fournisseurs et import organisationnel",
+        "sourcingToReceipt": "Devis, adjudication, commandes, expéditions, réceptions, factures et clôture sur le dossier de demande",
+        "messaging": "Messagerie acheteur–fournisseur avec notes internes restant internes",
+        "dashboards": "Vues pipeline et direction, pack d’audit et export de fichiers ERP"
       },
       "checkConnection": "Vérifier la connexion",
       "openRequests": "Ouvrir mes demandes"
     },
     "journey": {
-      "title": "Prochaines étapes",
-      "description": "Le parcours d’achat est livré étape par étape, chacune complète avant de passer à la suivante.",
+      "title": "Parcours d’achat",
+      "description": "Chaque étape est disponible dans cette édition Core. Ouvrez une demande pour agir sur les devis, commandes, logistique et réception.",
       "stages": {
         "request": "Créer et soumettre une demande d’achat",
         "approval": "Valider, rejeter ou renvoyer pour révision",

@@ -22,28 +22,23 @@ describe('navigation roadmap', () => {
     expect(findNavItem('import')?.route).toBe('/admin/import');
     expect(findNavItem('dashboards')?.route).toBe('/dashboards');
     expect(findNavItem('dashboards')?.permission).toBe('DASHBOARD_VIEW');
-    expect({
-      sourcing: sprintOf('sourcing'),
-      purchaseOrders: sprintOf('purchaseOrders'),
-      logistics: sprintOf('logistics'),
-      receipts: sprintOf('receipts'),
-    }).toEqual({
-      sourcing: 4,
-      purchaseOrders: 5,
-      logistics: 6,
-      receipts: 7,
-    });
+    // S4–S7 dossier actions are delivered; nav opens the request list (work continues on the detail).
+    expect(sprintOf('sourcing')).toBeUndefined();
+    expect(findNavItem('sourcing')?.route).toBe('/requests');
+    expect(sprintOf('purchaseOrders')).toBeUndefined();
+    expect(findNavItem('purchaseOrders')?.route).toBe('/requests');
+    expect(sprintOf('logistics')).toBeUndefined();
+    expect(findNavItem('logistics')?.route).toBe('/requests');
+    expect(sprintOf('receipts')).toBeUndefined();
+    expect(findNavItem('receipts')?.route).toBe('/requests');
   });
 
-  it('points every journey stage at an available or planned navigation item, in sprint order', () => {
-    // Available modules count as sprint 0 so they come first.
-    const sprints = JOURNEY_STAGES.map((stage) => {
+  it('marks every Core journey stage as available (no planned-sprint placeholders left)', () => {
+    for (const stage of JOURNEY_STAGES) {
       const item = findNavItem(stage.navItem);
-      return item?.route ? 0 : item?.plannedSprint;
-    });
-
-    expect(sprints.every((sprint) => typeof sprint === 'number')).toBe(true);
-    expect([...sprints].sort((a, b) => a! - b!)).toEqual(sprints);
+      expect(item?.route, stage.key).toBeTruthy();
+      expect(item?.plannedSprint, stage.key).toBeUndefined();
+    }
   });
 
   it('uses unique item keys', () => {

@@ -2,9 +2,9 @@ import { Permission } from '../core/auth/auth.models';
 import { IconName } from '../shared/ui/icon';
 
 /**
- * Navigation grouped by the procurement journey. This is the single source of the planned-sprint numbers shown
- * anywhere in the interface (sidebar, overview, planned pages); keep it aligned with docs/product/roadmap.md.
- * Modules that are not built yet open an honest "planned" page - never a mock screen.
+ * Navigation grouped by the procurement journey. Planned-sprint markers remain only for modules not yet built;
+ * keep them aligned with docs/product/roadmap.md. Delivered Core stages must use a real route (never a stale
+ * planned page). Sourcing / PO / logistics / receipt work continues on the request dossier.
  */
 export interface NavItem {
   /** Translation key suffix under `nav.items` and route parameter for planned modules. */
@@ -42,15 +42,16 @@ export const NAVIGATION: NavGroup[] = [
       { key: 'messages', icon: 'inbox', route: '/messages', permission: 'MESSAGING_BUYER' },
       { key: 'assistant', icon: 'activity', route: '/assistant', permission: 'ASSISTANT_USE' },
       { key: 'supplierMessages', icon: 'inbox', route: '/supplier/messages', permission: 'MESSAGING_SUPPLIER' },
-      { key: 'sourcing', icon: 'scale', plannedSprint: 4 },
+      // Sourcing / PO / logistics / receipt actions live on the request dossier (S4–S7).
+      { key: 'sourcing', icon: 'scale', route: '/requests', permission: 'PURCHASING_ACT' },
     ],
   },
   {
     key: 'orderToReceipt',
     items: [
-      { key: 'purchaseOrders', icon: 'file-text', plannedSprint: 5 },
-      { key: 'logistics', icon: 'truck', plannedSprint: 6 },
-      { key: 'receipts', icon: 'package-check', plannedSprint: 7 },
+      { key: 'purchaseOrders', icon: 'file-text', route: '/requests', permission: 'PURCHASING_ACT' },
+      { key: 'logistics', icon: 'truck', route: '/requests', permission: 'PURCHASING_ACT' },
+      { key: 'receipts', icon: 'package-check', route: '/requests', permission: 'RECEIPT_ACT' },
     ],
   },
   {

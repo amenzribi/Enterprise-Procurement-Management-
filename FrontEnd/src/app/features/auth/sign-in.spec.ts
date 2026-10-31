@@ -8,7 +8,7 @@ import { SignInPage } from './sign-in';
 
 describe('SignInPage', () => {
   let fixture: ComponentFixture<SignInPage>;
-  const auth = { signIn: vi.fn() };
+  const auth = { signIn: vi.fn(), me: () => null };
   const element = () => fixture.nativeElement as HTMLElement;
 
   async function create(query: Record<string, string> = {}): Promise<void> {

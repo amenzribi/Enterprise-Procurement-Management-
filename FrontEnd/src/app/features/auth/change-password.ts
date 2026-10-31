@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { toApiProblem } from '../../core/api/api-problem';
 import { AuthService } from '../../core/auth/auth.service';
+import { workspaceHome } from '../../core/auth/workspace-home';
 import { NotificationService } from '../../core/notifications/notification.service';
 import { Button } from '../../shared/ui/button';
 import { PageHeader } from '../../shared/ui/page-header';
@@ -83,8 +84,8 @@ export class ChangePasswordPage {
           this.busy.set(false);
           this.notifications.success('changePassword.done');
           this.auth.refresh().subscribe({
-            next: () => void this.router.navigateByUrl('/requests'),
-            error: () => void this.router.navigateByUrl('/requests'),
+            next: () => void this.router.navigateByUrl(workspaceHome(this.auth.me())),
+            error: () => void this.router.navigateByUrl(workspaceHome(this.auth.me())),
           });
         },
         error: (err) => {

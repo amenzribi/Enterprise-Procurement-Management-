@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { toApiProblem } from '../../core/api/api-problem';
 import { AuthService } from '../../core/auth/auth.service';
 import { safeReturnUrl } from '../../core/auth/safe-return-url';
+import { workspaceHome } from '../../core/auth/workspace-home';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { LanguageSelect } from '../../shared/ui/language-select';
@@ -29,7 +30,6 @@ export class SignInPage {
 
   protected readonly isDevMode = isDevMode();
   protected readonly reason = this.route.snapshot.queryParamMap.get('reason');
-  private readonly returnUrl = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     email: ['', [Validators.required, Validators.email]],
@@ -57,7 +57,11 @@ export class SignInPage {
     this.auth.signIn(email.trim(), password).subscribe({
       next: () => {
         this.submitting.set(false);
-        void this.router.navigateByUrl(this.returnUrl);
+        const destination = safeReturnUrl(
+          this.route.snapshot.queryParamMap.get('returnUrl'),
+          workspaceHome(this.auth.me()),
+        );
+        void this.router.navigateByUrl(destination);
       },
       error: (failure: unknown) => {
         this.submitting.set(false);

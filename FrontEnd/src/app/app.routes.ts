@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, permissionGuard } from './core/auth/auth.guards';
+import { authGuard, guestGuard, homeRedirectGuard, permissionGuard } from './core/auth/auth.guards';
 import { unsavedChangesGuard } from './features/requests/unsaved-changes.guard';
 import { findPlannedItem } from './layout/navigation';
 import { Shell } from './layout/shell/shell';
@@ -36,7 +36,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     canActivateChild: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'requests' },
+      {
+        path: '',
+        pathMatch: 'full',
+        canActivate: [homeRedirectGuard],
+        // Guard always redirects; component is never rendered.
+        loadComponent: () => import('./features/overview/overview').then((m) => m.OverviewPage),
+      },
       {
         path: 'account/password',
         title: 'changePassword.title',

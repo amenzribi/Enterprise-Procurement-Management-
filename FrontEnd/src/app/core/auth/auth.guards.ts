@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { Permission, hasPermission } from './auth.models';
 import { AuthService } from './auth.service';
+import { workspaceHome } from './workspace-home';
 
 /** Pages of the workspace require a signed-in user; others are sent to sign-in and brought back afterwards. */
 export const authGuard: CanActivateFn = (_route, state) => {
@@ -21,9 +22,12 @@ export const guestGuard: CanActivateFn = () => {
   if (!auth.isAuthenticated()) {
     return true;
   }
-  const home = hasPermission(auth.me(), 'MESSAGING_SUPPLIER') ? '/supplier/messages' : '/requests';
-  return inject(Router).createUrlTree([home]);
+  return inject(Router).createUrlTree([workspaceHome(auth.me())]);
 };
+
+/** Empty path → role-appropriate home (suppliers must not land on `/requests`). */
+export const homeRedirectGuard: CanActivateFn = () =>
+  inject(Router).createUrlTree([workspaceHome(inject(AuthService).me())]);
 
 /**
  * Hides pages of a permission the user does not hold behind the not-found page. The server enforces access on every

@@ -4,11 +4,12 @@ import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRo
 import { authGuard, guestGuard } from './auth.guards';
 import { AuthService } from './auth.service';
 import { safeReturnUrl } from './safe-return-url';
+import { workspaceHome } from './workspace-home';
 
 describe('auth guards', () => {
   const authenticated = signal(false);
 
-  const me = signal<{ mustChangePassword?: boolean } | null>(null);
+  const me = signal<{ mustChangePassword?: boolean; permissions?: string[] } | null>(null);
 
   beforeEach(() => {
     me.set(null);
@@ -39,12 +40,30 @@ describe('auth guards', () => {
 
   it('sends a signed-in user away from the sign-in page', () => {
     authenticated.set(true);
+    me.set({ permissions: [] });
     expect(TestBed.inject(Router).serializeUrl(run(guestGuard) as UrlTree)).toBe('/requests');
+  });
+
+  it('sends a supplier contact to the portal home from the sign-in page', () => {
+    authenticated.set(true);
+    me.set({ permissions: ['MESSAGING_SUPPLIER'] });
+    expect(TestBed.inject(Router).serializeUrl(run(guestGuard) as UrlTree)).toBe('/supplier/messages');
   });
 
   it('shows the sign-in page to anonymous users', () => {
     authenticated.set(false);
     expect(run(guestGuard)).toBe(true);
+  });
+});
+
+describe('workspaceHome', () => {
+  it('routes supplier contacts to the portal', () => {
+    expect(workspaceHome({ permissions: ['MESSAGING_SUPPLIER'] } as never)).toBe('/supplier/messages');
+  });
+
+  it('routes internal users to requests', () => {
+    expect(workspaceHome({ permissions: ['REQUEST_CREATE'] } as never)).toBe('/requests');
+    expect(workspaceHome(null)).toBe('/requests');
   });
 });
 

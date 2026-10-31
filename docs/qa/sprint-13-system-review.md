@@ -101,6 +101,7 @@ Additional agent findings (if any High) are appended in the verification report 
 - Navigation + overview honesty for S4–S7 journey.
 - Overview “available” checklist extended (sourcing→receipt, messaging, dashboards).
 - Assistant already shows demo/disabled mode label (kept).
+- Follow-up: supplier contacts land on `/supplier/messages` (shared `workspaceHome`) instead of `/requests`.
 
 ## Browser checks performed
 

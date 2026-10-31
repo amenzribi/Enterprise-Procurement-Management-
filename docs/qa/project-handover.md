@@ -8,7 +8,7 @@ Updated 2026-10-31 after Sprint 9 local delivery. Developer self-labelled eviden
 |---|---|
 | `281c6d9` / `d12eb2b` / `0b39925` | Sprint 8 delivery + evidence / handover |
 | `fbb1afd` | Sprint 9: trusted-proxy rate limits + supplier-link revoke/redaction/ITs |
-| `58487d30414aeba10d7770d1d29e9ccdc0fb6d11` | Sprint 9 plan, QA reports, proposed S10–S12, handover |
+| `58487d3` / `2ce95d8` | Sprint 9 plan, QA reports, proposed S10–S12, handover hash |
 | Ahead of `origin/main` | Do not push until asked |
 
 Unrelated dirty tree under purchasing/supplier/org/import (and V7) is **user work** — leave uncommitted unless Mohamed asks.

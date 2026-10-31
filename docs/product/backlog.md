@@ -61,6 +61,8 @@ Deferred to S9 (deployment): CR-18 i18n file cache-busting.
 
 See [roadmap.md](roadmap.md). Award / PO / supplier confirmation are Sprint 5 (manual UAT pending). Shipment
 tracking (local/international milestones, document references, delay flags) is Sprint 6 without AI (manual UAT
-pending). Receiving / manual invoice / user-confirmed closure are Sprint 7 (manual UAT pending; AI three-way
-and dashboards/ERP remain deferred to later). Grouping of similar needs, internal transfer and "buy again"
-stay confirm-with-pilot (G12). S2CR-08 stays Sprint 9. Native-speaker Arabic review outstanding. Pilot gate §15 unmet.
+pending). Receiving / manual invoice / user-confirmed closure are Sprint 7 (manual UAT pending). Visibility
+dashboards, audit pack PDF and ERP **file** CSV export are Sprint 8 (manual UAT pending; AI request draft
+blocked — no provider; live ERP connectors remain deferred). Grouping of similar needs, internal transfer and
+"buy again" stay confirm-with-pilot (G12). S2CR-08 stays Sprint 9. Native-speaker Arabic review outstanding.
+Pilot gate §15 unmet.

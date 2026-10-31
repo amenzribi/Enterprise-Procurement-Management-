@@ -52,7 +52,7 @@ export const NAVIGATION: NavGroup[] = [
   },
   {
     key: 'management',
-    items: [{ key: 'dashboards', icon: 'dashboard', plannedSprint: 8 }],
+    items: [{ key: 'dashboards', icon: 'dashboard', route: '/dashboards', permission: 'DASHBOARD_VIEW' }],
   },
   {
     key: 'administration',

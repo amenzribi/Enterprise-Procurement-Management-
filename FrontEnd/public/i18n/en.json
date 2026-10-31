@@ -1280,5 +1280,41 @@
       "PENDING": "Payment pending",
       "PAID": "Paid"
     }
+  },
+  "dashboards": {
+    "title": "Dashboards",
+    "description": "Pipeline counts, ownership and late requests for companies you can see. Amounts stay in their own currencies.",
+    "loading": "Loading dashboards…",
+    "loadError": "Dashboards could not be loaded",
+    "exportRequests": "Export requests (CSV)",
+    "exportPos": "Export purchase orders (CSV)",
+    "exportedRequests": "Request export downloaded",
+    "exportedPos": "Purchase-order export downloaded",
+    "auditPack": "Audit pack",
+    "auditPackDownloaded": "Audit pack downloaded",
+    "pipeline": {
+      "title": "Pipeline",
+      "emptyTitle": "No requests in the pipeline",
+      "emptyMessage": "Submitted requests you can see will appear here by status.",
+      "amountsNote": "Open amounts by currency (not summed across currencies):"
+    },
+    "group": {
+      "title": "By requesting company",
+      "empty": "No company breakdown for the visible set."
+    },
+    "management": {
+      "title": "Where / who / how much / late",
+      "emptyTitle": "No visible requests",
+      "emptyMessage": "When requests are submitted in your scope, they will list here.",
+      "number": "Number",
+      "titleCol": "Title",
+      "status": "Status",
+      "owner": "Owner",
+      "required": "Required",
+      "amount": "Amount",
+      "late": "Late",
+      "lateYes": "Late",
+      "lateNo": "On time"
+    }
   }
 }

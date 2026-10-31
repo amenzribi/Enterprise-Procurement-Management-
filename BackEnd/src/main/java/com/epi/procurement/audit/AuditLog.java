@@ -105,6 +105,20 @@ public class AuditLog {
 	}
 
 	/**
+	 * Events for one business entity (newest last), for audit packs (Sprint 8).
+	 */
+	@Transactional(readOnly = true)
+	public List<AuditEventView> listForEntity(String entityType, String entityId) {
+		return jdbc.query("""
+				SELECT id, occurred_at, actor_label, company_id, action, from_status, to_status, comment
+				FROM audit_event WHERE entity_type = ? AND entity_id = ?
+				ORDER BY occurred_at, id""", (rs, i) -> new AuditEventView(rs.getLong("id"),
+				rs.getObject("occurred_at", LocalDateTime.class).toInstant(ZoneOffset.UTC), rs.getString("actor_label"),
+				rs.getObject("company_id", Long.class), rs.getString("action"), rs.getString("from_status"),
+				rs.getString("to_status"), rs.getString("comment")), entityType, entityId);
+	}
+
+	/**
 	 * Recomputes every hash of one chain in sequence order and reports the first event whose content, position
 	 * or link is invalid. The head is read first and only events up to it are checked, so appends committed during
 	 * verification cannot cause a false alarm (CR-04). A missing head, or a head that does not point at the last

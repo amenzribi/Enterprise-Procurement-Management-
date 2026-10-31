@@ -71,6 +71,19 @@ public class RequestWorkflow {
 	}
 
 	/**
+	 * Visible non-draft requests for dashboards and exports (Sprint 8). Visibility already applied.
+	 */
+	@Transactional(readOnly = true)
+	public Page<RequestSnapshot> searchVisible(CurrentUser user, int page, int size) {
+		int safeSize = size < 1 || size > 200 ? 50 : size;
+		int safePage = Math.max(0, page);
+		Specification<PurchaseRequest> notDraft = (root, q, cb) -> cb.notEqual(root.get("status"), RequestStatus.DRAFT);
+		return requests
+			.search(user, notDraft, PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "updatedAt", "id")))
+			.map(RequestWorkflow::snapshot);
+	}
+
+	/**
 	 * Buying queue (S3-AC-01): visibility already applied; extra filters are ANDed.
 	 */
 	@Transactional(readOnly = true)

@@ -20,18 +20,18 @@ describe('navigation roadmap', () => {
     expect(findNavItem('organization')?.route).toBe('/admin/organization');
     expect(findNavItem('suppliers')?.route).toBe('/suppliers');
     expect(findNavItem('import')?.route).toBe('/admin/import');
+    expect(findNavItem('dashboards')?.route).toBe('/dashboards');
+    expect(findNavItem('dashboards')?.permission).toBe('DASHBOARD_VIEW');
     expect({
       sourcing: sprintOf('sourcing'),
       purchaseOrders: sprintOf('purchaseOrders'),
       logistics: sprintOf('logistics'),
       receipts: sprintOf('receipts'),
-      dashboards: sprintOf('dashboards'),
     }).toEqual({
       sourcing: 4,
       purchaseOrders: 5,
       logistics: 6,
       receipts: 7,
-      dashboards: 8,
     });
   });
 

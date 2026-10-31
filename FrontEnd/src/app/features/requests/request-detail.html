@@ -76,22 +76,24 @@
           </div>
         </dl>
 
-        @if (actions().length > 0) {
-          <div class="dossier-actions">
-            @if (actions().includes('SUBMIT')) {
-              <button appButton type="button" [disabled]="submitting()" (click)="submit()">
-                <app-icon name="send" [size]="16" />
-                {{ (submitting() ? 'requests.form.submitting' : (userStatus() === 'RETURNED' ? 'requests.detail.resubmit' : 'requests.form.submit')) | translate }}
-              </button>
-            }
-            @if (actions().includes('EDIT')) {
-              <a appButton variant="secondary" [routerLink]="['/requests', r.id, 'edit']">
-                <app-icon name="pencil" [size]="16" />
-                {{ (userStatus() === 'RETURNED' ? 'requests.detail.editReturned' : 'requests.detail.edit') | translate }}
-              </a>
-            }
-          </div>
-        }
+        <div class="dossier-actions">
+          @if (actions().includes('SUBMIT')) {
+            <button appButton type="button" [disabled]="submitting()" (click)="submit()">
+              <app-icon name="send" [size]="16" />
+              {{ (submitting() ? 'requests.form.submitting' : (userStatus() === 'RETURNED' ? 'requests.detail.resubmit' : 'requests.form.submit')) | translate }}
+            </button>
+          }
+          @if (actions().includes('EDIT')) {
+            <a appButton variant="secondary" [routerLink]="['/requests', r.id, 'edit']">
+              <app-icon name="pencil" [size]="16" />
+              {{ (userStatus() === 'RETURNED' ? 'requests.detail.editReturned' : 'requests.detail.edit') | translate }}
+            </a>
+          }
+          <button appButton variant="secondary" type="button" [disabled]="auditPackBusy()" (click)="downloadAuditPack()">
+            <app-icon name="download" [size]="16" />
+            {{ 'dashboards.auditPack' | translate }}
+          </button>
+        </div>
       </header>
 
       <!-- The approver's decision and the requester's answer come first, above the details (mobile-first, S2-AC-08). -->

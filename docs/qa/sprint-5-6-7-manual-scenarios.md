@@ -1,5 +1,7 @@
 # Sprint 5, 6 & 7 — Manual test scenarios
 
+> Prefer the combined guide: [sprint-5-6-7-8-manual-scenarios.md](sprint-5-6-7-8-manual-scenarios.md) (includes Sprint 8).
+
 | | |
 |---|---|
 | Application | http://localhost:4300 (proxy → http://localhost:8081) |

@@ -24,6 +24,7 @@ import { ApprovalTracker } from '../approvals/approval-tracker';
 import { ApprovalView } from '../approvals/approval.models';
 import { ApprovalsApi } from '../approvals/approvals.api';
 import { openSubmitPreview } from '../approvals/submit-preview-dialog';
+import { DashboardsApi } from '../dashboards/dashboards.api';
 import { Attachments } from '../documents/attachments';
 import { formatMoney } from './money';
 import { PurchaseRequest, RequestAction, optionLabel } from './request.models';
@@ -48,6 +49,7 @@ export { elapsedText } from '../../shared/relative-time';
 export class RequestDetailPage {
   private readonly api = inject(RequestsApi);
   private readonly approvalsApi = inject(ApprovalsApi);
+  private readonly dashboardsApi = inject(DashboardsApi);
   private readonly approvalCount = inject(ApprovalCountService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -60,6 +62,7 @@ export class RequestDetailPage {
   protected readonly loadError = signal<string | null>(null);
   protected readonly request = signal<PurchaseRequest | null>(null);
   protected readonly submitting = signal(false);
+  protected readonly auditPackBusy = signal(false);
   /** Approval rounds, stages and tasks for the tracker; null while loading or for drafts never submitted. */
   protected readonly approval = signal<ApprovalView | null>(null);
   /** Ticks every minute so "owner since" stays current without reloading. */
@@ -211,5 +214,32 @@ export class RequestDetailPage {
 
   protected translateStatus(status: string | null | undefined): string {
     return status ? this.translate.instant(statusKey(status)) : '';
+  }
+
+  protected downloadAuditPack(): void {
+    const request = this.request();
+    if (!request || this.auditPackBusy()) {
+      return;
+    }
+    this.auditPackBusy.set(true);
+    this.dashboardsApi.auditPack(request.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `audit-pack-${request.number ?? request.id}.pdf`;
+        anchor.rel = 'noopener';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        this.auditPackBusy.set(false);
+        this.notifications.success('dashboards.auditPackDownloaded');
+      },
+      error: (error: unknown) => {
+        this.auditPackBusy.set(false);
+        this.notifications.error(`errors.${toApiProblem(error).code}`);
+      },
+    });
   }
 }

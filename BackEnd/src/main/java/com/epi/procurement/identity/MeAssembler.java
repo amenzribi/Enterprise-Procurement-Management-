@@ -66,6 +66,13 @@ class MeAssembler {
 		if (user.hasRole(Role.RECEIVER)) {
 			permissions.add("RECEIPT_ACT");
 		}
+		if (user.hasRole(Role.DEPARTMENT_MANAGER) || user.hasRole(Role.BUYER) || user.hasRole(Role.PURCHASING_MANAGER)
+				|| user.hasRole(Role.GROUP_MANAGEMENT) || user.hasRole(Role.ADMIN)) {
+			permissions.add("DASHBOARD_VIEW");
+		}
+		if (user.hasRole(Role.PURCHASING_MANAGER) || user.hasRole(Role.ADMIN) || user.hasRole(Role.GROUP_MANAGEMENT)) {
+			permissions.add("ERP_EXPORT");
+		}
 		if (user.hasRole(Role.ADMIN)) {
 			permissions.add("SYSTEM_ADMIN");
 			permissions.add("APPROVAL_ADMIN");

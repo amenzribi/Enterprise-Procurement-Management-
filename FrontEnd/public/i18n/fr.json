@@ -1280,5 +1280,41 @@
       "PENDING": "Paiement en attente",
       "PAID": "Payé"
     }
+  },
+  "dashboards": {
+    "title": "Tableaux de bord",
+    "description": "Volumes du pipeline, responsables et retards pour les sociétés que vous voyez. Les montants restent dans leur devise.",
+    "loading": "Chargement des tableaux de bord…",
+    "loadError": "Les tableaux de bord n’ont pas pu être chargés",
+    "exportRequests": "Exporter les demandes (CSV)",
+    "exportPos": "Exporter les commandes (CSV)",
+    "exportedRequests": "Export des demandes téléchargé",
+    "exportedPos": "Export des commandes téléchargé",
+    "auditPack": "Dossier d’audit",
+    "auditPackDownloaded": "Dossier d’audit téléchargé",
+    "pipeline": {
+      "title": "Pipeline",
+      "emptyTitle": "Aucune demande dans le pipeline",
+      "emptyMessage": "Les demandes soumises visibles apparaîtront ici par statut.",
+      "amountsNote": "Montants ouverts par devise (jamais additionnés entre devises) :"
+    },
+    "group": {
+      "title": "Par société demandeuse",
+      "empty": "Aucun détail par société pour l’ensemble visible."
+    },
+    "management": {
+      "title": "Où / qui / combien / retard",
+      "emptyTitle": "Aucune demande visible",
+      "emptyMessage": "Les demandes soumises dans votre périmètre apparaîtront ici.",
+      "number": "Numéro",
+      "titleCol": "Titre",
+      "status": "Statut",
+      "owner": "Responsable",
+      "required": "Souhaité pour",
+      "amount": "Montant",
+      "late": "Retard",
+      "lateYes": "En retard",
+      "lateNo": "À l’heure"
+    }
   }
 }

@@ -46,13 +46,13 @@ Sprint = target sprint in [roadmap.md](roadmap.md). Status: Planned / In progres
 | FR-RCV-02 | Closure conditions (assumption A7) | §13 | — | MVP | S6 | Planned |
 | FR-RCV-04 | Manual final-invoice capture (number, amount, currency, document) | §13 | — | MVP | S6 | Planned |
 | FR-RCV-03 | Three-way match PO/receipt/invoice | §13 | — | P2 | — | Deferred |
-| FR-DSH-01 | Pipeline indicators and filters | §16.1 | — | MVP | S7 | Planned |
-| FR-DSH-02 | Management "where / who / how much / late / when" view | §16.2 | US-10 | MVP | S7 | Planned |
+| FR-DSH-01 | Pipeline indicators and filters | §16.1 | — | MVP | S8 | Done (S8: pipeline by userStatus + open amounts by currency; company isolation) |
+| FR-DSH-02 | Management "where / who / how much / late / when" view | §16.2 | US-10 | MVP | S8 | Done (S8: paginated management list + CEO company panel + audit pack PDF) |
 | FR-AUD-01 | Complete decision history per request | §7.2, §24 | US-11 | MVP | S0 table, S2 view | Done (S2: request tracker and approval history) |
-| FR-ERP-01 | Export approved requests and POs (CSV/Excel) | §21.1 | US-12 | MVP | S7 | Planned |
+| FR-ERP-01 | Export approved requests and POs (CSV/Excel) | §21.1 | US-12 | MVP | S8 | Done (S8: UTF-8 CSV file export for PM/ADMIN/GROUP_MANAGEMENT; no live connector) |
 | FR-ERP-02 | Import suppliers, articles, statuses (CSV/Excel) | §21.1 | US-12 | MVP | S3 wizard, S7/S8 ERP files | Done (S3: authorised CSV wizard for SUPPLIER and ORGANISATION). Live ERP connectors remain deferred. |
 | FR-ERP-03 | API connectors (SAP, Oracle, Dynamics, Sage, Odoo) | §21.2–§21.4 | — | P2 | — | Deferred |
-| FR-AI-01 | Free text → structured draft request, human-reviewed | §6.2, §17 | US-02 | MVP | S8 | Planned |
+| FR-AI-01 | Free text → structured draft request, human-reviewed | §6.2, §17 | US-02 | MVP | S8 (roadmap) | Blocked — no approved AI hosting/provider (same class as deferred S4/S6/S7 AI). Not delivered in S8. |
 | FR-EXT-01 | External customer requests, sales quotes, customer orders | §3.4, §17 M17 | US-13, US-14 | P2 | — | Deferred |
 | FR-FIN-01 | Internal recharging of centralised purchases | §3.3, §23 | US-16 | P2 | — | Deferred |
 | FR-BUD-01 | Budget lines, pre-commitment, commitment, consumption | §15 | — | P2 | — | Deferred |

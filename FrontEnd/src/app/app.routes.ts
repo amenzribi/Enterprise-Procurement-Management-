@@ -75,6 +75,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/purchasing/purchasing-inbox').then((m) => m.PurchasingInboxPage),
       },
       {
+        path: 'dashboards',
+        title: 'dashboards.title',
+        canActivate: [permissionGuard('DASHBOARD_VIEW')],
+        loadComponent: () => import('./features/dashboards/dashboards-page').then((m) => m.DashboardsPage),
+      },
+      {
         path: 'suppliers',
         title: 'suppliers.title',
         canActivate: [permissionGuard('SUPPLIER_READ')],

@@ -12,6 +12,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/sign-in').then((m) => m.SignInPage),
   },
   {
+    path: 'forgot-password',
+    title: 'auth.forgot.title',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/forgot-password').then((m) => m.ForgotPasswordPage),
+  },
+  {
     // One-tap approval from an e-mail (S2-AC-07): outside the signed-in workspace; the token is in the URL fragment.
     path: 'a',
     title: 'oneTap.title',
@@ -96,6 +102,12 @@ export const routes: Routes = [
         title: 'purchasing.inbox.title',
         canActivate: [permissionGuard('PURCHASING_ACT')],
         loadComponent: () => import('./features/purchasing/purchasing-inbox').then((m) => m.PurchasingInboxPage),
+      },
+      {
+        path: 'logistics',
+        title: 'logistics.inbox.title',
+        canActivate: [permissionGuard('PURCHASING_ACT')],
+        loadComponent: () => import('./features/logistics/logistics-inbox').then((m) => m.LogisticsInboxComponent),
       },
       {
         path: 'messages',

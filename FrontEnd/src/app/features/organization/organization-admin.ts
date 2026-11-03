@@ -105,6 +105,9 @@ const API = '/api/v1/admin/organization';
 
         <section class="panel" aria-labelledby="org-new-company">
           <h2 class="panel-title" id="org-new-company">{{ 'org.newCompany' | translate }}</h2>
+          <p class="muted">{{ 'org.companyVsSite' | translate }}</p>
+          <p class="muted">{{ 'org.workingCalendarNote' | translate }}</p>
+          <p class="muted">{{ 'org.deactivateNote' | translate }}</p>
           <form class="form" [formGroup]="companyForm" (ngSubmit)="createCompany()" novalidate>
             <div class="grid">
               <div class="field"><label for="co-code">{{ 'org.code' | translate }} *</label><input id="co-code" formControlName="code" maxlength="40" /></div>

@@ -177,6 +177,30 @@ public class UserAdminService {
 		publishPasswordSetup(userId, "RESET", actor, account.displayName(), account.companyId());
 	}
 
+	/**
+	 * Sets a temporary password and forces change at next sign-in. The clear-text value is never logged or returned.
+	 */
+	@Transactional
+	public void setTemporaryPassword(CurrentUser actor, long userId, String temporaryPassword) {
+		requireUserAdmin(actor);
+		UserAdminStore.AccountRow account = store.findAccount(userId)
+			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
+		assertCanManage(actor, account);
+		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(userId)) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"Company administrators cannot reset a global administrator password.");
+		}
+		if (!StringUtils.hasText(temporaryPassword) || temporaryPassword.length() < 12) {
+			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "weak-password",
+					"Temporary passwords must be at least 12 characters.");
+		}
+		credentials.savePasswordHash(userId, encoder.encode(temporaryPassword), true);
+		store.bumpCredentialsVersion(userId);
+		auditLog.record(new AuditRecord(actor.id(), actor.email(), account.companyId(), "USER_ACCOUNT",
+				Long.toString(userId), "TEMPORARY_PASSWORD_SET", null, null, null,
+				"{\"mustChangePassword\":true}"));
+	}
+
 	private void publishPasswordSetup(long userId, String purpose, CurrentUser actor, String displayName,
 			long companyId) {
 		events.publishEvent(new PasswordSetupRequested(userId, purpose, actor.id(), actor.email(), companyId,

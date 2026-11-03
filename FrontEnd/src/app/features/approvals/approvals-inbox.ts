@@ -33,8 +33,8 @@ export function inboxQueryFromParams(params: ParamMap): InboxQuery {
   return {
     view: params.get('view') === 'decided' ? 'decided' : 'pending',
     q: params.get('q')?.trim().slice(0, MAX_SEARCH_LENGTH) || null,
-    sort: (INBOX_SORTS as readonly string[]).includes(sort ?? '') ? (sort as InboxSort) : 'dueAt',
-    direction: params.get('dir') === 'desc' ? 'desc' : 'asc',
+    sort: (INBOX_SORTS as readonly string[]).includes(sort ?? '') ? (sort as InboxSort) : 'waitingSince',
+    direction: params.get('dir') === 'asc' ? 'asc' : 'desc',
     page: Number.isInteger(page) && page > 0 ? page : 0,
     size: PAGE_SIZE,
   };
@@ -268,7 +268,11 @@ export class ApprovalsInboxPage {
   }
 
   protected onSort(sort: string): void {
-    this.navigate({ sort, dir: sort === 'amount' ? 'desc' : 'asc', page: null });
+    this.navigate({
+      sort,
+      dir: sort === 'requiredDate' || sort === 'dueAt' ? 'asc' : 'desc',
+      page: null,
+    });
   }
 
   protected isOverdue(item: InboxItem): boolean {

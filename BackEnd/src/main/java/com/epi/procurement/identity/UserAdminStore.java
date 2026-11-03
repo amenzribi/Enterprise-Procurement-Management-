@@ -31,14 +31,26 @@ class UserAdminStore {
 		return jdbc.query("""
 				SELECT u.id, u.email, u.display_name, u.company_id, c.group_id, u.site_id, u.department_id,
 				       u.preferred_language, u.is_active, u.is_demo, u.credentials_version, u.version
-				FROM user_account u JOIN company c ON c.id = u.company_id WHERE u.id = ?""",
-				(rs, i) -> new AccountRow(rs.getLong("id"), rs.getString("email"), rs.getString("display_name"),
-						rs.getLong("company_id"), rs.getLong("group_id"), rs.getObject("site_id", Long.class),
-						rs.getObject("department_id", Long.class), rs.getString("preferred_language"),
-						rs.getBoolean("is_active"), rs.getBoolean("is_demo"), rs.getInt("credentials_version"),
-						rs.getInt("version")),
+				FROM user_account u JOIN company c ON c.id = u.company_id WHERE u.id = ?""", ACCOUNT,
 				userId).stream().findFirst();
 	}
+
+	Optional<AccountRow> findAccountByEmail(String email) {
+		if (email == null || email.isBlank()) {
+			return Optional.empty();
+		}
+		return jdbc.query("""
+				SELECT u.id, u.email, u.display_name, u.company_id, c.group_id, u.site_id, u.department_id,
+				       u.preferred_language, u.is_active, u.is_demo, u.credentials_version, u.version
+				FROM user_account u JOIN company c ON c.id = u.company_id WHERE LOWER(u.email) = LOWER(?)""", ACCOUNT,
+				email.strip()).stream().findFirst();
+	}
+
+	private static final org.springframework.jdbc.core.RowMapper<AccountRow> ACCOUNT = (rs, i) -> new AccountRow(
+			rs.getLong("id"), rs.getString("email"), rs.getString("display_name"), rs.getLong("company_id"),
+			rs.getLong("group_id"), rs.getObject("site_id", Long.class), rs.getObject("department_id", Long.class),
+			rs.getString("preferred_language"), rs.getBoolean("is_active"), rs.getBoolean("is_demo"),
+			rs.getInt("credentials_version"), rs.getInt("version"));
 
 	AccountRow requireActiveUser(long userId) {
 		return findAccount(userId).filter(AccountRow::active)

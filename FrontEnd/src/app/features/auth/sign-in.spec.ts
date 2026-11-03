@@ -74,7 +74,7 @@ describe('SignInPage', () => {
     await create({ returnUrl: 'https://evil.example' });
     auth.signIn.mockReturnValue(of({}));
     await fill('requester.tn@demo.local', 'secret');
-    expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/requests');
+    expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/overview');
   });
 
   it('explains that the session expired', async () => {

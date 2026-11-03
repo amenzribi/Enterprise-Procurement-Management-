@@ -35,9 +35,25 @@
       <!-- The dossier header: number, status, stage, owner and since when — the answer to "where is my purchase?" -->
       <header class="dossier">
         <div class="dossier-main">
-          <p class="dossier-number tabular" [class.is-draft]="!r.number">
-            <bdi>{{ r.number ?? ('requests.list.draftNumber' | translate) }}</bdi>
-          </p>
+          <div class="dossier-ref-row">
+            <p class="dossier-number tabular" [class.is-draft]="!r.number">
+              <span class="ref-label">{{ 'requests.detail.requestReference' | translate }}</span>
+              <bdi>{{ r.number ?? ('requests.list.draftNumber' | translate) }}</bdi>
+            </p>
+            @if (r.number) {
+              <button
+                appButton
+                type="button"
+                variant="secondary"
+                size="small"
+                (click)="copyReference(r.number)"
+                [attr.aria-label]="'requests.detail.copyReference' | translate"
+              >
+                <app-icon name="copy" [size]="16" />
+                {{ (copiedRef() ? 'requests.submit.copied' : 'requests.submit.copy') | translate }}
+              </button>
+            }
+          </div>
           <h1 class="title" tabindex="-1">{{ r.title }}</h1>
           <div class="dossier-status">
             <app-status-badge [tone]="tone()">{{ statusLabel() | translate }}</app-status-badge>
@@ -95,6 +111,23 @@
           </button>
         </div>
       </header>
+
+      <section class="panel next-action" aria-labelledby="next-action-heading">
+        <h2 class="panel-title" id="next-action-heading">{{ 'requests.detail.nextAction' | translate }}</h2>
+        @if (nextActionSummary(); as summary) {
+          <p>{{ summary }}</p>
+          @if (approval()?.nextActors?.length) {
+            <p class="muted">
+              {{ 'requests.detail.responsible' | translate }}:
+              @for (actor of approval()!.nextActors!; track actor.id; let last = $last) {
+                {{ actor.displayName }}@if (!last) {, }
+              }
+            </p>
+          }
+        } @else {
+          <p class="muted">{{ 'requests.detail.readOnlyProgress' | translate }}</p>
+        }
+      </section>
 
       <!-- The approver's decision and the requester's answer come first, above the details (mobile-first, S2-AC-08). -->
       <app-approval-actions class="decide" [requestId]="r.id" [approval]="approval()" (changed)="onApprovalChanged($event)" />

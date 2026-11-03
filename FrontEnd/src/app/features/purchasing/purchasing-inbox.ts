@@ -58,8 +58,8 @@ export function queueQueryFromParams(params: ParamMap): QueueQuery {
     amountMin: params.get('amountMin') || null,
     amountMax: params.get('amountMax') || null,
     complete: complete === 'true' ? true : complete === 'false' ? false : null,
-    sort: (QUEUE_SORTS as readonly string[]).includes(sort ?? '') ? (sort as QueueSort) : 'requiredDate',
-    direction: params.get('dir') === 'desc' ? 'desc' : 'asc',
+    sort: (QUEUE_SORTS as readonly string[]).includes(sort ?? '') ? (sort as QueueSort) : 'submittedAt',
+    direction: params.get('dir') === 'asc' ? 'asc' : 'desc',
     page: Number.isInteger(page) && page > 0 ? page : 0,
     size: PAGE_SIZE,
   };
@@ -357,7 +357,7 @@ export class PurchasingInboxPage {
   }
 
   protected onSort(sort: string): void {
-    this.navigate({ sort, dir: sort === 'amount' ? 'desc' : 'asc', page: null });
+    this.navigate({ sort, dir: sort === 'requiredDate' ? 'asc' : 'desc', page: null });
   }
 
   protected tone(item: QueueItem) {

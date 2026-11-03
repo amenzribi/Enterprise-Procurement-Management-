@@ -28,7 +28,7 @@ describe('navigation roadmap', () => {
     expect(sprintOf('purchaseOrders')).toBeUndefined();
     expect(findNavItem('purchaseOrders')?.route).toBe('/requests');
     expect(sprintOf('logistics')).toBeUndefined();
-    expect(findNavItem('logistics')?.route).toBe('/requests');
+    expect(findNavItem('logistics')?.route).toBe('/logistics');
     expect(sprintOf('receipts')).toBeUndefined();
     expect(findNavItem('receipts')?.route).toBe('/requests');
   });

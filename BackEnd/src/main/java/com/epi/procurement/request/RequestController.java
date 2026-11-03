@@ -68,7 +68,7 @@ class RequestController {
 	 * @param status comma-separated status codes
 	 * @param q text matched against number and title
 	 * @param sort {@code field,asc|desc}; fields: number, title, status, totalAmount, requiredDate, updatedAt,
-	 * createdAt, submittedAt (default updatedAt,desc)
+	 * createdAt, submittedAt (default createdAt,desc then id,desc)
 	 */
 	@GetMapping
 	RequestViews.Page<RequestViews.Summary> search(@RequestParam(required = false) String scope,
@@ -143,7 +143,7 @@ class RequestController {
 
 	private static Sort parseSort(String sort) {
 		if (!StringUtils.hasText(sort)) {
-			return Sort.by(Sort.Direction.DESC, "updatedAt");
+			return Sort.by(Sort.Direction.DESC, "createdAt");
 		}
 		String[] parts = sort.split(",");
 		String property = SORTABLE.get(parts[0].trim());

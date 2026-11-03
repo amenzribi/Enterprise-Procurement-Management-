@@ -36,3 +36,11 @@ record MilestoneView(long id, String code, int sortOrder, LocalDate plannedDate,
 
 record DocumentView(long id, String kind, String referenceNumber, String note, String fileName, Instant uploadedAt) {
 }
+
+record LogisticsInboxItem(long requestId, String requestNumber, String requestTitle, String requestStatus, long poId,
+		String poNumber, String poStatus, Long shipmentId, String shipmentNumber, String shipmentStatus,
+		String shipmentKind, Instant poCreatedAt, boolean readyForReceipt) {
+}
+
+record LogisticsInboxPage(List<LogisticsInboxItem> items, int page, int size, long totalItems, int totalPages) {
+}

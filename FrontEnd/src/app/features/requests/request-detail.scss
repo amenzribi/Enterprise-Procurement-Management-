@@ -46,11 +46,33 @@
   min-inline-size: 0;
 }
 
+.dossier-ref-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .dossier-number {
   color: var(--color-accent-hover);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.01em;
+  margin: 0;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.dossier-number .ref-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+}
+
+.next-action .muted {
+  color: var(--color-text-muted);
 }
 
 .dossier-number.is-draft {

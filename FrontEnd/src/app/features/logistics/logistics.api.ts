@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { idempotencyHeaders } from '../../core/api/idempotency';
@@ -6,9 +6,41 @@ import { ShipmentView } from './logistics.models';
 
 const API = '/api/v1/logistics';
 
+export interface LogisticsInboxItem {
+  requestId: number;
+  requestNumber: string | null;
+  requestTitle: string;
+  requestStatus: string;
+  poId: number;
+  poNumber: string;
+  poStatus: string;
+  shipmentId?: number | null;
+  shipmentNumber?: string | null;
+  shipmentStatus?: string | null;
+  shipmentKind?: string | null;
+  poCreatedAt?: string | null;
+  readyForReceipt: boolean;
+}
+
+export interface LogisticsInboxPage {
+  items: LogisticsInboxItem[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LogisticsApi {
   private readonly http = inject(HttpClient);
+
+  inbox(q?: string, page = 0, size = 20): Observable<LogisticsInboxPage> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (q) {
+      params = params.set('q', q);
+    }
+    return this.http.get<LogisticsInboxPage>(`${API}/inbox`, { params });
+  }
 
   list(requestId: number): Observable<ShipmentView[]> {
     return this.http.get<ShipmentView[]>(`${API}/requests/${requestId}/shipments`);

@@ -50,7 +50,7 @@ export const NAVIGATION: NavGroup[] = [
     key: 'orderToReceipt',
     items: [
       { key: 'purchaseOrders', icon: 'file-text', route: '/requests', permission: 'PURCHASING_ACT' },
-      { key: 'logistics', icon: 'truck', route: '/requests', permission: 'PURCHASING_ACT' },
+      { key: 'logistics', icon: 'truck', route: '/logistics', permission: 'PURCHASING_ACT' },
       { key: 'receipts', icon: 'package-check', route: '/requests', permission: 'RECEIPT_ACT' },
     ],
   },

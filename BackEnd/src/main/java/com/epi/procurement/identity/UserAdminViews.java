@@ -35,4 +35,12 @@ final class UserAdminViews {
 	record ActiveRequest(boolean active) {
 	}
 
+	/** Temporary password set by an administrator; the user must change it at next sign-in. */
+	record TemporaryPasswordRequest(String temporaryPassword) {
+		@Override
+		public String toString() {
+			return "TemporaryPasswordRequest[temporaryPassword=***]";
+		}
+	}
+
 }

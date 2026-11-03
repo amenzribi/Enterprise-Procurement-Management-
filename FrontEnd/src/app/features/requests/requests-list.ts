@@ -49,7 +49,7 @@ export function queryFromParams(params: ParamMap): RequestQuery {
     scope: params.get('scope') === 'visible' ? 'visible' : 'mine',
     status: status && (USER_STATUSES as readonly string[]).includes(status) ? status : null,
     q: params.get('q')?.trim().slice(0, MAX_SEARCH_LENGTH) || null,
-    sort: (SORTABLE_COLUMNS as readonly string[]).includes(sort ?? '') ? (sort as SortColumn) : 'updatedAt',
+    sort: (SORTABLE_COLUMNS as readonly string[]).includes(sort ?? '') ? (sort as SortColumn) : 'createdAt',
     direction: direction === 'asc' ? 'asc' : 'desc',
     page: Number.isInteger(page) && page > 0 ? page : 0,
     size: PAGE_SIZE,
@@ -85,6 +85,7 @@ export class RequestsListPage {
     { key: 'status', label: 'requests.list.columns.status' },
     { key: 'totalAmount', label: 'requests.list.columns.total', numeric: true },
     { key: 'requiredDate', label: 'requests.list.columns.requiredDate' },
+    { key: 'createdAt', label: 'requests.list.columns.createdAt' },
     { key: 'updatedAt', label: 'requests.list.columns.updatedAt' },
   ];
 

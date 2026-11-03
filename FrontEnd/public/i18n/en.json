@@ -34,7 +34,7 @@
       "management": "Management"
     },
     "items": {
-      "overview": "Overview",
+      "overview": "My work",
       "systemStatus": "System status",
       "requests": "Purchase requests",
       "approvals": "Approvals",
@@ -59,8 +59,8 @@
     "pendingCount": "{{count}} waiting for your decision"
   },
   "overview": {
-    "title": "Procurement Intelligence",
-    "description": "One entry point for every purchase request, from the first need to delivery and closure, with a named owner at each step.",
+    "title": "My work",
+    "description": "Items waiting for you, requests you created, and unread notices — within your company scope.",
     "available": {
       "title": "Available in this version",
       "items": {
@@ -93,7 +93,34 @@
       },
       "availableNow": "Available"
     },
-    "demoNote": "Companies and sites shown in development are demonstration data. Their names end in “(Demo)”."
+    "demoNote": "Companies and sites shown in development are demonstration data. Their names end in \"(Demo)\".",
+    "newRequest": "New request",
+    "loadError": "Your work list could not be loaded.",
+    "supplier": {
+      "title": "Supplier portal",
+      "message": "Open your conversations with buyers.",
+      "open": "Open messages"
+    },
+    "awaiting": {
+      "title": "Awaiting my action",
+      "emptyTitle": "Nothing waiting for you",
+      "emptyMessage": "When a request needs your approval or purchasing action, it appears here.",
+      "approve": "Approve",
+      "purchasing": "Purchasing",
+      "openApprovals": "Open approvals",
+      "openPurchasing": "Open purchasing inbox",
+      "openLogistics": "Open logistics"
+    },
+    "mine": {
+      "title": "Requests I created",
+      "emptyTitle": "No requests yet",
+      "emptyMessage": "Create a purchase request to track it here.",
+      "openAll": "Open my requests"
+    },
+    "notices": {
+      "title": "Unread notifications",
+      "empty": "No unread notifications."
+    }
   },
   "planned": {
     "title": "Planned for sprint {{sprint}}",
@@ -196,7 +223,10 @@
     "dismiss": "Dismiss",
     "cancel": "Cancel",
     "retry": "Try again",
-    "search": "Search"
+    "search": "Search",
+    "reset": "Reset",
+    "previous": "Previous",
+    "next": "Next"
   },
   "errors": {
     "network-error": "The server could not be reached. Check your connection and try again.",
@@ -291,6 +321,15 @@
       "submit": "Sign in",
       "submitting": "Signing in…",
       "demoNote": "Development: demonstration accounts and how to set their password are described in the README."
+    },
+    "forgot": {
+      "link": "Forgot password?",
+      "title": "Reset your password",
+      "lead": "Enter your work e-mail. If an account exists, a one-time setup link is queued (local mail capture in demo).",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "done": "If an account exists for that e-mail, a reset link was queued. Check the local mail folder in demo, or ask an administrator.",
+      "back": "Back to sign-in"
     }
   },
   "requests": {
@@ -334,7 +373,9 @@
         "status": "Status",
         "total": "Estimated total",
         "requiredDate": "Required by",
-        "updatedAt": "Last updated"
+        "updatedAt": "Last updated",
+        "createdAt": "Created",
+        "submittedAt": "Submitted"
       },
       "pagination": "Pages",
       "previous": "Previous",
@@ -470,7 +511,14 @@
       "message": "It will receive its number and go to your company’s approval circuit.",
       "confirm": "Submit request",
       "done": "Request {{number}} submitted",
-      "incomplete": "Complete the required fields before submitting."
+      "incomplete": "Complete the required fields before submitting.",
+      "successTitle": "Request submitted",
+      "successMessage": "Reference {{number}} — {{title}}. Share this reference with colleagues who need to find the dossier.",
+      "referenceLabel": "Request reference",
+      "copy": "Copy reference",
+      "copied": "Copied",
+      "openRequest": "Open request",
+      "backToList": "Back to my requests"
     },
     "discard": {
       "action": "Discard draft",
@@ -527,7 +575,21 @@
       "ownerAfter": "Responsible afterwards: {{name}}",
       "noHistory": "No history yet.",
       "resubmit": "Resubmit request",
-      "editReturned": "Correct the request"
+      "editReturned": "Correct the request",
+      "requestReference": "Request reference",
+      "copyReference": "Copy request reference",
+      "referenceCopied": "Request reference copied.",
+      "copyFailed": "Could not copy the reference.",
+      "nextAction": "Next required action",
+      "responsible": "Current responsible",
+      "readOnlyProgress": "No action is available for you on this dossier right now. Progress is shown below for information.",
+      "next": {
+        "submit": "Submit this draft so it receives a final request reference and enters approval.",
+        "edit": "Edit the request (for example after a return for revision).",
+        "decide": "A decision is waiting for you on this request.",
+        "answer": "An approver asked a question — answer it to continue.",
+        "available": "An action is available for you on this dossier (see the panels below)."
+      }
     },
     "status": {
       "DRAFT": "Draft",
@@ -1096,7 +1158,10 @@
     "empty": {
       "title": "No company",
       "message": "Create a company to start."
-    }
+    },
+    "companyVsSite": "A company is a legal entity with currency, language, time zone and purchasing mode. Sites, departments and cost centres belong to a company — they are not companies.",
+    "workingCalendarNote": "Working calendars are not configured as a separate master in this release; company time zone is used for local dates.",
+    "deactivateNote": "Deactivating a company preserves historical requests and documents; it does not delete them."
   },
   "imports": {
     "title": "Master-data import",
@@ -1210,7 +1275,11 @@
       "late": "Late",
       "docRef": "Document reference",
       "addDoc": "Add transport document",
-      "docAdded": "Document reference saved"
+      "docAdded": "Document reference saved",
+      "needConfirmedPo": "Confirm the purchase order before creating a shipment.",
+      "notEligible": "This request is not in a shipping status, or a shipment already covers the remaining quantity.",
+      "noPermission": "You can view progress but cannot create or advance shipments.",
+      "partialNote": "Partial shipments are supported when remaining PO line quantities allow it. Concurrent updates use optimistic locking."
     },
     "kind": {
       "LOCAL": "Local",
@@ -1244,6 +1313,26 @@
       "DELIVERY_NOTE": "Delivery note",
       "CMR": "CMR",
       "OTHER": "Other"
+    },
+    "inbox": {
+      "title": "Logistics",
+      "description": "Confirmed purchase orders eligible for shipment, newest first. Open the dossier to create or advance shipments. Delivered shipments become eligible for receipt on the same dossier.",
+      "search": "Search by reference",
+      "searchPlaceholder": "Request, PO or shipment reference",
+      "loadError": "Logistics could not be loaded.",
+      "requestRef": "Request reference",
+      "poNumber": "Purchase order number",
+      "shipmentRef": "Shipment reference",
+      "needsShipment": "Needs shipment",
+      "readyForReceipt": "Ready for receipt",
+      "empty": {
+        "title": "No confirmed purchase orders",
+        "message": "When a PO is confirmed, it appears here for shipment planning."
+      },
+      "noMatch": {
+        "title": "No matching logistics items",
+        "message": "Try another reference or reset the search."
+      }
     }
   },
   "receipt": {
@@ -1362,7 +1451,25 @@
     "empty": {
       "title": "No users found",
       "message": "Try another search or create a user."
-    }
+    },
+    "roleHelpTitle": "What each role permits",
+    "roleHelp": {
+      "REQUESTER": "Creates and submits purchase requests for their company. Company-scoped.",
+      "ENTER_ON_BEHALF": "Enters requests on behalf of another requester. Company-scoped.",
+      "DEPARTMENT_MANAGER": "Approves at department stage when the rule assigns this role. Company-scoped.",
+      "BUDGET_APPROVER": "Approves at budget stage when the rule assigns this role. Company-scoped.",
+      "MANAGEMENT_APPROVER": "Approves at management stage when the rule assigns this role. Company-scoped.",
+      "BUYER": "Handles assigned buying work (RFQ, award, PO, logistics). Company-scoped.",
+      "PURCHASING_MANAGER": "Owns the purchasing queue, assigns buyers, may act without assignment. Company-scoped.",
+      "RECEIVER": "Records goods receipt for delivered shipments. Company-scoped.",
+      "GROUP_MANAGEMENT": "Group-wide management visibility (dashboards). Not a substitute for operational roles.",
+      "ADMIN": "Company/organisation administration within the group. Does not grant all business-data access.",
+      "GLOBAL_ADMIN": "Installation administration (companies, users, passwords). Does not automatically receive all business-data access."
+    },
+    "roleCombinations": "Approver roles may be combined with REQUESTER. BUYER and PURCHASING_MANAGER may be combined. GLOBAL_ADMIN should not be used as an “all roles” account. SUPPLIER_CONTACT is invited from messaging, not here.",
+    "tempPassword": "Set temporary password",
+    "tempPasswordHint": "At least 12 characters. The user must change it at first sign-in. The value is never stored in clear text or shown again.",
+    "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it."
   },
   "passwordSetup": {
     "title": "Choose a password",

@@ -33,7 +33,7 @@ describe('inboxQueryFromParams', () => {
   it('accepts only known views and sorts, and bounds the search text', () => {
     const query = inboxQueryFromParams(convertToParamMap({ view: 'everything', sort: 'password', page: '-2', q: 'x'.repeat(300) }));
     expect(query.view).toBe('pending');
-    expect(query.sort).toBe('dueAt');
+    expect(query.sort).toBe('waitingSince');
     expect(query.page).toBe(0);
     expect(query.q?.length).toBe(100);
   });
@@ -61,10 +61,10 @@ describe('ApprovalsInboxPage', () => {
 
   const inbox = () => http.expectOne((request) => request.url === '/api/v1/approvals/inbox');
 
-  it('asks for the pending decisions, earliest due first, and shows each one as a card', async () => {
+  it('asks for the pending decisions, newest waiting first, and shows each one as a card', async () => {
     const request = inbox();
     expect(request.request.params.get('status')).toBe('PENDING');
-    expect(request.request.params.get('sort')).toBe('dueAt,asc');
+    expect(request.request.params.get('sort')).toBe('waitingSince,desc');
     request.flush({ items: [ITEM], page: 0, size: 20, totalItems: 1 });
     await fixture.whenStable();
 

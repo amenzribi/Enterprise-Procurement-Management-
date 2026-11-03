@@ -32,6 +32,13 @@ class LogisticsController {
 		this.idempotency = idempotency;
 	}
 
+	@GetMapping("/inbox")
+	LogisticsInboxPage inbox(@org.springframework.web.bind.annotation.RequestParam(required = false) String q,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+		return logistics.inbox(currentUser.require(), q, page, size);
+	}
+
 	@GetMapping("/requests/{requestId}/shipments")
 	List<ShipmentView> list(@PathVariable long requestId) {
 		return logistics.list(currentUser.require(), requestId);

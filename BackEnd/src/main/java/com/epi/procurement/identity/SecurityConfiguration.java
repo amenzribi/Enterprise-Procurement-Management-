@@ -67,7 +67,9 @@ class SecurityConfiguration {
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset/redeem").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset/request",
+						"/api/v1/auth/password-reset/redeem")
+				.permitAll()
 				// One-tap e-mail approval (S2-AC-07): the token in the body authenticates the single action.
 				.requestMatchers(HttpMethod.POST, "/api/v1/approval-links/summary", "/api/v1/approval-links/approve")
 				.permitAll()

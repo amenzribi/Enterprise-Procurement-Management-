@@ -73,6 +73,12 @@ class UserAdminController {
 		service.initiatePasswordReset(currentUser.require(), id);
 	}
 
+	@PostMapping("/{id}/temporary-password")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void temporaryPassword(@PathVariable long id, @RequestBody UserAdminViews.TemporaryPasswordRequest body) {
+		service.setTemporaryPassword(currentUser.require(), id, body == null ? null : body.temporaryPassword());
+	}
+
 	@PostMapping("/{id}/revoke-sessions")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void revokeSessions(@PathVariable long id) {

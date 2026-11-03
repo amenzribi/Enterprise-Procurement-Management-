@@ -23,7 +23,24 @@ import { ShipmentView } from './logistics.models';
           <p class="error" role="alert">{{ error() }}</p>
         }
 
-        @if (canCreate()) {
+        <p class="muted small refs">
+          <span
+            >{{ 'logistics.inbox.requestRef' | translate }}:
+            <bdi class="tabular">{{ request().number || ('requests.list.draftNumber' | translate) }}</bdi></span
+          >
+          @if (poNumber()) {
+            <span
+              >{{ 'logistics.inbox.poNumber' | translate }}: <bdi class="tabular">{{ poNumber() }}</bdi></span
+            >
+          }
+        </p>
+
+        @if (!canAct() && !canViewAsAuthor()) {
+          <p class="muted">{{ 'logistics.actions.noPermission' | translate }}</p>
+        } @else if (canAct() && !poConfirmed()) {
+          <p class="muted" role="status">{{ 'logistics.actions.needConfirmedPo' | translate }}</p>
+        } @else if (canCreate()) {
+          <p class="muted small">{{ 'logistics.actions.partialNote' | translate }}</p>
           <form class="form" (submit)="$event.preventDefault(); create()" novalidate>
             <label class="label" for="ship-kind">{{ 'logistics.actions.kind' | translate }}</label>
             <select id="ship-kind" [value]="kind()" (change)="kind.set($any($event.target).value)">
@@ -34,13 +51,25 @@ import { ShipmentView } from './logistics.models';
             <input id="ship-carrier" [value]="carrier()" (input)="carrier.set($any($event.target).value)" />
             <button appButton type="submit" [disabled]="busy()">{{ 'logistics.actions.create' | translate }}</button>
           </form>
+        } @else if (canAct() && shipments().length === 0) {
+          <p class="muted" role="status">{{ 'logistics.actions.notEligible' | translate }}</p>
         }
 
         @for (s of shipments(); track s.id) {
           <article class="shipment">
             <p class="muted small">
-              {{ s.number }} · {{ 'logistics.kind.' + s.kind | translate }} · {{ 'logistics.status.' + s.status | translate }}
+              <span class="label">{{ 'logistics.inbox.shipmentRef' | translate }}:</span>
+              <bdi class="tabular">{{ s.number }}</bdi> · {{ 'logistics.kind.' + s.kind | translate }} ·
+              {{ 'logistics.status.' + s.status | translate }}
             </p>
+            <ul class="qtys">
+              @for (line of s.lines; track line.id) {
+                <li>
+                  {{ line.description }} —
+                  <span class="tabular">{{ line.quantity }} {{ line.unit }}</span>
+                </li>
+              }
+            </ul>
             <ul class="milestones">
               @for (m of s.milestones; track m.id) {
                 <li [class.late]="m.late">
@@ -97,6 +126,9 @@ import { ShipmentView } from './logistics.models';
     .milestones li.late { border-inline-start-color: var(--color-danger); }
     .badge { color: var(--color-danger); font-size: var(--text-sm); }
     .dates { font-size: var(--text-sm); color: var(--color-text-muted); }
+    .refs { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+    .tabular { user-select: all; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
+    .qtys { list-style: none; margin: 0 0 var(--space-2); padding: 0; font-size: var(--text-sm); }
   `,
 })
 export class LogisticsActions {
@@ -110,6 +142,7 @@ export class LogisticsActions {
 
   protected readonly shipments = signal<ShipmentView[]>([]);
   protected readonly poConfirmed = signal(false);
+  protected readonly poNumber = signal<string | null>(null);
   protected readonly kind = signal<'LOCAL' | 'INTERNATIONAL'>('LOCAL');
   protected readonly carrier = signal('Demo Freight');
   protected readonly docRef = signal('');
@@ -185,10 +218,10 @@ export class LogisticsActions {
         newIdempotencyKey(),
       )
       .subscribe({
-        next: (shipment) => {
+        next: () => {
           this.busy.set(false);
-          this.shipments.set([shipment]);
           this.notifications.success('logistics.actions.created');
+          this.reload(this.request().id);
           this.changed.emit();
         },
         error: (error: unknown) => {
@@ -243,8 +276,14 @@ export class LogisticsActions {
 
   private reload(requestId: number): void {
     this.orderingApi.getPo(requestId).subscribe({
-      next: (po) => this.poConfirmed.set(po.status === 'CONFIRMED'),
-      error: () => this.poConfirmed.set(false),
+      next: (po) => {
+        this.poConfirmed.set(po.status === 'CONFIRMED');
+        this.poNumber.set(po.number ?? null);
+      },
+      error: () => {
+        this.poConfirmed.set(false);
+        this.poNumber.set(null);
+      },
     });
     this.api.list(requestId).subscribe({
       next: (list) => this.shipments.set(list),

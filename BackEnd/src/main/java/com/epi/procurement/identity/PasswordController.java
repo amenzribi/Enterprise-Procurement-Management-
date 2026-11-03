@@ -30,10 +30,23 @@ class PasswordController {
 		return ResponseEntity.noContent().build();
 	}
 
+	@PostMapping("/password-reset/request")
+	ResponseEntity<Void> requestReset(@RequestBody ForgotRequest body, HttpServletRequest request) {
+		passwords.requestForgotPassword(body.email(), request);
+		return ResponseEntity.accepted().build();
+	}
+
 	@PostMapping("/password-reset/redeem")
 	ResponseEntity<Void> redeem(@RequestBody RedeemRequest body, HttpServletRequest request) {
 		passwords.redeemReset(body.token(), body.newPassword(), request);
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+	}
+
+	record ForgotRequest(String email) {
+		@Override
+		public String toString() {
+			return "ForgotRequest[email=***]";
+		}
 	}
 
 	record ChangePasswordRequest(String currentPassword, String newPassword) {

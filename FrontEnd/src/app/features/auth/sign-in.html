@@ -94,6 +94,10 @@
         </button>
       </form>
 
+      <p class="forgot">
+        <a routerLink="/forgot-password">{{ 'auth.forgot.link' | translate }}</a>
+      </p>
+
       @if (isDevMode) {
         <p class="dev-note">
           <app-icon name="info" [size]="16" />

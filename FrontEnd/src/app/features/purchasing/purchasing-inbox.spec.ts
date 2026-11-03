@@ -38,7 +38,7 @@ describe('queueQueryFromParams', () => {
     );
     expect(query.status).toBeNull();
     expect(query.purchaseMode).toBeNull();
-    expect(query.sort).toBe('requiredDate');
+    expect(query.sort).toBe('submittedAt');
     expect(query.page).toBe(0);
     expect(query.q?.length).toBe(100);
     expect(query.buyingCompanyId).toBe(9);
@@ -83,7 +83,7 @@ describe('PurchasingInboxPage', () => {
       countries: ['TN', 'FR'],
     });
     const request = http.expectOne((call) => call.url === '/api/v1/purchasing/queue');
-    expect(request.request.params.get('sort')).toBe('requiredDate');
+    expect(request.request.params.get('sort')).toBe('submittedAt');
     request.flush({ items: [ITEM], page: 0, size: 20, totalItems: 1 });
     await fixture.whenStable();
 

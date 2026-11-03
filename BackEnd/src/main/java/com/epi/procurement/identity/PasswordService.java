@@ -19,7 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * Own password change and public token redeem (S10-AC-04/05/09).
+ * Own password change, forgot-password request and public token redeem (S10-AC-04/05/09).
  */
 @Service
 public class PasswordService {
@@ -40,13 +40,16 @@ public class PasswordService {
 
 	private final ClientAddressResolver addresses;
 
+	private final org.springframework.context.ApplicationEventPublisher events;
+
 	private final Clock clock;
 
 	private final int redeemLimitPerMinute;
 
 	PasswordService(CredentialStore credentials, PasswordResetStore tokens, PasswordEncoder encoder,
 			PasswordPolicy policy, UserAdminStore users, AuditLog auditLog, RequestRateLimiter rateLimiter,
-			ClientAddressResolver addresses, ObjectProvider<Clock> clock,
+			ClientAddressResolver addresses, org.springframework.context.ApplicationEventPublisher events,
+			ObjectProvider<Clock> clock,
 			@org.springframework.beans.factory.annotation.Value("${app.security.password-reset-rate-limit-per-minute:20}") int redeemLimitPerMinute) {
 		this.credentials = credentials;
 		this.tokens = tokens;
@@ -56,8 +59,30 @@ public class PasswordService {
 		this.auditLog = auditLog;
 		this.rateLimiter = rateLimiter;
 		this.addresses = addresses;
+		this.events = events;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
 		this.redeemLimitPerMinute = redeemLimitPerMinute;
+	}
+
+	/**
+	 * Public forgot-password. Always succeeds from the caller's perspective so the response never reveals whether
+	 * the e-mail exists. When an active account matches, a single-use setup token is issued (mail capture in demo).
+	 */
+	@Transactional
+	public void requestForgotPassword(String email, HttpServletRequest request) {
+		String address = addresses.resolve(request);
+		rateLimiter.check("pwd-forgot:" + address, Math.max(5, redeemLimitPerMinute / 2));
+		String normalized = email == null ? "" : email.strip().toLowerCase(java.util.Locale.ROOT);
+		if (normalized.isEmpty() || !normalized.contains("@")) {
+			return;
+		}
+		users.findAccountByEmail(normalized).filter(UserAdminStore.AccountRow::active).ifPresent(account -> {
+			events.publishEvent(new PasswordSetupRequested(account.id(), "RESET", null, "self-service",
+					account.companyId(), account.displayName()));
+			auditLog.record(new AuditRecord(account.id(), account.email(), account.companyId(), "USER_ACCOUNT",
+					Long.toString(account.id()), "PASSWORD_RESET_REQUESTED", null, null, null,
+					"{\"channel\":\"forgot-password\"}"));
+		});
 	}
 
 	@Transactional

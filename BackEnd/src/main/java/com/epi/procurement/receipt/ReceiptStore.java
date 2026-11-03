@@ -106,7 +106,8 @@ class ReceiptStore {
 	}
 
 	List<ReceiptRow> receiptsForRequest(long requestId) {
-		return jdbc.query("SELECT * FROM goods_receipt WHERE request_id = ? ORDER BY id", RECEIPT, requestId);
+		return jdbc.query("SELECT * FROM goods_receipt WHERE request_id = ? ORDER BY created_at DESC, id DESC", RECEIPT,
+				requestId);
 	}
 
 	Optional<ReceiptRow> findReceipt(long id) {

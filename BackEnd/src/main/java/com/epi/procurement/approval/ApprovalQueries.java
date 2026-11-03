@@ -38,7 +38,8 @@ import com.epi.procurement.request.RequestWorkflow;
 @Service
 class ApprovalQueries {
 
-	private static final Set<String> SORTS = Set.of("dueAt", "waitingSince", "amount", "number", "requiredDate");
+	private static final Set<String> SORTS = Set.of("dueAt", "waitingSince", "amount", "number", "requiredDate",
+			"createdAt");
 
 	private final ApprovalStore store;
 
@@ -70,7 +71,8 @@ class ApprovalQueries {
 
 	/**
 	 * @param status {@code PENDING} (default) or {@code DECIDED} (my last 200 decisions)
-	 * @param sort {@code field,asc|desc} with field dueAt (default), waitingSince, amount, number, requiredDate
+	 * @param sort {@code field,asc|desc} with field waitingSince (default desc = newest first), dueAt, amount,
+	 * number, requiredDate, createdAt
 	 */
 	@Transactional(readOnly = true)
 	ApprovalViews.InboxPage inbox(CurrentUser user, String status, String q, String sort, int page, int size) {
@@ -346,13 +348,16 @@ class ApprovalQueries {
 	}
 
 	private static Comparator<ApprovalViews.InboxItem> comparator(String sort) {
-		String field = "dueAt";
-		boolean descending = false;
+		String field = "waitingSince";
+		boolean descending = true;
 		if (StringUtils.hasText(sort)) {
 			String[] parts = sort.split(",");
 			field = parts[0].trim();
 			if (!SORTS.contains(field) || parts.length > 2) {
 				throw ApiProblemException.invalidParameter("sort");
+			}
+			if ("createdAt".equals(field)) {
+				field = "waitingSince";
 			}
 			if (parts.length == 2) {
 				String direction = parts[1].trim().toLowerCase(Locale.ROOT);
@@ -370,9 +375,10 @@ class ApprovalQueries {
 			default -> ApprovalViews.InboxItem::dueAt;
 		};
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		Comparator<ApprovalViews.InboxItem> base = Comparator.comparing((Function) key);
+		Comparator<ApprovalViews.InboxItem> base = Comparator.comparing((Function) key,
+				Comparator.nullsLast(Comparator.naturalOrder()));
 		base = descending ? base.reversed() : base;
-		return base.thenComparing(ApprovalViews.InboxItem::taskId);
+		return base.thenComparing(ApprovalViews.InboxItem::taskId, Comparator.reverseOrder());
 	}
 
 	private static boolean contains(String value, String text) {

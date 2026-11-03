@@ -34,6 +34,7 @@ import { Button } from '../../shared/ui/button';
 import { openConfirm } from '../../shared/ui/confirm-dialog';
 import { Attachments } from '../documents/attachments';
 import { openSubmitPreview } from '../approvals/submit-preview-dialog';
+import { openSubmitSuccess } from './submit-success-dialog';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
@@ -374,8 +375,19 @@ export class RequestFormPage implements HasUnsavedChanges {
               this.clearSnapshot();
               this.form.markAsPristine();
               this.busy.set('idle');
-              this.notifications.success('requests.submit.done', { number: submitted.number ?? '' });
-              void this.router.navigate(['/requests', submitted.id]);
+              const number = submitted.number ?? '';
+              this.notifications.success('requests.submit.done', { number });
+              openSubmitSuccess(this.dialog, {
+                requestId: submitted.id,
+                number,
+                title: submitted.title ?? '',
+              }).subscribe((action) => {
+                if (action === 'list') {
+                  void this.router.navigate(['/requests']);
+                } else if (action !== 'open') {
+                  void this.router.navigate(['/requests', submitted.id]);
+                }
+              });
             },
             error: (error: unknown) => this.handleFailure(error),
           });

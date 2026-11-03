@@ -67,6 +67,7 @@ export class RequestDetailPage {
   protected readonly approval = signal<ApprovalView | null>(null);
   /** Ticks every minute so "owner since" stays current without reloading. */
   protected readonly now = signal(Date.now());
+  protected readonly copiedRef = signal(false);
 
   /** The user-facing status (Solution Guide v3.0 §8). */
   protected readonly userStatus = computed(() => {
@@ -76,6 +77,32 @@ export class RequestDetailPage {
 
   /** Exactly the actions the server allows (S1DR-18); the UI never re-derives permissions. */
   protected readonly actions = computed<RequestAction[]>(() => this.request()?.actions ?? []);
+
+  /** Plain-language next step from server actions / approval data — never invents actors. */
+  protected readonly nextActionSummary = computed(() => {
+    const request = this.request();
+    if (!request) {
+      return null;
+    }
+    const actions = request.actions ?? [];
+    if (actions.includes('SUBMIT')) {
+      return this.translate.instant('requests.detail.next.submit');
+    }
+    if (actions.includes('EDIT')) {
+      return this.translate.instant('requests.detail.next.edit');
+    }
+    const approval = this.approval();
+    if (approval?.myTask) {
+      return this.translate.instant('requests.detail.next.decide');
+    }
+    if (approval?.openQuestions?.length) {
+      return this.translate.instant('requests.detail.next.answer');
+    }
+    if (actions.length > 0) {
+      return this.translate.instant('requests.detail.next.available');
+    }
+    return null;
+  });
 
   protected readonly stage = computed(() => {
     const request = this.request();
@@ -214,6 +241,17 @@ export class RequestDetailPage {
 
   protected translateStatus(status: string | null | undefined): string {
     return status ? this.translate.instant(statusKey(status)) : '';
+  }
+
+  protected copyReference(number: string): void {
+    void navigator.clipboard.writeText(number).then(
+      () => {
+        this.copiedRef.set(true);
+        this.notifications.success('requests.detail.referenceCopied');
+        setTimeout(() => this.copiedRef.set(false), 2000);
+      },
+      () => this.notifications.error('requests.detail.copyFailed'),
+    );
   }
 
   protected downloadAuditPack(): void {

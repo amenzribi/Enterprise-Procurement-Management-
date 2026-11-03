@@ -34,7 +34,7 @@
       "management": "Pilotage"
     },
     "items": {
-      "overview": "Vue d’ensemble",
+      "overview": "Mon travail",
       "systemStatus": "État du système",
       "requests": "Demandes d’achat",
       "approvals": "Validations",
@@ -59,8 +59,8 @@
     "pendingCount": "{{count}} en attente de votre décision"
   },
   "overview": {
-    "title": "Procurement Intelligence",
-    "description": "Une seule porte d’entrée pour toutes les demandes d’achat, de l’expression du besoin jusqu’à la livraison et à la clôture, avec un responsable identifié à chaque étape.",
+    "title": "Mon travail",
+    "description": "Actions en attente, demandes que vous avez créées et notifications non lues — dans le périmètre de votre société.",
     "available": {
       "title": "Disponible dans cette version",
       "items": {
@@ -93,7 +93,34 @@
       },
       "availableNow": "Disponible"
     },
-    "demoNote": "Les sociétés et sites affichés en développement sont des données de démonstration. Leur nom se termine par « (Demo) »."
+    "demoNote": "Les sociétés et sites affichés en développement sont des données de démonstration. Leurs noms se terminent par « (Demo) ».",
+    "newRequest": "Nouvelle demande",
+    "loadError": "La liste de travail n’a pas pu être chargée.",
+    "supplier": {
+      "title": "Portail fournisseur",
+      "message": "Ouvrez vos conversations avec les acheteurs.",
+      "open": "Ouvrir les messages"
+    },
+    "awaiting": {
+      "title": "En attente de mon action",
+      "emptyTitle": "Rien en attente",
+      "emptyMessage": "Lorsqu’une demande nécessite votre approbation ou une action d’achat, elle apparaît ici.",
+      "approve": "Approuver",
+      "purchasing": "Achats",
+      "openApprovals": "Ouvrir les approbations",
+      "openPurchasing": "Ouvrir la boîte d’achats",
+      "openLogistics": "Ouvrir la logistique"
+    },
+    "mine": {
+      "title": "Demandes que j’ai créées",
+      "emptyTitle": "Aucune demande",
+      "emptyMessage": "Créez une demande d’achat pour la suivre ici.",
+      "openAll": "Ouvrir mes demandes"
+    },
+    "notices": {
+      "title": "Notifications non lues",
+      "empty": "Aucune notification non lue."
+    }
   },
   "planned": {
     "title": "Prévu pour le sprint {{sprint}}",
@@ -196,7 +223,10 @@
     "dismiss": "Fermer",
     "cancel": "Annuler",
     "retry": "Réessayer",
-    "search": "Rechercher"
+    "search": "Rechercher",
+    "reset": "Réinitialiser",
+    "previous": "Précédent",
+    "next": "Suivant"
   },
   "errors": {
     "network-error": "Le serveur est injoignable. Vérifiez votre connexion puis réessayez.",
@@ -291,6 +321,15 @@
       "submit": "Se connecter",
       "submitting": "Connexion…",
       "demoNote": "Développement : les comptes de démonstration et la façon de définir leur mot de passe sont décrits dans le README."
+    },
+    "forgot": {
+      "link": "Mot de passe oublié ?",
+      "title": "Réinitialiser le mot de passe",
+      "lead": "Saisissez votre e-mail professionnel. Si un compte existe, un lien à usage unique est mis en file (capture locale en démo).",
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi…",
+      "done": "Si un compte existe pour cet e-mail, un lien a été mis en file. Consultez le dossier mail local en démo, ou contactez un administrateur.",
+      "back": "Retour à la connexion"
     }
   },
   "requests": {
@@ -334,7 +373,9 @@
         "status": "Statut",
         "total": "Total estimé",
         "requiredDate": "Date requise",
-        "updatedAt": "Dernière modification"
+        "updatedAt": "Dernière modification",
+        "createdAt": "Créée",
+        "submittedAt": "Soumise"
       },
       "pagination": "Pages",
       "previous": "Précédent",
@@ -470,7 +511,14 @@
       "message": "Elle recevra son numéro et partira dans le circuit de validation de votre société.",
       "confirm": "Soumettre la demande",
       "done": "Demande {{number}} soumise",
-      "incomplete": "Complétez les champs obligatoires avant de soumettre."
+      "incomplete": "Complétez les champs obligatoires avant de soumettre.",
+      "successTitle": "Demande soumise",
+      "successMessage": "Référence {{number}} — {{title}}. Communiquez cette référence aux collègues qui doivent retrouver le dossier.",
+      "referenceLabel": "Référence de la demande",
+      "copy": "Copier la référence",
+      "copied": "Copiée",
+      "openRequest": "Ouvrir la demande",
+      "backToList": "Retour à mes demandes"
     },
     "discard": {
       "action": "Supprimer le brouillon",
@@ -527,7 +575,21 @@
       "ownerAfter": "Responsable ensuite : {{name}}",
       "noHistory": "Aucun historique pour le moment.",
       "resubmit": "Soumettre à nouveau",
-      "editReturned": "Corriger la demande"
+      "editReturned": "Corriger la demande",
+      "requestReference": "Référence de la demande",
+      "copyReference": "Copier la référence de la demande",
+      "referenceCopied": "Référence copiée.",
+      "copyFailed": "Impossible de copier la référence.",
+      "nextAction": "Prochaine action requise",
+      "responsible": "Responsable actuel",
+      "readOnlyProgress": "Aucune action n’est disponible pour vous sur ce dossier pour le moment. L’avancement est affiché ci-dessous à titre d’information.",
+      "next": {
+        "submit": "Soumettez ce brouillon pour obtenir une référence définitive et démarrer l’approbation.",
+        "edit": "Modifiez la demande (par exemple après un retour pour révision).",
+        "decide": "Une décision vous attend sur cette demande.",
+        "answer": "Un approbateur a posé une question — répondez pour continuer.",
+        "available": "Une action est disponible pour vous sur ce dossier (voir les panneaux ci-dessous)."
+      }
     },
     "status": {
       "DRAFT": "Brouillon",
@@ -1096,7 +1158,10 @@
     "empty": {
       "title": "Aucune société",
       "message": "Créez une société pour commencer."
-    }
+    },
+    "companyVsSite": "Une société est une entité juridique avec devise, langue, fuseau et mode d’achat. Les sites, départements et centres de coûts appartiennent à une société — ce ne sont pas des sociétés.",
+    "workingCalendarNote": "Les calendriers de travail ne sont pas un référentiel séparé dans cette version ; le fuseau de la société sert pour les dates locales.",
+    "deactivateNote": "La désactivation d’une société conserve l’historique des demandes et documents ; elle ne les supprime pas."
   },
   "imports": {
     "title": "Import des données",
@@ -1210,7 +1275,11 @@
       "late": "En retard",
       "docRef": "Référence du document",
       "addDoc": "Ajouter un document de transport",
-      "docAdded": "Référence du document enregistrée"
+      "docAdded": "Référence du document enregistrée",
+      "needConfirmedPo": "Confirmez la commande avant de créer un envoi.",
+      "notEligible": "Cette demande n’est pas dans un statut d’expédition, ou un envoi couvre déjà la quantité restante.",
+      "noPermission": "Vous pouvez consulter l’avancement mais pas créer ni avancer les envois.",
+      "partialNote": "Les envois partiels sont pris en charge tant que les quantités restantes des lignes de commande le permettent. Les mises à jour concurrentes utilisent un verrouillage optimiste."
     },
     "kind": {
       "LOCAL": "Locale",
@@ -1244,6 +1313,26 @@
       "DELIVERY_NOTE": "Bon de livraison",
       "CMR": "CMR",
       "OTHER": "Autre"
+    },
+    "inbox": {
+      "title": "Logistique",
+      "description": "Commandes confirmées éligibles à l’expédition, les plus récentes d’abord. Ouvrez le dossier pour créer ou avancer les envois. Une livraison rend le dossier éligible à la réception.",
+      "search": "Rechercher par référence",
+      "searchPlaceholder": "Référence demande, commande ou envoi",
+      "loadError": "La logistique n’a pas pu être chargée.",
+      "requestRef": "Référence de la demande",
+      "poNumber": "Numéro de commande",
+      "shipmentRef": "Référence d’envoi",
+      "needsShipment": "Envoi à créer",
+      "readyForReceipt": "Prêt pour réception",
+      "empty": {
+        "title": "Aucune commande confirmée",
+        "message": "Lorsqu’une commande est confirmée, elle apparaît ici pour la planification d’envoi."
+      },
+      "noMatch": {
+        "title": "Aucun élément logistique correspondant",
+        "message": "Essayez une autre référence ou réinitialisez la recherche."
+      }
     }
   },
   "receipt": {
@@ -1362,7 +1451,25 @@
     "empty": {
       "title": "Aucun utilisateur",
       "message": "Modifiez la recherche ou creez un utilisateur."
-    }
+    },
+    "roleHelpTitle": "Ce que permet chaque rôle",
+    "roleHelp": {
+      "REQUESTER": "Crée et soumet des demandes d’achat pour sa société. Périmètre société.",
+      "ENTER_ON_BEHALF": "Saisit des demandes pour le compte d’un autre demandeur. Périmètre société.",
+      "DEPARTMENT_MANAGER": "Approuve à l’étape département lorsque la règle l’assigne. Périmètre société.",
+      "BUDGET_APPROVER": "Approuve à l’étape budget lorsque la règle l’assigne. Périmètre société.",
+      "MANAGEMENT_APPROVER": "Approuve à l’étape direction lorsque la règle l’assigne. Périmètre société.",
+      "BUYER": "Traite les dossiers d’achat assignés (RFQ, adjudication, commande, logistique). Périmètre société.",
+      "PURCHASING_MANAGER": "Pilote la file d’achats, assigne les acheteurs, peut agir sans assignation. Périmètre société.",
+      "RECEIVER": "Enregistre la réception des marchandises livrées. Périmètre société.",
+      "GROUP_MANAGEMENT": "Visibilité de gestion au niveau groupe (tableaux de bord). Ne remplace pas les rôles opérationnels.",
+      "ADMIN": "Administration société/organisation dans le groupe. Ne donne pas tout accès aux données métier.",
+      "GLOBAL_ADMIN": "Administration de l’installation (sociétés, utilisateurs, mots de passe). Ne reçoit pas automatiquement tout accès aux données métier."
+    },
+    "roleCombinations": "Les rôles d’approbation peuvent être combinés avec REQUESTER. BUYER et PURCHASING_MANAGER peuvent être combinés. GLOBAL_ADMIN ne doit pas servir de compte « tous les rôles ». SUPPLIER_CONTACT s’invite depuis la messagerie, pas ici.",
+    "tempPassword": "Définir un mot de passe temporaire",
+    "tempPasswordHint": "Au moins 12 caractères. L’utilisateur doit le changer à la première connexion. La valeur n’est jamais stockée en clair ni réaffichée.",
+    "tempPasswordDone": "Mot de passe temporaire défini. Demandez à l’utilisateur de se connecter et de le changer."
   },
   "passwordSetup": {
     "title": "Choisir un mot de passe",

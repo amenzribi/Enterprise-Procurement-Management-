@@ -235,7 +235,16 @@ export interface Page<T> {
 /** "My requests" or every request the user may see (department or group visibility). */
 export type RequestScope = 'mine' | 'visible';
 
-export const SORTABLE_COLUMNS = ['number', 'title', 'status', 'totalAmount', 'requiredDate', 'updatedAt'] as const;
+export const SORTABLE_COLUMNS = [
+  'number',
+  'title',
+  'status',
+  'totalAmount',
+  'requiredDate',
+  'updatedAt',
+  'createdAt',
+  'submittedAt',
+] as const;
 export type SortColumn = (typeof SORTABLE_COLUMNS)[number];
 export type SortDirection = 'asc' | 'desc';
 

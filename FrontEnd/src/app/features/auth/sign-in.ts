@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, isDevMode, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { toApiProblem } from '../../core/api/api-problem';
 import { AuthService } from '../../core/auth/auth.service';
@@ -19,7 +19,7 @@ type SignInError = 'invalid-credentials' | 'network-error' | 'unexpected-error' 
 @Component({
   selector: 'app-sign-in',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, Icon, LanguageSelect, ReactiveFormsModule, TranslatePipe],
+  imports: [Button, Icon, LanguageSelect, ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './sign-in.html',
   styleUrl: './sign-in.scss',
 })

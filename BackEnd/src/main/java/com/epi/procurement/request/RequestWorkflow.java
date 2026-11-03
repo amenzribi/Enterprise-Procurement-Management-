@@ -90,12 +90,15 @@ public class RequestWorkflow {
 	public Page<RequestSnapshot> purchasingQueue(CurrentUser user, PurchasingQuery query) {
 		int size = query.size() < 1 || query.size() > 100 ? 20 : query.size();
 		int page = Math.max(0, query.page());
-		Sort sort = switch (query.sort() == null ? "requiredDate" : query.sort()) {
+		Sort sort = switch (query.sort() == null ? "submittedAt" : query.sort()) {
 			case "amount" -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "totalAmount");
+			case "requiredDate" -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "requiredDate");
 			case "submittedAt" -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "submittedAt");
-			default -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "requiredDate");
+			default -> Sort.by(query.descending() ? Sort.Direction.DESC : Sort.Direction.ASC, "submittedAt");
 		};
-		return requests.search(user, purchasingSpec(query), PageRequest.of(page, size, sort)).map(RequestWorkflow::snapshot);
+		// Stable secondary key so equal timestamps stay ordered across pages.
+		return requests.search(user, purchasingSpec(query), PageRequest.of(page, size, sort.and(Sort.by(Sort.Direction.DESC, "id"))))
+			.map(RequestWorkflow::snapshot);
 	}
 
 	public record PurchasingQuery(String q, Long buyingCompanyId, Long categoryId, String status, String priority,

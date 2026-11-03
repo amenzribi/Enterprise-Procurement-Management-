@@ -80,6 +80,29 @@ class LogisticsService {
 	}
 
 	@Transactional(readOnly = true)
+	LogisticsInboxPage inbox(CurrentUser user, String q, int page, int size) {
+		if (!user.hasRole(Role.PURCHASING_MANAGER) && !user.hasRole(Role.BUYER)) {
+			throw ApiProblemException.forbidden();
+		}
+		int safePage = Math.max(0, page);
+		int safeSize = size < 1 || size > 100 ? 20 : size;
+		List<LogisticsStore.InboxRow> rows = store.inbox(user.groupId(), q).stream()
+			.filter(row -> user.hasRoleIn(Role.PURCHASING_MANAGER, row.buyingCompanyId())
+					|| user.hasRoleIn(Role.BUYER, row.buyingCompanyId()))
+			.toList();
+		int from = Math.min(safePage * safeSize, rows.size());
+		int to = Math.min(from + safeSize, rows.size());
+		List<LogisticsInboxItem> items = rows.subList(from, to).stream()
+			.map(row -> new LogisticsInboxItem(row.requestId(), row.requestNumber(), row.requestTitle(),
+					row.requestStatus(), row.poId(), row.poNumber(), row.poStatus(), row.shipmentId(),
+					row.shipmentNumber(), row.shipmentStatus(), row.shipmentKind(), row.poCreatedAt(),
+					"DELIVERED".equals(row.shipmentStatus()) || "DELIVERED".equals(row.requestStatus())))
+			.toList();
+		return new LogisticsInboxPage(items, safePage, safeSize, rows.size(),
+				rows.isEmpty() ? 0 : (rows.size() + safeSize - 1) / safeSize);
+	}
+
+	@Transactional(readOnly = true)
 	List<ShipmentView> list(CurrentUser user, long requestId) {
 		RequestSnapshot request = requests.requireVisible(user, requestId);
 		requireViewer(user, request);

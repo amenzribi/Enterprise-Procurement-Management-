@@ -61,7 +61,7 @@ describe('RequestsListPage', () => {
     const request = pending();
     expect(request.request.params.get('scope')).toBe('mine');
     expect(request.request.params.has('mine')).toBe(false);
-    expect(request.request.params.get('sort')).toBe('updatedAt,desc');
+    expect(request.request.params.get('sort')).toBe('createdAt,desc');
     expect(request.request.params.get('page')).toBe('0');
     expect(request.request.params.get('size')).toBe('20');
     request.flush({ items: [], page: 0, size: 20, totalItems: 0 });
@@ -122,7 +122,7 @@ describe('queryFromParams', () => {
   it('accepts only known sort columns and statuses (no arbitrary sort properties)', () => {
     const query = queryFromParams(convertToParamMap({ sort: 'requester.passwordHash', status: 'HACKED', page: '-3', dir: 'sideways' }));
 
-    expect(query).toEqual({ scope: 'mine', status: null, q: null, sort: 'updatedAt', direction: 'desc', page: 0, size: 20 });
+    expect(query).toEqual({ scope: 'mine', status: null, q: null, sort: 'createdAt', direction: 'desc', page: 0, size: 20 });
   });
 
   it('reads valid filters, sort and page from the URL', () => {

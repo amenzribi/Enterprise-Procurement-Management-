@@ -41,7 +41,7 @@ describe('auth guards', () => {
   it('sends a signed-in user away from the sign-in page', () => {
     authenticated.set(true);
     me.set({ permissions: [] });
-    expect(TestBed.inject(Router).serializeUrl(run(guestGuard) as UrlTree)).toBe('/requests');
+    expect(TestBed.inject(Router).serializeUrl(run(guestGuard) as UrlTree)).toBe('/overview');
   });
 
   it('sends a supplier contact to the portal home from the sign-in page', () => {
@@ -62,8 +62,8 @@ describe('workspaceHome', () => {
   });
 
   it('routes internal users to requests', () => {
-    expect(workspaceHome({ permissions: ['REQUEST_CREATE'] } as never)).toBe('/requests');
-    expect(workspaceHome(null)).toBe('/requests');
+    expect(workspaceHome({ permissions: ['REQUEST_CREATE'] } as never)).toBe('/overview');
+    expect(workspaceHome(null)).toBe('/overview');
   });
 });
 
@@ -89,6 +89,6 @@ describe('safeReturnUrl', () => {
     null,
     undefined,
   ])('rejects %s and falls back to My requests', (input) => {
-    expect(safeReturnUrl(input as string | null | undefined)).toBe('/requests');
+    expect(safeReturnUrl(input as string | null | undefined)).toBe('/overview');
   });
 });

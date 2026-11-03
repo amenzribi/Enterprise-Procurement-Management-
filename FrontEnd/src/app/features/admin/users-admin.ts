@@ -94,6 +94,18 @@ const ASSIGNABLE = [
           </form>
         </div>
 
+        <section class="role-help" aria-labelledby="role-help-heading">
+          <h3 id="role-help-heading">{{ 'usersAdmin.roleHelpTitle' | translate }}</h3>
+          <ul>
+            @for (role of assignable; track role) {
+              <li>
+                <strong>{{ role }}</strong> — {{ 'usersAdmin.roleHelp.' + role | translate }}
+              </li>
+            }
+          </ul>
+          <p class="meta">{{ 'usersAdmin.roleCombinations' | translate }}</p>
+        </section>
+
         <form class="create" [formGroup]="create" (ngSubmit)="createUser()">
           <h3>{{ 'usersAdmin.create' | translate }}</h3>
           <div class="grid">
@@ -189,6 +201,17 @@ const ASSIGNABLE = [
               {{ 'usersAdmin.revokeSessions' | translate }}
             </button>
           </div>
+          <form class="temp" [formGroup]="tempPassword" (ngSubmit)="setTempPassword(detail.id)">
+            <h3>{{ 'usersAdmin.tempPassword' | translate }}</h3>
+            <p class="meta">{{ 'usersAdmin.tempPasswordHint' | translate }}</p>
+            <label
+              >{{ 'usersAdmin.tempPassword' | translate }}
+              <input type="password" formControlName="temporaryPassword" autocomplete="new-password" />
+            </label>
+            <button appButton type="submit" [disabled]="tempPassword.invalid || busy()">
+              {{ 'usersAdmin.tempPassword' | translate }}
+            </button>
+          </form>
 
           <h3>{{ 'usersAdmin.roles' | translate }}</h3>
           <ul class="roles">
@@ -247,11 +270,22 @@ const ASSIGNABLE = [
     .search,
     .create,
     .grant,
+    .temp,
     .grid {
       display: flex;
       flex-wrap: wrap;
       gap: 0.75rem;
       align-items: end;
+    }
+    .role-help {
+      padding: 0.75rem;
+      border: 1px solid var(--color-border, #d7dde5);
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .role-help ul {
+      margin: 0.5rem 0;
+      padding-inline-start: 1.1rem;
     }
     .grid {
       display: grid;
@@ -350,6 +384,13 @@ export class UsersAdminPage implements OnInit {
     companyId: new FormControl<number | null>(null),
   });
 
+  readonly tempPassword = new FormGroup({
+    temporaryPassword: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(12)],
+    }),
+  });
+
   ngOnInit(): void {
     this.load();
   }
@@ -446,6 +487,25 @@ export class UsersAdminPage implements OnInit {
       next: () => {
         this.busy.set(false);
         this.notifications.success('usersAdmin.resetIssued');
+      },
+      error: (err) => {
+        this.busy.set(false);
+        this.notifications.error(`errors.${toApiProblem(err).code}`);
+      },
+    });
+  }
+
+  setTempPassword(id: number): void {
+    if (this.tempPassword.invalid) {
+      return;
+    }
+    const temporaryPassword = this.tempPassword.controls.temporaryPassword.value;
+    this.busy.set(true);
+    this.http.post(`${API}/${id}/temporary-password`, { temporaryPassword }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.tempPassword.reset({ temporaryPassword: '' });
+        this.notifications.success('usersAdmin.tempPasswordDone');
       },
       error: (err) => {
         this.busy.set(false);

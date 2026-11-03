@@ -51,7 +51,7 @@
 | Checks navigateur ciblés admin/délégation | À faire manuellement (scénarios guide E) |
 | Scan secrets sur fichiers ajoutés | OK (pas de mots de passe / jetons) |
 
-Révision testée : commit local de cette livraison (hash ci-dessous après commit).
+Révision testée : `ed6ed6b` — *Add GLOBAL_ADMIN request administration with archive and safe cleanup preview.*
 
 ## URLs locales
 

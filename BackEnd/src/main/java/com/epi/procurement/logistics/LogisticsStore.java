@@ -48,47 +48,6 @@ class LogisticsStore {
 				requestId);
 	}
 
-	/**
-	 * Confirmed POs (and their latest shipment, if any) visible for logistics work, newest first.
-	 */
-	List<InboxRow> inbox(long groupId, String q) {
-		String text = q == null ? "" : q.strip().toLowerCase(java.util.Locale.ROOT);
-		boolean filter = !text.isEmpty();
-		String like = "%" + text.replace("%", "[%]").replace("_", "[_]") + "%";
-		String sql = """
-				SELECT po.id AS po_id, po.number AS po_number, po.status AS po_status, po.created_at AS po_created_at,
-				       po.buying_company_id,
-				       pr.id AS request_id, pr.number AS request_number, pr.title AS request_title, pr.status AS request_status,
-				       s.id AS shipment_id, s.number AS shipment_number, s.status AS shipment_status, s.kind AS shipment_kind
-				FROM purchase_order po
-				JOIN purchase_request pr ON pr.id = po.request_id
-				OUTER APPLY (
-				  SELECT TOP 1 id, number, status, kind FROM shipment
-				  WHERE request_id = pr.id AND status <> 'CANCELLED'
-				  ORDER BY created_at DESC, id DESC
-				) s
-				WHERE pr.group_id = ? AND po.status = 'CONFIRMED'
-				""" + (filter
-				? " AND (LOWER(pr.number) LIKE ? OR LOWER(po.number) LIKE ? OR LOWER(ISNULL(s.number,'')) LIKE ? OR LOWER(pr.title) LIKE ?)"
-				: "") + """
-				 ORDER BY po.created_at DESC, po.id DESC""";
-		if (filter) {
-			return jdbc.query(sql, INBOX, groupId, like, like, like, like);
-		}
-		return jdbc.query(sql, INBOX, groupId);
-	}
-
-	record InboxRow(long poId, String poNumber, String poStatus, Instant poCreatedAt, long buyingCompanyId,
-			long requestId, String requestNumber, String requestTitle, String requestStatus, Long shipmentId,
-			String shipmentNumber, String shipmentStatus, String shipmentKind) {
-	}
-
-	private static final RowMapper<InboxRow> INBOX = (rs, i) -> new InboxRow(rs.getLong("po_id"),
-			rs.getString("po_number"), rs.getString("po_status"), UtcTimes.instant(rs, "po_created_at"),
-			rs.getLong("buying_company_id"), rs.getLong("request_id"), rs.getString("request_number"),
-			rs.getString("request_title"), rs.getString("request_status"), rs.getObject("shipment_id", Long.class),
-			rs.getString("shipment_number"), rs.getString("shipment_status"), rs.getString("shipment_kind"));
-
 	Optional<ShipmentRow> findShipment(long id) {
 		return jdbc.query("SELECT * FROM shipment WHERE id = ?", SHIPMENT, id).stream().findFirst();
 	}

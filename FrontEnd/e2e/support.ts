@@ -185,12 +185,19 @@ export async function createAndSubmit(
   await fillHeader(page, title);
   await fillLine(page, 0, { description: 'Mechanical seal P-204', quantity: line.quantity, unit: 'PCE', price: line.price });
   await page.getByRole('button', { name: t(lang, 'requests.form.submit') }).click();
-  const dialog = page.getByRole('alertdialog');
-  await expect(dialog).toContainText(t(lang, 'approvals.preview.title'));
-  await dialog.getByRole('button', { name: t(lang, 'requests.submit.confirm') }).click();
+  const preview = page.getByRole('alertdialog');
+  await expect(preview).toContainText(t(lang, 'approvals.preview.title'));
+  await preview.getByRole('button', { name: t(lang, 'requests.submit.confirm') }).click();
+  // Success dialog replaces the preview; wait for its title (submit can be slow under parallel IT load).
+  const successTitle = page.getByRole('heading', { name: t(lang, 'requests.submit.successTitle') });
+  await expect(successTitle).toBeVisible({ timeout: 30_000 });
+  const success = page.getByRole('alertdialog').filter({ has: successTitle });
+  await expect(success.locator('.number')).not.toBeEmpty();
+  const number = (await success.locator('.number').innerText()).trim();
+  await success.getByRole('button', { name: t(lang, 'requests.submit.openRequest') }).click();
   await expect(page).toHaveURL(/\/requests\/\d+$/);
   const id = Number(/\/requests\/(\d+)$/.exec(page.url())![1]);
-  const number = (await page.locator('.dossier-number').innerText()).trim();
+  await expect(page.locator('.dossier-number')).toContainText(number);
   return { id, number };
 }
 

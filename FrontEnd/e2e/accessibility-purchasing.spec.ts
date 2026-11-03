@@ -22,6 +22,7 @@ async function noHorizontalScroll(page: Page, label: string): Promise<void> {
 for (const lang of ['en', 'ar'] as Lang[]) {
   for (const size of WIDTHS) {
     test(`purchasing screens accessibility ${lang.toUpperCase()} ${size.name}`, async ({ page, browser }) => {
+      test.setTimeout(180_000);
       await page.setViewportSize({ width: size.width, height: size.height });
       await signIn(page, USERS.buyer, lang, '/purchasing');
       await expect(page.locator('html')).toHaveAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');

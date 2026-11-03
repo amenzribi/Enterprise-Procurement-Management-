@@ -47,10 +47,9 @@
                 variant="secondary"
                 size="small"
                 (click)="copyReference(r.number)"
-                [attr.aria-label]="'requests.detail.copyReference' | translate"
               >
-                <app-icon name="copy" [size]="16" />
-                {{ (copiedRef() ? 'requests.submit.copied' : 'requests.submit.copy') | translate }}
+                <app-icon name="copy" [size]="16" aria-hidden="true" />
+                {{ (copiedRef() ? 'requests.submit.copied' : 'requests.detail.copyReference') | translate }}
               </button>
             }
           </div>

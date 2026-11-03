@@ -71,6 +71,9 @@ describe('safeReturnUrl', () => {
   it.each([
     ['/requests/12', '/requests/12'],
     ['/requests?status=DRAFT&page=2', '/requests?status=DRAFT&page=2'],
+    ['/purchasing', '/purchasing'],
+    ['/approvals', '/approvals'],
+    ['/portal/home', '/portal/home'],
   ])('keeps the internal path %s', (input, expected) => {
     expect(safeReturnUrl(input)).toBe(expected);
   });
@@ -84,11 +87,15 @@ describe('safeReturnUrl', () => {
     '/javascript:alert(1)',
     'requests',
     '/sign-in?returnUrl=/requests',
+    '/login',
+    '/forgot-password',
+    '/p',
+    '/p#token',
     '/requests\n/next',
     '',
     null,
     undefined,
-  ])('rejects %s and falls back to My requests', (input) => {
+  ])('rejects %s and falls back to My work', (input) => {
     expect(safeReturnUrl(input as string | null | undefined)).toBe('/overview');
   });
 });

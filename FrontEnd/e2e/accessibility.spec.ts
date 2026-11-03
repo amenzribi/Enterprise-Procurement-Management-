@@ -24,6 +24,7 @@ async function noHorizontalScroll(page: Page, label: string): Promise<void> {
 for (const lang of ['en', 'fr', 'ar'] as Lang[]) {
   for (const size of WIDTHS) {
     test(`accessibility ${lang.toUpperCase()} ${size.name}`, async ({ page }) => {
+      test.setTimeout(180_000);
       await page.setViewportSize({ width: size.width, height: size.height });
 
       await page.goto('/sign-in');

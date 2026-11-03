@@ -37,7 +37,19 @@ Developer self-verification. **Not** user-accepted UAT unless Mohamed confirms s
 
 Demo adapter returns a labelled empty-data message when no authorised records match. Live AI remains disabled; demo responses stay labelled.
 
-**Follow-up:** Summarise/draft starters previously sent no `requestId` and free-text retrieval failed on “Summarize this dossier…”. Fixed by (1) a request-reference field on the assistant page, (2) appending the business reference to the question, and (3) backend resolution of `…-PR-YYYY-######` numbers. Confirmed via `AssistantIntegrationTests.summarizeWithBusinessReferenceRetrievesAuthorisedDossier`.
+**Follow-up:** Summarise/draft starters previously sent no `requestId` and free-text retrieval failed on “Summarize this dossier…”. Fixed by (1) a request-reference field on the assistant page, (2) appending the business reference to the question, and (3) backend resolution of `…-PR-YYYY-######` numbers. Confirmed via `AssistantIntegrationTests.summarizeWithBusinessReferenceRetrievesAuthorisedDossier` and developer browser ask on `DEMO-TN-PLT-PR-2026-000490` (non-empty DEMO summary with sources). **Status: fixed.**
+
+## Pre-acceptance verification fixes (post-`fef8b1f`)
+
+| Issue | Fix |
+|---|---|
+| `safeReturnUrl` treated `/purchasing` as auth path (`startsWith('/p')`) | Match only exact `/p` password-setup path |
+| Post-login `/login` returnUrl 404 | Reject `/login` and `/forgot-password` in `safeReturnUrl` |
+| E2E `createAndSubmit` stuck after success dialog | Helper opens request via success dialog |
+| ArchitectureTests: logistics inbox SQL named `purchase_request` | Moved query to `RequestLogisticsQueries` in request module |
+| Axe `label-content-name-mismatch` on dossier copy button | Visible label uses `requests.detail.copyReference` (no mismatched aria-label) |
+
+Manual session packs: [manual-acceptance-sessions.md](manual-acceptance-sessions.md) — all user Actual cells remain **Not executed by user**.
 
 ## Evidence classes
 

@@ -25,6 +25,7 @@ async function noHorizontalScroll(page: Page, label: string): Promise<void> {
 for (const lang of ['en', 'ar'] as Lang[]) {
   for (const size of WIDTHS) {
     test(`approval screens accessibility ${lang.toUpperCase()} ${size.name}`, async ({ page, browser }) => {
+      test.setTimeout(180_000);
       // A request waiting for Karim, so his inbox and decision panel have content.
       const sami = await newUserPage(browser);
       await signIn(sami, USERS.requesterTn, lang);

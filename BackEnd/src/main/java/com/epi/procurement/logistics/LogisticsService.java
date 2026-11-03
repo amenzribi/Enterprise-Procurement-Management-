@@ -28,6 +28,7 @@ import com.epi.procurement.organization.OrganizationDirectory;
 import com.epi.procurement.platform.web.ApiProblemException;
 import com.epi.procurement.platform.web.FieldViolation;
 import com.epi.procurement.platform.web.ValidationFailedException;
+import com.epi.procurement.request.RequestLogisticsQueries;
 import com.epi.procurement.request.RequestSnapshot;
 import com.epi.procurement.request.RequestStatus;
 import com.epi.procurement.request.RequestWorkflow;
@@ -67,12 +68,15 @@ class LogisticsService {
 
 	private final Clock clock;
 
+	private final RequestLogisticsQueries requestLogistics;
+
 	LogisticsService(LogisticsStore store, ShipmentNumbering numbering, RequestWorkflow requests,
-			OrganizationDirectory organization, AuditLog auditLog, Notifications notifications,
-			ObjectProvider<Clock> clock) {
+			RequestLogisticsQueries requestLogistics, OrganizationDirectory organization, AuditLog auditLog,
+			Notifications notifications, ObjectProvider<Clock> clock) {
 		this.store = store;
 		this.numbering = numbering;
 		this.requests = requests;
+		this.requestLogistics = requestLogistics;
 		this.organization = organization;
 		this.auditLog = auditLog;
 		this.notifications = notifications;
@@ -86,7 +90,9 @@ class LogisticsService {
 		}
 		int safePage = Math.max(0, page);
 		int safeSize = size < 1 || size > 100 ? 20 : size;
-		List<LogisticsStore.InboxRow> rows = store.inbox(user.groupId(), q).stream()
+		List<RequestLogisticsQueries.ConfirmedPoInboxRow> rows = requestLogistics
+			.confirmedPoInbox(user.groupId(), q)
+			.stream()
 			.filter(row -> user.hasRoleIn(Role.PURCHASING_MANAGER, row.buyingCompanyId())
 					|| user.hasRoleIn(Role.BUYER, row.buyingCompanyId()))
 			.toList();

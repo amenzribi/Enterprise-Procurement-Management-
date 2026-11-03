@@ -61,6 +61,12 @@ import { LanguageSelect } from '../../shared/ui/language-select';
     .back {
       color: var(--color-text-muted);
     }
+    .back a {
+      display: inline-flex;
+      align-items: center;
+      min-block-size: 2.75rem;
+      padding-block: var(--space-2);
+    }
     .form {
       display: grid;
       gap: var(--space-3);

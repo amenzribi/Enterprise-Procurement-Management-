@@ -47,11 +47,16 @@ for (const { lang, user, onBehalf } of journeys) {
     await expect(dialog).toContainText(t(lang, 'requests.submit.title'));
     await expect(dialog).toContainText(t(lang, 'approvals.preview.title'));
     await dialog.getByRole('button', { name: t(lang, 'requests.submit.confirm') }).click();
+    const successTitle = page.getByRole('heading', { name: t(lang, 'requests.submit.successTitle') });
+    await expect(successTitle).toBeVisible({ timeout: 30_000 });
+    const success = page.getByRole('alertdialog').filter({ has: successTitle });
+    await expect(success.locator('.number')).toHaveText(/^\s*\S+-PR-\d{4}-\d{6}\s*$/);
+    const requestNumber = (await success.locator('.number').innerText()).trim();
+    await success.getByRole('button', { name: t(lang, 'requests.submit.openRequest') }).click();
 
     await expect(page).toHaveURL(new RegExp(`/requests/${id}$`));
     const number = page.locator('.dossier-number');
-    await expect(number).toHaveText(/^\s*\S+-PR-\d{4}-\d{6}\s*$/);
-    const requestNumber = (await number.innerText()).trim();
+    await expect(number).toContainText(requestNumber);
     // Submission starts the approval circuit (S2-AC-04); users see the v3.0 status "Submitted".
     await expect(page.locator('.dossier-status')).toContainText(t(lang, 'requests.userStatus.SUBMITTED'));
     await expect(page.locator('.dossier-facts')).toContainText(t(lang, 'requests.stages.APPROVAL'));

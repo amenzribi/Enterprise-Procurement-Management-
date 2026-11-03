@@ -71,6 +71,13 @@ test('return for revision, correction and resubmission start a new round (EN)', 
   await page.locator('#line-0-quantity').fill('3');
   await page.getByRole('button', { name: t('en', 'requests.form.submit') }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: t('en', 'requests.submit.confirm') }).click();
+  const successTitle = page.getByRole('heading', { name: t('en', 'requests.submit.successTitle') });
+  await expect(successTitle).toBeVisible({ timeout: 30_000 });
+  await page
+    .getByRole('alertdialog')
+    .filter({ has: successTitle })
+    .getByRole('button', { name: t('en', 'requests.submit.openRequest') })
+    .click();
   await expect(page).toHaveURL(new RegExp(`/requests/${request.id}$`));
   // Same number, new round; the earlier round stays readable.
   await expect(page.locator('.dossier-number')).toContainText(request.number);

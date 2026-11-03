@@ -205,6 +205,18 @@ input[aria-invalid='true'] {
   margin-block-start: var(--space-1);
 }
 
+.forgot {
+  margin-block-start: var(--space-3);
+}
+
+.forgot a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-1);
+}
+
 .dev-note {
   display: flex;
   gap: var(--space-2);

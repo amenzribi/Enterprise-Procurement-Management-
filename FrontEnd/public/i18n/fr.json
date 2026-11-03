@@ -1510,7 +1510,11 @@
     "draftHint": "Ce brouillon n'est pas envoye. Copiez-le dans la messagerie et relisez avant envoi.",
     "copyDraft": "Copier le brouillon",
     "draftCopied": "Brouillon copie.",
-    "draftCopyFailed": "Impossible de copier le brouillon."
+    "draftCopyFailed": "Impossible de copier le brouillon.",
+    "dossierRef": "Référence de la demande (optionnelle pour les listes)",
+    "dossierRefPlaceholder": "ex. DEMO-TN-PLT-PR-2026-000490",
+    "dossierRefHint": "Obligatoire pour résumer un dossier ou rédiger un suivi fournisseur. Collez la référence métier, pas un identifiant technique.",
+    "dossierRefRequired": "Saisissez une référence de demande avant de résumer ou de rédiger."
   },
   "messaging": {
     "panel": {

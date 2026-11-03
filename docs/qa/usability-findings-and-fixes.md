@@ -35,7 +35,9 @@ Developer self-verification. **Not** user-accepted UAT unless Mohamed confirms s
 
 ## Assistant
 
-Demo adapter already returns a labelled empty-data message when no authorised records match. Live AI remains disabled; demo responses stay labelled.
+Demo adapter returns a labelled empty-data message when no authorised records match. Live AI remains disabled; demo responses stay labelled.
+
+**Follow-up:** Summarise/draft starters previously sent no `requestId` and free-text retrieval failed on “Summarize this dossier…”. Fixed by (1) a request-reference field on the assistant page, (2) appending the business reference to the question, and (3) backend resolution of `…-PR-YYYY-######` numbers. Confirmed via `AssistantIntegrationTests.summarizeWithBusinessReferenceRetrievesAuthorisedDossier`.
 
 ## Evidence classes
 

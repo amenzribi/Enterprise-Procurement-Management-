@@ -1510,7 +1510,11 @@
     "draftHint": "This draft is not sent. Copy it into messaging and review before sending.",
     "copyDraft": "Copy draft",
     "draftCopied": "Draft copied.",
-    "draftCopyFailed": "Could not copy the draft."
+    "draftCopyFailed": "Could not copy the draft.",
+    "dossierRef": "Request reference (optional for list questions)",
+    "dossierRefPlaceholder": "e.g. DEMO-TN-PLT-PR-2026-000490",
+    "dossierRefHint": "Required to summarise a dossier or draft a supplier follow-up. Paste the business request reference, not a database id.",
+    "dossierRefRequired": "Enter a request reference before summarising or drafting."
   },
   "messaging": {
     "panel": {

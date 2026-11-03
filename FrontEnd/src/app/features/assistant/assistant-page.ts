@@ -38,10 +38,21 @@ import { AskResponse, AssistantApi, AssistantStatus } from './assistant.api';
         </div>
 
         <form class="form" (submit)="$event.preventDefault(); ask()" novalidate>
+          <label class="label" for="assistant-ref">{{ 'assistant.dossierRef' | translate }}</label>
+          <input
+            id="assistant-ref"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            [value]="dossierRef()"
+            [attr.placeholder]="'assistant.dossierRefPlaceholder' | translate"
+            (input)="dossierRef.set($any($event.target).value)"
+          />
+          <p class="muted small">{{ 'assistant.dossierRefHint' | translate }}</p>
           <label class="label" for="assistant-q">{{ 'assistant.question' | translate }}</label>
           <textarea id="assistant-q" rows="3" maxlength="2000" [value]="question()" (input)="question.set($any($event.target).value)"></textarea>
           <div class="actions">
-            <button appButton type="submit" [disabled]="busy() || !question().trim()">{{ 'assistant.ask' | translate }}</button>
+            <button appButton type="submit" [disabled]="busy() || !canAsk()">{{ 'assistant.ask' | translate }}</button>
           </div>
         </form>
 
@@ -82,9 +93,17 @@ import { AskResponse, AssistantApi, AssistantStatus } from './assistant.api';
     .muted { color: var(--color-text-muted); }
     .small { font-size: var(--text-sm); }
     .starters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block-end: var(--space-4); }
-    .chip { border: 1px solid var(--color-border); background: transparent; padding: 0.35rem 0.75rem; cursor: pointer; border-radius: var(--radius-sm); }
-    .form { display: grid; gap: var(--space-2); margin-block-end: var(--space-4); }
-    textarea { width: 100%; }
+    .chip { border: 1px solid var(--color-border); background: transparent; padding: 0.35rem 0.75rem; cursor: pointer; border-radius: var(--radius-sm); min-block-size: 2.25rem; }
+    .form { display: grid; gap: var(--space-2); margin-block-end: var(--space-4); max-inline-size: 40rem; }
+    input, textarea {
+      width: 100%;
+      min-block-size: 2.5rem;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-line-strong, var(--color-border));
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+    }
+    textarea { min-block-size: 5rem; }
     .answer { border: 1px solid var(--color-border); padding: var(--space-4); }
     .body { white-space: pre-wrap; font-family: inherit; margin: 0; }
     .draft { margin-block-start: var(--space-4); padding-block-start: var(--space-3); border-block-start: 1px dashed var(--color-border); }
@@ -101,6 +120,7 @@ export class AssistantPage implements OnInit {
   protected readonly loadingStatus = signal(true);
   protected readonly statusError = signal<string | null>(null);
   protected readonly question = signal('');
+  protected readonly dossierRef = signal('');
   protected readonly busy = signal(false);
   protected readonly askError = signal<string | null>(null);
   protected readonly answer = signal<AskResponse | null>(null);
@@ -126,15 +146,41 @@ export class AssistantPage implements OnInit {
       draft: 'Draft a supplier follow-up without internal notes.',
     };
     this.question.set(map[key] ?? '');
+    if ((key === 'summarize' || key === 'draft') && !this.dossierRef().trim()) {
+      void Promise.resolve().then(() => document.getElementById('assistant-ref')?.focus());
+    }
+  }
+
+  protected canAsk(): boolean {
+    if (!this.question().trim()) {
+      return false;
+    }
+    const needsRef = /summariz|dossier|follow-up|follow up/i.test(this.question());
+    return (
+      !needsRef ||
+      !!this.dossierRef().trim() ||
+      /\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-PR-\d{4}-\d+\b/i.test(this.question()) ||
+      /(?:request|#)\s*\d+/i.test(this.question())
+    );
   }
 
   protected ask(): void {
-    if (!this.question().trim()) {
+    if (!this.canAsk()) {
+      if (!this.dossierRef().trim()) {
+        this.askError.set('validation-failed');
+        this.notify.error('assistant.dossierRefRequired');
+      }
       return;
     }
     this.busy.set(true);
     this.askError.set(null);
-    this.api.ask(this.question().trim(), undefined, newIdempotencyKey()).subscribe({
+    const ref = this.dossierRef().trim();
+    const requestId = /^\d+$/.test(ref) ? Number(ref) : undefined;
+    let question = this.question().trim();
+    if (ref && requestId == null && !question.toLowerCase().includes(ref.toLowerCase())) {
+      question = `${question} Request reference ${ref}.`;
+    }
+    this.api.ask(question, requestId, newIdempotencyKey()).subscribe({
       next: (res) => {
         this.answer.set(res);
         this.busy.set(false);

@@ -281,6 +281,23 @@ class ApprovalStore {
 				WHERE round_id = ? AND status = 'PENDING' AND id <> ?""", status, db(at), roundId, exceptTaskId);
 	}
 
+	/**
+	 * Administrative cancellation / return: ends every pending task on the request and closes active rounds.
+	 */
+	void cancelAllPendingForRequest(long requestId, Instant at) {
+		jdbc.update("""
+				UPDATE approval_task SET status = 'CANCELLED', decided_at = ?, question_open = 0, paused_at = NULL,
+				       version = version + 1
+				WHERE request_id = ? AND status = 'PENDING'""", db(at), requestId);
+		jdbc.update("""
+				UPDATE approval_round SET status = 'CANCELLED', completed_at = ?, version = version + 1
+				WHERE request_id = ? AND status = 'ACTIVE'""", db(at), requestId);
+		jdbc.update("""
+				UPDATE approval_link_token SET used_at = ?
+				WHERE used_at IS NULL AND task_id IN (SELECT id FROM approval_task WHERE request_id = ?)""", db(at),
+				requestId);
+	}
+
 	void openQuestion(long id, Instant at) {
 		jdbc.update("UPDATE approval_task SET question_open = 1, paused_at = ?, version = version + 1 WHERE id = ?", db(at), id);
 	}

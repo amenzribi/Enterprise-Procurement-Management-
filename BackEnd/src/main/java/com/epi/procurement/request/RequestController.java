@@ -165,6 +165,8 @@ class RequestController {
 			List<RequestStatus> statuses, String q) {
 		return (root, query, cb) -> {
 			List<Predicate> predicates = new ArrayList<>();
+			// Archived requests leave everyday lists; GLOBAL_ADMIN inspects them via /admin/requests.
+			predicates.add(cb.isNull(root.get("archivedAt")));
 			if (onlyMine) {
 				predicates.add(cb.or(cb.equal(root.get("requesterUserId"), user.id()),
 						cb.equal(root.get("enteredByUserId"), user.id())));

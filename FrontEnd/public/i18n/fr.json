@@ -53,6 +53,7 @@
       "exchangeRates": "Taux de change",
       "import": "Import des données",
       "users": "Utilisateurs",
+      "requestAdmin": "Administration des demandes",
       "changePassword": "Changer le mot de passe"
     },
     "plannedSprint": "Sprint {{sprint}}",
@@ -584,11 +585,12 @@
       "responsible": "Responsable actuel",
       "readOnlyProgress": "Aucune action n’est disponible pour vous sur ce dossier pour le moment. L’avancement est affiché ci-dessous à titre d’information.",
       "next": {
-        "submit": "Soumettez ce brouillon pour obtenir une référence définitive et démarrer l’approbation.",
-        "edit": "Modifiez la demande (par exemple après un retour pour révision).",
-        "decide": "Une décision vous attend sur cette demande.",
-        "answer": "Un approbateur a posé une question — répondez pour continuer.",
-        "available": "Une action est disponible pour vous sur ce dossier (voir les panneaux ci-dessous)."
+        "submit": "Prochaine étape à votre charge : soumettez ce brouillon depuis cette page pour obtenir une référence définitive et démarrer l’approbation.",
+        "edit": "Prochaine étape à votre charge : modifiez la demande ici (par exemple après un retour), puis soumettez à nouveau.",
+        "decide": "Vous devez agir : ouvrez Approvals ou Mon travail, ou décidez sur ce dossier. Les tâches restent assignées jusqu’à décision ou annulation.",
+        "answer": "Un approbateur a posé une question — répondez sur ce dossier pour reprendre le délai d’approbation.",
+        "available": "Une action est disponible pour vous sur ce dossier (voir les panneaux). Si un bouton est désactivé, l’explication apparaît à côté.",
+        "ownerElsewhere": "Responsable actuel : {{owner}}. Cherchez la tâche dans Approvals, file Achats, Logistique ou Réceptions selon l’étape — pas dans l’administration des demandes."
       }
     },
     "status": {
@@ -1464,12 +1466,69 @@
       "RECEIVER": "Enregistre la réception des marchandises livrées. Périmètre société.",
       "GROUP_MANAGEMENT": "Visibilité de gestion au niveau groupe (tableaux de bord). Ne remplace pas les rôles opérationnels.",
       "ADMIN": "Administration société/organisation dans le groupe. Ne donne pas tout accès aux données métier.",
-      "GLOBAL_ADMIN": "Administration de l’installation (sociétés, utilisateurs, mots de passe). Ne reçoit pas automatiquement tout accès aux données métier."
+      "GLOBAL_ADMIN": "Administration de l’installation (sociétés, utilisateurs, mots de passe) plus REQUEST_ADMIN contrôlé pour recherche/archivage/annulation/nettoyage des demandes dans le groupe. Ne devient pas acheteur, approbateur, messagerie fournisseur ni assistant."
     },
     "roleCombinations": "Les rôles d’approbation peuvent être combinés avec REQUESTER. BUYER et PURCHASING_MANAGER peuvent être combinés. GLOBAL_ADMIN ne doit pas servir de compte « tous les rôles ». SUPPLIER_CONTACT s’invite depuis la messagerie, pas ici.",
     "tempPassword": "Définir un mot de passe temporaire",
     "tempPasswordHint": "Au moins 12 caractères. L’utilisateur doit le changer à la première connexion. La valeur n’est jamais stockée en clair ni réaffichée.",
     "tempPasswordDone": "Mot de passe temporaire défini. Demandez à l’utilisateur de se connecter et de le changer."
+  },
+  "requestAdmin": {
+    "title": "Administration des demandes",
+    "detailTitle": "Administrer une demande",
+    "detailDescription": "Inspecter les objets liés et n’exécuter que les actions administratives sûres pour l’état.",
+    "description": "Rechercher et administrer les demandes d’achat dans votre groupe d’installation. Ce n’est pas l’achat, l’approbation ni la messagerie fournisseur.",
+    "boundary": "La visibilité est limitée à votre groupe d’organisation (installation). Le serveur applique la même frontière.",
+    "search": "Rechercher référence, titre…",
+    "status": "Code statut",
+    "archivedFilter": "Filtre archive",
+    "archivedAll": "Actives et archivées",
+    "archivedActive": "Actives seulement",
+    "archivedOnly": "Archivées seulement",
+    "archived": "Archivée",
+    "apply": "Rechercher",
+    "cleanupPreview": "Prévisualiser le nettoyage",
+    "reason": "Motif administratif",
+    "reasonRequired": "Saisissez un motif clair (au moins 3 caractères).",
+    "loadError": "Impossible de charger l’administration des demandes.",
+    "back": "Retour à la liste d’administration",
+    "nextStep": "Prochaine étape",
+    "links": "Objets liés",
+    "actionMatrix": "Actions administratives autorisées",
+    "allowed": "Autorisée",
+    "blocked": "Indisponible",
+    "openDossier": "Ouvrir le dossier métier",
+    "deleted": "Brouillon éligible définitivement supprimé.",
+    "empty": {
+      "title": "Aucune demande",
+      "message": "Ajustez les filtres. Les archives n’apparaissent que si le filtre archive les inclut."
+    },
+    "cols": {
+      "reference": "Référence",
+      "title": "Titre",
+      "company": "Société",
+      "requester": "Demandeur",
+      "status": "Statut",
+      "actions": "Actions admin"
+    },
+    "act": {
+      "ARCHIVE": "Archiver",
+      "RESTORE": "Restaurer",
+      "CANCEL": "Annuler le flux",
+      "DELETE_DRAFT": "Supprimer le brouillon",
+      "RETURN_FOR_REVISION": "Renvoyer pour révision",
+      "CORRECT_DRAFT": "Corriger le brouillon",
+      "VIEW": "Voir"
+    },
+    "cleanup": {
+      "title": "Prévisualisation du nettoyage",
+      "summary": "{{total}} candidats — suppressibles {{deletable}}, annulables {{cancellable}}, archivables {{archivable}}, bloqués {{blocked}}.",
+      "confirm": "Confirmer les actions sélectionnées",
+      "dismiss": "Fermer la prévisualisation",
+      "warn": "Rien ne s’exécute avant confirmation. La référence UAT DEMO-TN-PLT-PR-2026-000490 n’est jamais supprimée définitivement. Un nouvel essai exige une nouvelle prévisualisation.",
+      "ready": "Prévisualisation prête — vérifiez puis confirmez.",
+      "done": "Nettoyage terminé. Vérifiez les résultats par enregistrement si certains ont été ignorés."
+    }
   },
   "passwordSetup": {
     "title": "Choisir un mot de passe",

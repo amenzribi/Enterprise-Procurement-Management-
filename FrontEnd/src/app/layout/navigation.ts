@@ -61,6 +61,7 @@ export const NAVIGATION: NavGroup[] = [
   {
     key: 'administration',
     items: [
+      { key: 'requestAdmin', icon: 'file-text', route: '/admin/requests', permission: 'REQUEST_ADMIN' },
       { key: 'approvalRules', icon: 'settings', route: '/admin/approval-rules', permission: 'SYSTEM_ADMIN' },
       { key: 'exchangeRates', icon: 'coins', route: '/admin/exchange-rates', permission: 'SYSTEM_ADMIN' },
       { key: 'organization', icon: 'building', route: '/admin/organization', permission: 'ORG_ADMIN' },

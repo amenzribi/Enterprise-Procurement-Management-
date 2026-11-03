@@ -53,6 +53,7 @@
       "exchangeRates": "Exchange rates",
       "import": "Master-data import",
       "users": "Users",
+      "requestAdmin": "Request administration",
       "changePassword": "Change password"
     },
     "plannedSprint": "Sprint {{sprint}}",
@@ -584,11 +585,12 @@
       "responsible": "Current responsible",
       "readOnlyProgress": "No action is available for you on this dossier right now. Progress is shown below for information.",
       "next": {
-        "submit": "Submit this draft so it receives a final request reference and enters approval.",
-        "edit": "Edit the request (for example after a return for revision).",
-        "decide": "A decision is waiting for you on this request.",
-        "answer": "An approver asked a question — answer it to continue.",
-        "available": "An action is available for you on this dossier (see the panels below)."
+        "submit": "You own the next step: submit this draft from this page so it receives a final reference and enters approval.",
+        "edit": "You own the next step: edit the request here (for example after a return for revision), then submit again.",
+        "decide": "You must act next: open Approvals or My work, or decide on this dossier. Pending tasks stay assigned until decided or cancelled.",
+        "answer": "An approver asked a question — answer it on this dossier to resume the approval deadline.",
+        "available": "An action is available for you on this dossier (see the panels below). If a button is disabled, the explanation appears next to it.",
+        "ownerElsewhere": "Current owner: {{owner}}. Look for the task in Approvals, Purchasing inbox, Logistics or Receipts depending on the stage — not in Request administration."
       }
     },
     "status": {
@@ -1464,12 +1466,69 @@
       "RECEIVER": "Records goods receipt for delivered shipments. Company-scoped.",
       "GROUP_MANAGEMENT": "Group-wide management visibility (dashboards). Not a substitute for operational roles.",
       "ADMIN": "Company/organisation administration within the group. Does not grant all business-data access.",
-      "GLOBAL_ADMIN": "Installation administration (companies, users, passwords). Does not automatically receive all business-data access."
+      "GLOBAL_ADMIN": "Installation administration (companies, users, passwords) plus controlled REQUEST_ADMIN for cross-company request search/archive/cancel/cleanup within the group. Does not become buyer, approver, supplier messenger or assistant user."
     },
     "roleCombinations": "Approver roles may be combined with REQUESTER. BUYER and PURCHASING_MANAGER may be combined. GLOBAL_ADMIN should not be used as an “all roles” account. SUPPLIER_CONTACT is invited from messaging, not here.",
     "tempPassword": "Set temporary password",
     "tempPasswordHint": "At least 12 characters. The user must change it at first sign-in. The value is never stored in clear text or shown again.",
     "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it."
+  },
+  "requestAdmin": {
+    "title": "Request administration",
+    "detailTitle": "Administer request",
+    "detailDescription": "Inspect linked records and run only state-safe administrative actions.",
+    "description": "Search and administer purchase requests across your installation group. This is not purchasing, approval or supplier messaging.",
+    "boundary": "Visibility is limited to your organisation group (installation). The server enforces the same boundary.",
+    "search": "Search reference, title…",
+    "status": "Status code",
+    "archivedFilter": "Archive filter",
+    "archivedAll": "Active and archived",
+    "archivedActive": "Active only",
+    "archivedOnly": "Archived only",
+    "archived": "Archived",
+    "apply": "Search",
+    "cleanupPreview": "Preview cleanup",
+    "reason": "Administrative reason",
+    "reasonRequired": "Enter a clear reason (at least 3 characters).",
+    "loadError": "Request administration could not be loaded.",
+    "back": "Back to administration list",
+    "nextStep": "Next step",
+    "links": "Linked records",
+    "actionMatrix": "Allowed administrative actions",
+    "allowed": "Allowed",
+    "blocked": "Unavailable",
+    "openDossier": "Open business dossier",
+    "deleted": "Eligible draft permanently deleted.",
+    "empty": {
+      "title": "No requests match",
+      "message": "Adjust filters. Archived records appear only when the archive filter includes them."
+    },
+    "cols": {
+      "reference": "Reference",
+      "title": "Title",
+      "company": "Company",
+      "requester": "Requester",
+      "status": "Status",
+      "actions": "Admin actions"
+    },
+    "act": {
+      "ARCHIVE": "Archive",
+      "RESTORE": "Restore",
+      "CANCEL": "Cancel workflow",
+      "DELETE_DRAFT": "Delete draft",
+      "RETURN_FOR_REVISION": "Return for revision",
+      "CORRECT_DRAFT": "Correct draft",
+      "VIEW": "View"
+    },
+    "cleanup": {
+      "title": "Cleanup preview",
+      "summary": "{{total}} candidates — deletable {{deletable}}, cancellable {{cancellable}}, archivable {{archivable}}, blocked {{blocked}}.",
+      "confirm": "Confirm selected actions",
+      "dismiss": "Dismiss preview",
+      "warn": "Nothing runs until you confirm. Protected UAT reference DEMO-TN-PLT-PR-2026-000490 is never hard-deleted. Retries require a new preview.",
+      "ready": "Cleanup preview ready — review and confirm.",
+      "done": "Cleanup finished. Review per-record outcomes if some were skipped."
+    }
   },
   "passwordSetup": {
     "title": "Choose a password",

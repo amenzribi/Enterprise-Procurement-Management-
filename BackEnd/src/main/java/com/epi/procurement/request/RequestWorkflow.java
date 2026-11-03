@@ -77,7 +77,8 @@ public class RequestWorkflow {
 	public Page<RequestSnapshot> searchVisible(CurrentUser user, int page, int size) {
 		int safeSize = size < 1 || size > 200 ? 50 : size;
 		int safePage = Math.max(0, page);
-		Specification<PurchaseRequest> notDraft = (root, q, cb) -> cb.notEqual(root.get("status"), RequestStatus.DRAFT);
+		Specification<PurchaseRequest> notDraft = (root, q, cb) -> cb.and(cb.notEqual(root.get("status"), RequestStatus.DRAFT),
+				cb.isNull(root.get("archivedAt")));
 		return requests
 			.search(user, notDraft, PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "updatedAt", "id")))
 			.map(RequestWorkflow::snapshot);
@@ -110,6 +111,8 @@ public class RequestWorkflow {
 	private static Specification<PurchaseRequest> purchasingSpec(PurchasingQuery query) {
 		return (root, q, cb) -> {
 			java.util.ArrayList<jakarta.persistence.criteria.Predicate> all = new java.util.ArrayList<>();
+			// Archived requests leave active buying queues; GLOBAL_ADMIN uses /admin/requests archive filter.
+			all.add(cb.isNull(root.get("archivedAt")));
 			if (StringUtils.hasText(query.status())) {
 				all.add(cb.equal(root.get("status"), RequestStatus.valueOf(query.status())));
 			}

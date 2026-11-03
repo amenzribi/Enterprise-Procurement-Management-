@@ -192,6 +192,16 @@ class PurchaseRequest {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	@Column(name = "archived_at")
+	private Instant archivedAt;
+
+	@Column(name = "archived_by_user_id")
+	private Long archivedByUserId;
+
+	@Nationalized
+	@Column(name = "archive_reason", length = 1000)
+	private String archiveReason;
+
 	@Version
 	private int version;
 
@@ -271,6 +281,36 @@ class PurchaseRequest {
 	void touch(long userId, Instant now) {
 		this.updatedByUserId = userId;
 		this.updatedAt = now;
+	}
+
+	void archive(long actorUserId, String reason, Instant now) {
+		this.archivedAt = now;
+		this.archivedByUserId = actorUserId;
+		this.archiveReason = reason;
+		touch(actorUserId, now);
+	}
+
+	void restoreFromArchive(long actorUserId, Instant now) {
+		this.archivedAt = null;
+		this.archivedByUserId = null;
+		this.archiveReason = null;
+		touch(actorUserId, now);
+	}
+
+	boolean isArchived() {
+		return archivedAt != null;
+	}
+
+	Instant getArchivedAt() {
+		return archivedAt;
+	}
+
+	Long getArchivedByUserId() {
+		return archivedByUserId;
+	}
+
+	String getArchiveReason() {
+		return archiveReason;
 	}
 
 	Long getId() {

@@ -51,6 +51,9 @@ class MeAssembler {
 			permissions.add("USER_ADMIN_GLOBAL");
 			permissions.add("ORG_ADMIN");
 			permissions.add("SYSTEM_ADMIN");
+			// Installation-scoped request administration (search/archive/cancel/cleanup) — not buyer/approver powers.
+			permissions.add("REQUEST_ADMIN");
+			permissions.add("APPROVAL_ADMIN");
 		}
 		if (user.hasRole(Role.ADMIN) && !permissions.contains("USER_ADMIN")) {
 			permissions.add("USER_ADMIN");

@@ -61,6 +61,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/users-admin').then((m) => m.UsersAdminPage),
       },
       {
+        path: 'admin/requests',
+        title: 'requestAdmin.title',
+        canActivate: [permissionGuard('REQUEST_ADMIN')],
+        loadComponent: () => import('./features/admin/request-admin').then((m) => m.RequestAdminPage),
+      },
+      {
+        path: 'admin/requests/:id',
+        title: 'requestAdmin.detailTitle',
+        canActivate: [permissionGuard('REQUEST_ADMIN')],
+        loadComponent: () => import('./features/admin/request-admin').then((m) => m.RequestAdminDetailPage),
+      },
+      {
         path: 'overview',
         title: 'nav.items.overview',
         loadComponent: () => import('./features/overview/overview').then((m) => m.OverviewPage),

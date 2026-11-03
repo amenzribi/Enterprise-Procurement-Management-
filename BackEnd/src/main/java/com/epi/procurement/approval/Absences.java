@@ -167,7 +167,8 @@ class Absences {
 	}
 
 	static void requireAdmin(CurrentUser user) {
-		if (!user.hasRole(Role.ADMIN)) {
+		// GLOBAL_ADMIN holds SYSTEM_ADMIN / APPROVAL_ADMIN in MeAssembler but may lack Role.ADMIN.
+		if (!user.hasRole(Role.ADMIN) && !user.isGlobalAdmin()) {
 			throw ApiProblemException.forbidden();
 		}
 	}

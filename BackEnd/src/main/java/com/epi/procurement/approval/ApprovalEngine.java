@@ -31,6 +31,7 @@ import com.epi.procurement.organization.WorkingCalendar;
 import com.epi.procurement.platform.web.ApiProblemException;
 import com.epi.procurement.platform.web.FieldViolation;
 import com.epi.procurement.platform.web.ValidationFailedException;
+import com.epi.procurement.request.RequestAdministrativelyCancelledEvent;
 import com.epi.procurement.request.RequestSnapshot;
 import com.epi.procurement.request.RequestSubmittedEvent;
 import com.epi.procurement.request.RequestWorkflow;
@@ -86,6 +87,19 @@ class ApprovalEngine {
 	@EventListener
 	void onSubmitted(RequestSubmittedEvent event) {
 		start(event.requestId(), event.roundNo(), event.submittedAt(), null, true);
+	}
+
+	/**
+	 * GLOBAL_ADMIN cancel/return: cancel pending tasks, close active rounds, invalidate unused one-tap links.
+	 * Completed decisions stay intact.
+	 */
+	@EventListener
+	void onAdministrativelyCancelled(RequestAdministrativelyCancelledEvent event) {
+		Optional<ApprovalStore.Round> round = store.activeRound(event.requestId());
+		store.cancelAllPendingForRequest(event.requestId(), event.occurredAt());
+		round.ifPresent(r -> store.insertEvent(event.requestId(), r.id(), null, "ADMIN_" + event.outcome(),
+				event.actorUserId(), null, null, "Administrative " + event.outcome(), "IN_APPROVAL", event.outcome(),
+				"APP", event.occurredAt()));
 	}
 
 	/**

@@ -11,6 +11,8 @@ describe('navigation roadmap', () => {
   it('opens approvals from Sprint 2, and the approval administration for administrators only', () => {
     expect(findNavItem('approvals')?.route).toBe('/approvals');
     expect(findNavItem('approvals')?.badge).toBe('approvals');
+    expect(findNavItem('requestAdmin')?.permission).toBe('REQUEST_ADMIN');
+    expect(findNavItem('requestAdmin')?.route).toBe('/admin/requests');
     expect(findNavItem('approvalRules')?.permission).toBe('SYSTEM_ADMIN');
     expect(findNavItem('exchangeRates')?.permission).toBe('SYSTEM_ADMIN');
   });

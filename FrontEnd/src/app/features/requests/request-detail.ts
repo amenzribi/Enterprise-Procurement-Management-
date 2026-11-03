@@ -101,6 +101,10 @@ export class RequestDetailPage {
     if (actions.length > 0) {
       return this.translate.instant('requests.detail.next.available');
     }
+    const owner = request.currentOwner?.displayName ?? request.requester?.displayName;
+    if (owner) {
+      return this.translate.instant('requests.detail.next.ownerElsewhere', { owner });
+    }
     return null;
   });
 

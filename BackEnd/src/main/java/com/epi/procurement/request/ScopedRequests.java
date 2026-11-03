@@ -30,6 +30,33 @@ class ScopedRequests {
 		return repository.findAll(policy.visibleTo(user).and(filter), pageable);
 	}
 
+	/**
+	 * Installation/group-scoped search for GLOBAL_ADMIN request administration. Does not grant ordinary
+	 * business visibility; callers must enforce {@code REQUEST_ADMIN} separately.
+	 */
+	Page<PurchaseRequest> searchInGroup(long groupId, Specification<PurchaseRequest> filter, Pageable pageable) {
+		return repository.findAll(inGroup(groupId).and(filter), pageable);
+	}
+
+	PurchaseRequest getInGroup(long groupId, long id) {
+		return repository.findOne(inGroup(groupId).and(hasId(id))).orElseThrow(ApiProblemException::notFound);
+	}
+
+	PurchaseRequest getInGroupForUpdate(long groupId, long id) {
+		if (!repository.exists(inGroup(groupId).and(hasId(id)))) {
+			throw ApiProblemException.notFound();
+		}
+		return repository.findByIdForUpdate(id).orElseThrow(ApiProblemException::notFound);
+	}
+
+	java.util.List<PurchaseRequest> findInGroupByIds(long groupId, java.util.Collection<Long> ids) {
+		if (ids == null || ids.isEmpty()) {
+			return java.util.List.of();
+		}
+		Specification<PurchaseRequest> byIds = (root, query, cb) -> root.get("id").in(ids);
+		return repository.findAll(inGroup(groupId).and(byIds));
+	}
+
 	PurchaseRequest getVisible(CurrentUser user, long id) {
 		return repository.findOne(policy.visibleTo(user).and(hasId(id))).orElseThrow(ApiProblemException::notFound);
 	}
@@ -80,6 +107,10 @@ class ScopedRequests {
 
 	private static Specification<PurchaseRequest> hasId(long id) {
 		return (root, query, cb) -> cb.equal(root.get("id"), id);
+	}
+
+	private static Specification<PurchaseRequest> inGroup(long groupId) {
+		return (root, query, cb) -> cb.equal(root.get("groupId"), groupId);
 	}
 
 }

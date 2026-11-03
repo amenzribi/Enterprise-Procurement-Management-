@@ -1,51 +1,51 @@
-# Guide absences et délégation (comportement réel)
+# Absences et délégation — comportement réel
 
 ## Qui configure
 
-| Acteur | Page / API | Droits |
+| Acteur | Où | Droit |
 |---|---|---|
-| Utilisateur lui-même | `/absences` → `POST /api/v1/me/absences` | Ses propres absences ; délégué doit partager un rôle d’approbation dans la même société |
-| ADMIN ou GLOBAL_ADMIN | Admin absences (API `/api/v1/admin/...`) | Même groupe ; option `adminOverride` pour délégué hors rôle strict |
+| Utilisateur | `/absences` → API `/api/v1/me/absences` | Ses absences ; délégué partageant un rôle d’approbation dans la même société |
+| `ADMIN` (groupe) ou `GLOBAL_ADMIN` | API `/api/v1/admin/absences` | Même groupe ; option `adminOverride` |
 
-**Correction** : `Absences.requireAdmin` accepte désormais `GLOBAL_ADMIN` (auparavant `Role.ADMIN` seul → décalage UI `SYSTEM_ADMIN` / API).
+L’écran absences rappelle explicitement la limitation « création de tâche uniquement ».
 
-## Champs
+## `adminOverride` — ce qu’il contourne / ne contourne pas
 
-- `startsAt`, `endsAt` (UTC) — `endsAt` strictement après `startsAt`
-- `delegateUserId` — pas soi-même ; même groupe
-- `reason` (≤ 300)
-- `adminOverride` (admin seulement)
+| Contourne | Ne contourne **pas** |
+|---|---|
+| L’exigence que le délégué tienne le même rôle d’approbation que l’absent | Isolation de **groupe** (délégué hors groupe → refus / introuvable) |
+| | Compte **inactif** (routage → `ABSENCE_UNRESOLVED`, tâche reste sur l’approbateur désigné) |
+| | **Auto-approbation** : un délégué auteur (requester / entered-by) est inéligible |
+| | Auto-délégation à soi-même |
+| | Chevauchement de périodes (`absence-overlap`) |
 
-Chevauchements refusés (`absence-overlap`).
+## Politique de routage (création de tâche uniquement)
 
-## Routage (création de tâche uniquement)
+1. À la **création** d’une tâche, si l’approbateur désigné a une absence active → assignee = délégué, `original_user_id` = absent, note `ABSENCE_DELEGATE`.
+2. Chaîne max **3** hops (`MAX_DELEGATION_HOPS`) ; cycle → `ABSENCE_UNRESOLVED`.
+3. **Tâches déjà créées avant** le début d’absence : **non réassignées**.
+4. **Après fin d’absence** : nouvelles tâches → approbateur nominal ; tâches déjà chez le délégué **restent** chez lui.
+5. **ANY** : plusieurs absents dont le délégué est déjà détenteur → une seule tâche, « on behalf of » cumule.
+6. **ALL** : si le délégué a déjà une tâche requise de l’étage, l’absent **garde** la sienne (`ABSENCE_UNRESOLVED`) — une personne ne satisfait pas deux approvals ALL.
+7. Questions : pause SLA ; rappels / escalade **n’approuvent pas**.
+8. Audit : `actor_user_id` + `on_behalf_of_user_id`.
 
-Documenté dans `ApproverResolver.route` / commentaire `Absences` :
+## Ce qu’un administrateur peut faire pour une tâche déjà ouverte
 
-1. À la **création** d’une tâche d’approbation, si l’approbateur désigné a une absence **active** à l’instant `at`, la tâche est assignée au délégué (note `ABSENCE_DELEGATE`, `original_user_id` renseigné).
-2. Chaîne : jusqu’à `MAX_DELEGATION_HOPS` (voir code), détection de cycle A→B→A.
-3. Délégué inactif, inéligible, auteur de la demande, ou boucle → `ABSENCE_UNRESOLVED` : la tâche reste sur l’approbateur désigné.
-4. **Tâches déjà créées avant le début d’absence** : **non réassignées** automatiquement (politique actuelle).
-5. **Après la fin d’absence** : les nouvelles tâches suivent l’approbateur nominal ; les tâches déjà chez le délégué restent chez lui jusqu’à décision.
-6. Auto-approbation : les auteurs (requester / entered-by) sont retirés des détenteurs ; un délégué auteur est inéligible.
-7. Stages ANY / ALL : politique inchangée ; un même utilisateur ne doit pas compter deux fois (résolution des holders + délégation).
-8. Questions : mettent en pause les SLA (`question_open`) ; rappels / escalade **n’approuvent pas**.
-9. Audit : `actor_user_id` + `on_behalf_of_user_id` sur les événements de décision déléguée.
+- Enregistrer / annuler une **période d’absence** (futur ou en cours).
+- Utiliser, si exposée, l’action métier **DELEGATE** sur une tâche pending (décision du titulaire), distincte de l’absence.
+- **Ne peut pas** : forcer depuis l’admin d’absence une réassignation rétroactive des tâches déjà pending. Aucune action inventée.
 
-## Scénario type (Karim → Hichem)
+## Karim → Hichem (preuve correcte)
 
-1. Créer une absence datée pour Karim avec Hichem délégué (éligible même société / rôle).
-2. Pendant la période : soumettre une demande qui crée une tâche pour le rôle de Karim → assignee = Hichem.
-3. Avant / après les dates : assignee = Karim (sauf tâche déjà créée).
-4. Tentative de délégué hors société / hors groupe → refus.
-5. Boucle A→B→A → unresolved / pas de boucle infinie.
+Les deux sont `DEPARTMENT_MANAGER` DEMO-MAINT : sur un étage **ANY**, Hichem peut déjà voir la tâche **sans** délégation. Preuve de délégation = `assignee = Hichem`, `original_user_id = Karim`, `routing_note = ABSENCE_DELEGATE`, événement `ABSENCE_ROUTED` / audit, affichage « pour le compte de ».
 
-## Limites connues (pas inventées)
+## Montants Sfax (borne 5 000 TND)
 
-- Pas de « task delegation » séparée hors absence (hors action DELEGATE sur une tâche pending si exposée dans le moteur).
-- Pas de redistribution automatique des tâches ouvertes à la révocation d’absence ou à la désactivation du délégué.
-- Si aucun approbateur éligible au démarrage du circuit → `no-eligible-approver` (422), notification admin éventuelle.
+Bandes `[min, max)` en devise société :
 
-## Décisions métier encore ouvertes
-
-Aucune décision bloquante pour livrer REQUEST_ADMIN. Si le métier exige la **réassignation des tâches déjà ouvertes** au début d’une absence, cela doit être une ADR explicite (comportement actuel = création seule).
+| Règle | Intervalle | Effet à **exactement 5 000 TND** |
+|---|---|---|
+| Sfax up to 5 000 | `[0, 5000)` | **N’applique pas** 5000 |
+| Sfax 5 000 to 50 000 | `[5000, 50000)` | **Oui** — département puis budget (Leila) |
+| Sfax from 50 000 | `[50000, ∞)` | — |

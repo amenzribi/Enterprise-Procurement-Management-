@@ -42,6 +42,11 @@ class OutboxIntegrationTests extends SqlServerTestSupport {
 		TransactionTemplate tx = new TransactionTemplate(transactionManager);
 		Notice notice = new Notice("TASK_REMINDER", leila, null, Map.of("number", "TEST-OUTBOX", "stage", "Budget"),
 				List.of(), List.of(), "/requests");
+		jdbc.update("DELETE FROM notification_outbox WHERE subject LIKE '%TEST-OUTBOX%'");
+		// Push leftover due rows out of the claim window so this notice is not starved.
+		jdbc.update("""
+				UPDATE notification_outbox SET next_attempt_at = DATEADD(day, 30, SYSUTCDATETIME()), claimed_at = NULL
+				WHERE status IN ('PENDING', 'SENDING')""");
 
 		tx.executeWithoutResult(status -> {
 			notifications.enqueue(notice);
@@ -53,6 +58,7 @@ class OutboxIntegrationTests extends SqlServerTestSupport {
 		Map<String, Object> row = jdbc.queryForMap("SELECT TOP (1) id, language, body_html, message_id FROM notification_outbox "
 				+ "WHERE subject LIKE '%TEST-OUTBOX%' ORDER BY id DESC");
 		long id = ((Number) row.get("id")).longValue();
+		String expectedMessageId = (String) row.get("message_id");
 		// Leila's demo language is Arabic: right-to-left e-mail.
 		assertThat(row.get("language")).isEqualTo("ar");
 		assertThat((String) row.get("body_html")).contains("dir=\"rtl\"");
@@ -77,7 +83,7 @@ class OutboxIntegrationTests extends SqlServerTestSupport {
 		clock.advance(Duration.ofMinutes(5));
 		working.sendDue();
 		working.sendDue();
-		assertThat(sentIds).containsExactly((String) row.get("message_id"));
+		assertThat(sentIds).containsExactly(expectedMessageId);
 		assertThat(jdbc.queryForObject("SELECT status FROM notification_outbox WHERE id = ?", String.class, id))
 			.isEqualTo("SENT");
 

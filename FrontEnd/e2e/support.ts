@@ -36,6 +36,7 @@ export const USERS = {
   receiverTn: 'receiver.tn@demo.local',
   ceo: 'ceo@demo.local',
   admin: 'admin@demo.local',
+  globalAdmin: 'global.admin@demo.local',
 } as const;
 
 export function demoPassword(): string {

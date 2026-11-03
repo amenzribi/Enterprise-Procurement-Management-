@@ -317,6 +317,77 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 				+ "body_html LIKE ?", Integer.class, "%/requests/" + id + "\"%")).as("one escalation per task").isEqualTo(tasks);
 	}
 
+	/**
+	 * Absence routing applies only at task creation. Pre-existing tasks stay with the original assignee; ending an
+	 * absence does not pull already-delegated tasks back.
+	 */
+	@Test
+	void absenceAffectsOnlyTasksCreatedDuringThePeriod() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		ApiClient karim = signedIn("manager.tn@demo.local");
+		long karimId = userId("manager.tn@demo.local");
+		long hichemId = userId("manager2.tn@demo.local");
+
+		// Task created before absence: stays with Karim (and Hichem as ANY peer).
+		long beforeId = submit(sami, request("Before absence IT", "TND", 15, "DEMO-SPARE"));
+		assertThat(jdbc.queryForList(
+				"SELECT assignee_user_id FROM approval_task WHERE request_id = ? AND status = 'PENDING'", Long.class,
+				beforeId)).contains(karimId);
+
+		Instant now = clock.instant();
+		long absence = karim.post("/api/v1/me/absences",
+				"{\"delegateUserId\":" + hichemId + ",\"startsAt\":\"" + now.minusSeconds(30) + "\",\"endsAt\":\""
+						+ now.plus(Duration.ofDays(1)) + "\",\"reason\":\"IT controlled absence\"}")
+			.expectStatus(201)
+			.id();
+		try {
+			long duringId = submit(sami, request("During absence IT", "TND", 15, "DEMO-SPARE"));
+			List<Map<String, Object>> during = jdbc.queryForList(
+					"SELECT assignee_user_id, original_user_id, routing_note FROM approval_task WHERE request_id = ?",
+					duringId);
+			assertThat(during).anySatisfy(t -> {
+				assertThat(((Number) t.get("assignee_user_id")).longValue()).isEqualTo(hichemId);
+				assertThat(((Number) t.get("original_user_id")).longValue()).isEqualTo(karimId);
+				assertThat(t.get("routing_note")).isEqualTo("ABSENCE_DELEGATE");
+			});
+			// Pre-absence task unchanged.
+			assertThat(jdbc.queryForList(
+					"SELECT assignee_user_id FROM approval_task WHERE request_id = ? AND status = 'PENDING'", Long.class,
+					beforeId)).contains(karimId);
+
+			karim.delete("/api/v1/me/absences/" + absence).expectStatus(204);
+			absence = 0;
+			// Already delegated task remains with Hichem after absence ends.
+			assertThat(jdbc.queryForList(
+					"SELECT assignee_user_id FROM approval_task WHERE request_id = ? AND routing_note = 'ABSENCE_DELEGATE'",
+					Long.class, duringId)).containsOnly(hichemId);
+
+			long afterId = submit(sami, request("After absence IT", "TND", 15, "DEMO-SPARE"));
+			assertThat(jdbc.queryForList(
+					"SELECT assignee_user_id FROM approval_task WHERE request_id = ? AND status = 'PENDING'", Long.class,
+					afterId)).contains(karimId);
+		}
+		finally {
+			if (absence > 0) {
+				karim.delete("/api/v1/me/absences/" + absence).expectStatus(204);
+			}
+		}
+	}
+
+	@Test
+	void globalAdminCanAdministerAbsencesLikeCompanyAdmin() {
+		ApiClient global = signedIn("global.admin@demo.local");
+		Instant now = clock.instant();
+		long absence = global.post("/api/v1/admin/absences",
+				"{\"userId\":" + userId("manager.tn@demo.local") + ",\"delegateUserId\":"
+						+ userId("manager2.tn@demo.local") + ",\"startsAt\":\"" + now.plus(Duration.ofDays(10))
+						+ "\",\"endsAt\":\"" + now.plus(Duration.ofDays(12))
+						+ "\",\"reason\":\"GLOBAL_ADMIN IT absence\"}")
+			.expectStatus(201)
+			.id();
+		global.delete("/api/v1/admin/absences/" + absence).expectStatus(204);
+	}
+
 	@Test
 	void absenceDelegationRoutesTasksToTheDelegate() {
 		ApiClient leila = signedIn("budget.tn@demo.local");

@@ -59,6 +59,7 @@ export const periodValidator: ValidatorFn = (group): ValidationErrors | null => 
   imports: [Button, DatePipe, EmptyState, ErrorState, Icon, PageHeader, ReactiveFormsModule, Skeleton, TranslatePipe],
   template: `
     <app-page-header [heading]="'absences.title' | translate" [description]="'absences.description' | translate" />
+    <p class="policy-note">{{ 'absences.policyNote' | translate }}</p>
 
     <div class="layout">
       <section class="panel" aria-labelledby="absence-new">
@@ -160,6 +161,13 @@ export const periodValidator: ValidatorFn = (group): ValidationErrors | null => 
     </div>
   `,
   styles: `
+    .policy-note {
+      max-inline-size: 48rem;
+      margin-block: 0 1rem;
+      color: var(--color-text-muted, #5c6570);
+      font-size: 0.9rem;
+    }
+
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);

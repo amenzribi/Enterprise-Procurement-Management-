@@ -1,46 +1,47 @@
-# Règles d’administration des demandes (REQUEST_ADMIN)
+# Règles d’administration des demandes (`REQUEST_ADMIN`)
 
-Frontière : **groupe d’organisation** du `GLOBAL_ADMIN` (`group_id`). Hors groupe → 404. Pas d’accès silencieux buyer/approver.
+Frontière serveur : `group_id` du `GLOBAL_ADMIN`. Hors groupe → 404. Ne confère pas buyer / approver / messagerie / assistant.
 
 UI : **Administration → Administration des demandes** (`/admin/requests`).
 
-## Signification des verbes
+## Verbes
 
 | Action | Effet | Ne fait pas |
 |---|---|---|
-| **Supprimer (Delete)** | Retrait permanent d’un brouillon éligible | Réutiliser le numéro ; supprimer l’audit admin |
-| **Annuler (Cancel)** | Passe en `CANCELLED`, annule tâches d’approbation en attente et liens one-tap inutilisés | Annuler un PO, inverser réception/paiement |
-| **Archiver (Archive)** | Quitte les listes actives (`archived_at`) ; historique conservé | Changer le statut métier ; « disparaitre » une tâche ouverte sans explication |
-| **Restaurer** | Retire l’archive ; revient dans les listes | Rouvrir un état annulé/clôturé |
-| **Renvoyer pour révision** | `REVISION_REQUESTED` + annulation des tâches pending | Contourner les règles d’auto-approbation au resoumission |
+| **Supprimer** | Retrait permanent d’un brouillon éligible + audit | Réutiliser un numéro ; casser la chaîne d’audit |
+| **Annuler** | `CANCELLED` ; annule tâches pending et invalide liens one-tap inutilisés | Annuler un PO / inverser réception-paiement |
+| **Archiver** | Quitte listes actives (`archived_at`) | Changer le statut métier |
+| **Restaurer** | Revient dans les listes actives | Rouvrir un état annulé/clôturé |
+| **Renvoyer pour révision** | `REVISION_REQUESTED` + annulation pending | Contourner l’auto-approbation au resoumission |
 
-## Matrice par état (résumé)
+Référence protégée : `DEMO-TN-PLT-PR-2026-000490`.
 
-| État | Voir | Corriger | Retour | Annuler | Archiver | Restaurer | Supprimer |
-|---|---|---|---|---|---|---|---|
-| DRAFT | Oui | Titre/justification + motif | Non | Non (utiliser Delete) | Non | Non | Oui si aucun lien métier / pas de n° / pas protégé |
-| CREATED / IN_APPROVAL | Oui | Non (pas de rewrite silencieux) | Oui | Oui | Non | Non | Non |
-| REVISION_REQUESTED / PURCHASING_RETURNED | Oui | Non via admin général | Non | Oui (si &lt; ORDERED et sans engagement) | Non | Non | Non |
-| APPROVED … AWARDED (pré-ORDERED, sans PO/award) | Oui | Non | Non | Oui si pas d’engagement lié | Non | Non | Non |
-| ORDERED et après / avec PO, shipment, receipt, invoice | Oui | Non | Non | **Bloqué** (pas de workflow financier inventé) | Non | Non | Non |
-| REJECTED / CANCELLED / CLOSED | Oui | Non | Non | Non si déjà terminal | Oui | Après archive | Non |
+## Matrice (résumé)
 
-Référence protégée : `DEMO-TN-PLT-PR-2026-000490` — suppression définitive toujours refusée.
+Voir aussi tests `RequestAdminActionsTest` / `RequestAdminIntegrationTests`.
 
-## Listes et métriques
+| État | Corriger | Retour | Annuler | Archiver | Supprimer |
+|---|---|---|---|---|---|
+| DRAFT | Oui (titre/justification + motif) | Non | Non | Non | Oui si éligible |
+| CREATED / IN_APPROVAL | Non | Oui | Oui | Non | Non |
+| Pré-ORDERED sans engagement | Non | Selon statut | Oui si pas d’engagement | Non | Non |
+| ORDERED+ / PO / shipment / receipt / invoice | Non | Non | Bloqué | Non | Non |
+| REJECTED / CANCELLED / CLOSED | Non | Non | Non | Oui | Non |
 
-- Listes métier quotidiennes (`/api/v1/requests`, file achats, vues visibles) : **excluent** `archived_at IS NOT NULL`.
-- Administration : filtre archive = toutes / actives / archivées.
-- Tableaux de bord : les agrégats basés sur les mêmes files actives **n’incluent pas** les archivées ; documenter toute métrique historique séparément si ajoutée plus tard.
+## Listes, badges, tableaux de bord
 
-## Audit
+| Surface | Archivées |
+|---|---|
+| `/api/v1/requests`, file achats, vues visibles | **Exclues** |
+| Badges inbox (approvals / purchasing) | Basés sur tâches / files actives — une demande archivée ne doit plus générer de travail ouvert |
+| Tableaux de bord (`RequestWorkflow.searchVisible`) | **Métriques actives** : archivées exclues |
+| Métriques historiques incluant l’archive | **Non implémentées** à part — l’admin archive sert à les consulter via filtre `archived=true` |
 
-Chaque mutation admin écrit un événement (`REQUEST_ARCHIVED`, `REQUEST_RESTORED`, `REQUEST_ADMIN_CANCELLED`, `REQUEST_ADMIN_RETURNED`, `REQUEST_ADMIN_DRAFT_CORRECTED`, `REQUEST_ADMIN_DRAFT_DELETED`) avec acteur, motif, avant/après sans secrets.
+## Nettoyage
 
-## Nettoyage (preview)
+1. `POST .../cleanup/preview` (max 50) — **aucune** mutation.
+2. Relecture + sélection.
+3. `POST .../cleanup/execute` avec `confirmation=APPLY` + motif ; jeton **one-shot**.
+4. Résultats par enregistrement (DELETED / CANCELLED / ARCHIVED / SKIPPED / BLOCKED).
 
-1. Filtrer / sélectionner → `POST /cleanup/preview` (max 50).
-2. Relire impact + actions recommandées.
-3. Confirmer `confirmation=APPLY` + motif → `POST /cleanup/execute`.
-4. Jeton one-shot (pas de double traitement).
-5. **Aucun** nettoyage automatique au démarrage ni en développement.
+**État livraison** : le flux preview→exécution est implémenté et testé sur des **fiches isolées**. **Aucun** nettoyage de masse des demandes existantes de l’utilisateur n’a été exécuté.

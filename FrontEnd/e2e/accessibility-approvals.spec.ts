@@ -26,7 +26,16 @@ for (const lang of ['en', 'ar'] as Lang[]) {
   for (const size of WIDTHS) {
     test(`approval screens accessibility ${lang.toUpperCase()} ${size.name}`, async ({ page, browser }) => {
       test.setTimeout(180_000);
-      // A request waiting for Karim, so his inbox and decision panel have content.
+      // Clear leftover absences so Karim (not a delegate) receives the new task for inbox content.
+      await page.setViewportSize({ width: size.width, height: size.height });
+      await signIn(page, USERS.managerTn, lang, '/absences');
+      await expect(page.locator('#absence-delegate')).toBeVisible();
+      while ((await page.getByRole('button', { name: t(lang, 'absences.remove') }).count()) > 0) {
+        await page.getByRole('button', { name: t(lang, 'absences.remove') }).first().click();
+        await page.getByRole('alertdialog').getByRole('button', { name: t(lang, 'absences.remove') }).click();
+        await expect(page.getByText(t(lang, 'absences.removed')).last()).toBeVisible();
+      }
+
       const sami = await newUserPage(browser);
       await signIn(sami, USERS.requesterTn, lang);
       const request = await createAndSubmit(sami, lang, uniqueTitle('Axe approvals'));
@@ -35,10 +44,11 @@ for (const lang of ['en', 'ar'] as Lang[]) {
       await noHorizontalScroll(sami, 'tracker (requester)');
       await sami.context().close();
 
-      await page.setViewportSize({ width: size.width, height: size.height });
-      await signIn(page, USERS.managerTn, lang, '/approvals');
+      // Search by number: Karim may have hundreds of pending items sorted by waiting-longest.
+      await page.goto(`/approvals?q=${encodeURIComponent(request.number)}`);
       await expect(page.locator('html')).toHaveAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
       await expect(page.getByRole('heading', { level: 1, name: t(lang, 'approvals.inbox.title') })).toBeVisible();
+      await expect(page.getByText(request.number)).toBeVisible({ timeout: 20_000 });
       await expect(page.locator('.card').first()).toBeVisible();
       await expectNoViolations(page, 'inbox');
       await noHorizontalScroll(page, 'inbox');

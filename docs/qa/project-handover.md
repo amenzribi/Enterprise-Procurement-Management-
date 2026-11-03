@@ -8,7 +8,8 @@ Updated after the **usability** implementation pass (admin clarity, My work, new
 |---|---|
 | `b967b3e` / `fabfe96` | Sprint 12 assistant + handover |
 | `4616e83` … `838d9f9` | Sprint 13 verification / nav / workspace home |
-| Usability commits (local) | See `git log` after this pass |
+| `fef8b1f` | Usability: My work, newest-first, references, logistics inbox, admin password flows, FR guides |
+| `95b469f` | Assistant empty summary fix (dossier reference binding + PR-number resolve) |
 
 **Unrelated dirty tree** (purchasing/supplier/org/import/V7/frontend/docs): classified **CRLF-only** — leave uncommitted unless Mohamed asks. **Do not edit applied V7.**
 

@@ -68,7 +68,7 @@ Le calendrier de travail n’est pas un référentiel séparé dans cette versio
 1. Sélectionnez l’utilisateur dans la liste.
 2. Sous **Attributions de rôles**, choisissez le rôle et la **société** (si le rôle est au périmètre société).
 3. Cliquez sur **Ajouter le rôle**.
-4. Les rôles groupe (ADMIN, GLOBAL_ADMIN, GROUP_MANAGEMENT) n’exigent pas de société sur la grant.
+4. Les rôles groupe (`GLOBAL_ADMIN`, `GROUP_MANAGEMENT`, `SUPPLIER_CONTACT`) n’exigent pas de société. **`ADMIN` exige une société** ; un ADMIN ne peut pas s’auto-étendre à d’autres sociétés ni créer de sociétés (réservé à `GLOBAL_ADMIN`).
 5. Combinaisons usuelles : REQUESTER + rôle d’approbation ; BUYER + PURCHASING_MANAGER. Lisez le paragraphe **combinaisons** sur l’écran.
 
 ---

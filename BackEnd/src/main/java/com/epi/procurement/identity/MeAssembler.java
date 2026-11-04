@@ -51,12 +51,18 @@ class MeAssembler {
 			permissions.add("USER_ADMIN_GLOBAL");
 			permissions.add("ORG_ADMIN");
 			permissions.add("SYSTEM_ADMIN");
-			// Installation-scoped request administration (search/archive/cancel/cleanup) — not buyer/approver powers.
+			// Installation-scoped request administration (search/archive/cancel/cleanup/correct/remove).
 			permissions.add("REQUEST_ADMIN");
+			permissions.add("REQUEST_DRAFT_ADMIN");
 			permissions.add("APPROVAL_ADMIN");
 		}
 		if (user.hasRole(Role.ADMIN) && !permissions.contains("USER_ADMIN")) {
 			permissions.add("USER_ADMIN");
+		}
+		// Company ADMIN may inspect/correct eligible drafts in granted companies only.
+		if (user.hasRole(Role.ADMIN) && !user.adminCompanyIds().isEmpty()
+				&& !permissions.contains("REQUEST_DRAFT_ADMIN")) {
+			permissions.add("REQUEST_DRAFT_ADMIN");
 		}
 		if (user.hasRole(Role.REQUESTER) || user.hasRole(Role.ENTER_ON_BEHALF)) {
 			permissions.add("REQUEST_CREATE");

@@ -59,7 +59,8 @@ class ImportService {
 		if (!"SUPPLIER".equals(kind) && !"ORGANISATION".equals(kind)) {
 			throw ApiProblemException.invalidParameter("kind");
 		}
-		if ("ORGANISATION".equals(kind) && (companyId == null || !user.hasRole(Role.ADMIN))) {
+		if ("ORGANISATION".equals(kind)
+				&& (companyId == null || !user.isGlobalAdmin() && !user.canAdminCompany(companyId))) {
 			throw ApiProblemException.forbidden();
 		}
 		byte[] bytes;

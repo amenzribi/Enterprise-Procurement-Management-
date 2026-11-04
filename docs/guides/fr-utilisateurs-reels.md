@@ -9,8 +9,8 @@ Tous les comptes listés sont **actifs** (`is_active = 1`). Mot de passe démo :
 
 | Affichage | E-mail (login) | Société domicile | Département domicile | Grants (rôle → société / département) | Menus / actions typiques |
 |---|---|---|---|---|---|
-| Global Administrator (Demo) | `global.admin@demo.local` | DEMO-HOLD | — | `GLOBAL_ADMIN` (sans société) | Org, Users, Approval rules, Exchange rates, **Request administration** (`REQUEST_ADMIN`), absences admin. **Pas** file achats / approvals métier / assistant |
-| Platform Administrator (Demo) | `admin@demo.local` | DEMO-HOLD | — | `ADMIN` (sans société = **groupe**) | Org/users/règles/taux/import dans le groupe. **Pas** `REQUEST_ADMIN` |
+| Global Administrator (Demo) | `global.admin@demo.local` | DEMO-HOLD | — | `GLOBAL_ADMIN` (sans société) | Org, Users, Approval rules, Exchange rates, **Request administration** (`REQUEST_ADMIN` + `REQUEST_DRAFT_ADMIN`), absences admin. **Pas** file achats / approvals métier / assistant |
+| Platform Administrator (Demo) | `admin@demo.local` | DEMO-HOLD | — | `ADMIN` → DEMO-HOLD, DEMO-TN-PLT, DEMO-FR-PLT, DEMO-CPA (**company-scoped**) | Org/users/règles/taux/import **dans les sociétés accordées** ; brouillons demandes (`REQUEST_DRAFT_ADMIN`). **Pas** `REQUEST_ADMIN` (correction soumise / remove / archive / cleanup) |
 | Hedi Ferchichi (Demo) | `ceo@demo.local` | DEMO-HOLD | — | `GROUP_MANAGEMENT` (groupe) ; `MANAGEMENT_APPROVER` → DEMO-TN-PLT ; `MANAGEMENT_APPROVER` → DEMO-FR-PLT | Tableaux de bord ; étapes management |
 | Sami Ben Ali (Demo) | `requester.tn@demo.local` | DEMO-TN-PLT | DEMO-MAINT | `REQUESTER` → DEMO-TN-PLT | Demandes (créer/soumettre) |
 | Amel Trabelsi (Demo) | `assistant.tn@demo.local` | DEMO-TN-PLT | DEMO-MAINT | `REQUESTER` + `ENTER_ON_BEHALF` → DEMO-TN-PLT | Saisie pour compte d’autrui |
@@ -30,6 +30,14 @@ Tous les comptes listés sont **actifs** (`is_active = 1`). Mot de passe démo :
 |---|---|---|---|
 | `DEMO-TN-PLT-PR-2026-000490` | UAT-01 — Pump seals | `CLOSED` | non |
 
-## Clarification ADMIN
+## Clarification ADMIN (V17)
 
-`ADMIN` n’est **pas** « admin d’une seule société » : le grant démo est **sans `company_id`**, donc **périmètre groupe**. L’UI Users peut encore parler d’administration d’organisation ; le serveur applique le groupe du compte.
+`ADMIN` **exige** `company_id`. Migration V17 : chaque ancienne grant `ADMIN` à `company_id` NULL a été **étendue** en une grant explicite par société du groupe du compte, puis la ligne NULL a été supprimée. Les **nouvelles** sociétés ne reçoivent pas automatiquement un ADMIN — attribution par `GLOBAL_ADMIN` seulement.
+
+### Rapport comptes ADMIN (seed DEMO-GRP)
+
+| E-mail | Grants ADMIN résultantes |
+|---|---|
+| `admin@demo.local` | DEMO-HOLD, DEMO-TN-PLT, DEMO-FR-PLT, DEMO-CPA |
+
+Vérifier en SQL : `SELECT ua.email, c.code FROM user_role ur JOIN user_account ua ON ua.id = ur.user_id JOIN company c ON c.id = ur.company_id WHERE ur.role = N'ADMIN' ORDER BY 1, 2;`

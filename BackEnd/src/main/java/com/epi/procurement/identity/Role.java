@@ -22,9 +22,9 @@ public enum Role {
 		return this == SUPPLIER_CONTACT;
 	}
 
-	/** Roles that may be granted with company_id NULL. */
+	/** Roles that may be granted with company_id NULL. ADMIN is company-scoped (requires company_id). */
 	public boolean isGroupWide() {
-		return this == GROUP_MANAGEMENT || this == ADMIN || this == GLOBAL_ADMIN || this == SUPPLIER_CONTACT;
+		return this == GROUP_MANAGEMENT || this == GLOBAL_ADMIN || this == SUPPLIER_CONTACT;
 	}
 
 	/** Roles that can hold approval tasks (approval rule stages and escalation). */

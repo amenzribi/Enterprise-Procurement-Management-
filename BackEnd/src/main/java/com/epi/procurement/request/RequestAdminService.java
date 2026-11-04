@@ -3,14 +3,17 @@ package com.epi.procurement.request;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -23,9 +26,12 @@ import org.springframework.util.StringUtils;
 import com.epi.procurement.audit.AuditLog;
 import com.epi.procurement.audit.AuditRecord;
 import com.epi.procurement.identity.CurrentUser;
+import com.epi.procurement.identity.Role;
 import com.epi.procurement.identity.UserDirectory;
 import com.epi.procurement.organization.OrganizationDirectory;
 import com.epi.procurement.platform.web.ApiProblemException;
+import com.epi.procurement.platform.web.FieldViolation;
+import com.epi.procurement.platform.web.ValidationFailedException;
 import com.epi.procurement.request.RequestAdminActions.Action;
 import com.epi.procurement.request.RequestAdminActions.LinkCounts;
 import com.epi.procurement.request.RequestAdminActions.Matrix;
@@ -33,8 +39,7 @@ import com.epi.procurement.request.RequestAdminActions.Matrix;
 import jakarta.persistence.criteria.Predicate;
 
 /**
- * GLOBAL_ADMIN request administration: group-scoped search and state-safe mutations. Does not grant buyer, approver,
- * messaging or assistant powers. Boundary: {@code CurrentUser.groupId()} (installation/group).
+ * Request administration: GLOBAL_ADMIN (full) and company ADMIN (draft inspect/correct/delete in granted companies).
  */
 @Service
 class RequestAdminService {
@@ -57,14 +62,20 @@ class RequestAdminService {
 
 	private final ApplicationEventPublisher events;
 
+	private final RequestService requestService;
+
+	private final RequestValidator validator;
+
 	private final Clock clock;
 
-	/** Short-lived cleanup previews (token → snapshot). In-memory is enough for a single-node admin tool. */
+	private final int maxLines;
+
 	private final ConcurrentHashMap<String, PreviewSession> previews = new ConcurrentHashMap<>();
 
 	RequestAdminService(ScopedRequests requests, RequestTransitionRepository transitions, RequestAdminLinks links,
 			OrganizationDirectory organization, UserDirectory users, AuditLog auditLog,
-			ApplicationEventPublisher events, ObjectProvider<Clock> clock) {
+			ApplicationEventPublisher events, RequestService requestService, RequestValidator validator,
+			ObjectProvider<Clock> clock, @Value("${app.request.max-lines:100}") int maxLines) {
 		this.requests = requests;
 		this.transitions = transitions;
 		this.links = links;
@@ -72,7 +83,16 @@ class RequestAdminService {
 		this.users = users;
 		this.auditLog = auditLog;
 		this.events = events;
+		this.requestService = requestService;
+		this.validator = validator;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
+		this.maxLines = maxLines;
+	}
+
+	static void requireDraftAdmin(CurrentUser user) {
+		if (!user.isGlobalAdmin() && !user.hasRole(Role.ADMIN)) {
+			throw ApiProblemException.forbidden();
+		}
 	}
 
 	static void requireRequestAdmin(CurrentUser user) {
@@ -81,26 +101,41 @@ class RequestAdminService {
 		}
 	}
 
+	private void assertRequestVisible(CurrentUser user, PurchaseRequest request) {
+		if (request.getGroupId() != user.groupId()) {
+			throw ApiProblemException.notFound();
+		}
+		if (!user.isGlobalAdmin() && !user.canAdminCompany(request.getRequestingCompanyId())) {
+			throw ApiProblemException.notFound();
+		}
+	}
+
 	@Transactional(readOnly = true)
 	RequestAdminViews.Page search(CurrentUser user, String q, Long companyId, String status, Boolean archived,
-			int page, int size) {
-		requireRequestAdmin(user);
+			Boolean removed, int page, int size) {
+		requireDraftAdmin(user);
 		if (page < 0) {
 			throw ApiProblemException.invalidParameter("page");
 		}
 		if (size < 1 || size > 100) {
 			throw ApiProblemException.invalidParameter("size");
 		}
+		if (companyId != null && !user.isGlobalAdmin() && !user.canAdminCompany(companyId)) {
+			throw ApiProblemException.notFound();
+		}
 		var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by("id").descending()));
-		var result = requests.searchInGroup(user.groupId(), filter(q, companyId, status, archived), pageable);
+		var result = requests.searchInGroup(user.groupId(), filter(user, q, companyId, status, archived, removed),
+				pageable);
 		List<RequestAdminViews.Summary> items = result.getContent().stream().map(this::summary).toList();
 		return new RequestAdminViews.Page(items, page, size, result.getTotalElements(), result.getTotalPages());
 	}
 
 	@Transactional(readOnly = true)
 	RequestAdminViews.Detail get(CurrentUser user, long id) {
-		requireRequestAdmin(user);
-		return detail(requests.getInGroup(user.groupId(), id));
+		requireDraftAdmin(user);
+		PurchaseRequest request = requests.getInGroup(user.groupId(), id);
+		assertRequestVisible(user, request);
+		return detail(request);
 	}
 
 	@Transactional
@@ -188,7 +223,30 @@ class RequestAdminService {
 
 	@Transactional
 	RequestAdminViews.MutationResult correctDraft(CurrentUser user, long id,
-			RequestAdminViews.DraftCorrectionPayload body) {
+			RequestAdminViews.AdminCorrectionPayload body) {
+		requireDraftAdmin(user);
+		if (body == null) {
+			throw ApiProblemException.invalidParameter("body");
+		}
+		String reason = requireReason(body.reason());
+		PurchaseRequest request = requests.getInGroupForUpdate(user.groupId(), id);
+		assertRequestVisible(user, request);
+		requireVersion(body.version(), request);
+		Matrix matrix = RequestAdminActions.evaluate(request, links.counts(request.getId()));
+		requireAllowed(matrix, Action.CORRECT_DRAFT);
+		Map<String, Object> before = snapshotContent(request);
+		applyCorrection(user, request, body);
+		Instant now = clock.instant();
+		request.touch(user.id(), now);
+		requests.saveAndFlush(request);
+		audit(user, request, "REQUEST_ADMIN_DRAFT_CORRECTED", RequestStatus.DRAFT.name(), RequestStatus.DRAFT.name(),
+				reason, Map.of("before", before, "after", snapshotContent(request)));
+		return new RequestAdminViews.MutationResult(detail(request), "Draft corrected. Changes are audited.");
+	}
+
+	@Transactional
+	RequestAdminViews.MutationResult correctSubmitted(CurrentUser user, long id,
+			RequestAdminViews.AdminCorrectionPayload body) {
 		requireRequestAdmin(user);
 		if (body == null) {
 			throw ApiProblemException.invalidParameter("body");
@@ -197,38 +255,73 @@ class RequestAdminService {
 		PurchaseRequest request = requests.getInGroupForUpdate(user.groupId(), id);
 		requireVersion(body.version(), request);
 		Matrix matrix = RequestAdminActions.evaluate(request, links.counts(request.getId()));
-		requireAllowed(matrix, Action.CORRECT_DRAFT);
-		Map<String, Object> before = Map.of("title", nullToEmpty(request.getTitle()), "justification",
-				nullToEmpty(request.getJustification()));
-		if (StringUtils.hasText(body.title())) {
-			String title = body.title().strip();
-			if (title.length() > 200) {
-				throw ApiProblemException.invalidParameter("title");
-			}
-			request.setTitle(title);
-		}
-		if (body.justification() != null) {
-			String justification = body.justification().strip();
-			if (justification.length() > 4000) {
-				throw ApiProblemException.invalidParameter("justification");
-			}
-			request.setJustification(justification.isEmpty() ? null : justification);
-		}
+		requireAllowed(matrix, Action.CORRECT_SUBMITTED);
+		Map<String, Object> before = snapshotContent(request);
+		RequestStatus from = request.getStatus();
+		int priorRound = request.getRoundNo();
 		Instant now = clock.instant();
+		applyCorrection(user, request, body);
+		events.publishEvent(
+				new RequestAdministrativelyCancelledEvent(request.getId(), user.id(), now, "CORRECT_SUBMITTED"));
+		int newRound = request.nextRound();
+		request.transitionTo(RequestStatus.IN_APPROVAL, request.getRequesterUserId(), now);
 		request.touch(user.id(), now);
 		requests.saveAndFlush(request);
-		audit(user, request, "REQUEST_ADMIN_DRAFT_CORRECTED", RequestStatus.DRAFT.name(), RequestStatus.DRAFT.name(),
-				reason, Map.of("before", before, "after",
-						Map.of("title", nullToEmpty(request.getTitle()), "justification",
-								nullToEmpty(request.getJustification()))));
-		return new RequestAdminViews.MutationResult(detail(request), "Draft corrected. Changes are audited.");
+		if (from != RequestStatus.IN_APPROVAL) {
+			transitions.save(new RequestTransition(request.getId(), from, RequestStatus.IN_APPROVAL,
+					request.getCurrentOwnerUserId(), user.id(), now, reason));
+		}
+		events.publishEvent(new RequestSubmittedEvent(request.getId(), newRound, user.id(), now, true));
+		audit(user, request, "REQUEST_ADMIN_SUBMITTED_CORRECTED", from.name(), RequestStatus.IN_APPROVAL.name(), reason,
+				Map.of("before", before, "after", snapshotContent(request), "priorRound", priorRound, "newRound",
+						newRound));
+		return new RequestAdminViews.MutationResult(detail(request),
+				"Submitted request corrected. Pending approvals and unused links were invalidated; a new approval round was started. Prior decisions remain historical.");
+	}
+
+	@Transactional
+	RequestAdminViews.MutationResult remove(CurrentUser user, long id, RequestAdminViews.ReasonPayload body) {
+		requireRequestAdmin(user);
+		String reason = requireReason(body == null ? null : body.reason());
+		PurchaseRequest request = requests.getInGroupForUpdate(user.groupId(), id);
+		requireVersion(body == null ? null : body.version(), request);
+		Matrix matrix = RequestAdminActions.evaluate(request, links.counts(request.getId()));
+		requireAllowed(matrix, Action.REMOVE);
+		Instant now = clock.instant();
+		events.publishEvent(new RequestAdministrativelyCancelledEvent(request.getId(), user.id(), now, "REMOVED"));
+		request.markRemoved(user.id(), reason, now);
+		requests.saveAndFlush(request);
+		audit(user, request, "REQUEST_ADMIN_REMOVED", request.getStatus().name(), request.getStatus().name(), reason,
+				Map.of("removed", true));
+		return new RequestAdminViews.MutationResult(detail(request),
+				"Request administratively removed from active work. History, number and decisions are retained. Distinct from Archive and permanent Delete.");
+	}
+
+	@Transactional
+	RequestAdminViews.MutationResult restoreRemoved(CurrentUser user, long id, RequestAdminViews.ReasonPayload body) {
+		requireRequestAdmin(user);
+		PurchaseRequest request = requests.getInGroupForUpdate(user.groupId(), id);
+		requireVersion(body == null ? null : body.version(), request);
+		Matrix matrix = RequestAdminActions.evaluate(request, links.counts(request.getId()));
+		requireAllowed(matrix, Action.RESTORE_REMOVED);
+		Instant now = clock.instant();
+		String reason = body == null || !StringUtils.hasText(body.reason()) ? "Administrative restore of removal"
+				: requireReason(body.reason());
+		request.clearRemoval(user.id(), now);
+		requests.saveAndFlush(request);
+		audit(user, request, "REQUEST_ADMIN_RESTORE_REMOVED", request.getStatus().name(), request.getStatus().name(),
+				reason, Map.of("removed", false, "note",
+						"Pending approvals were not recreated; return/resubmit or correct to start a new round if work continues."));
+		return new RequestAdminViews.MutationResult(detail(request),
+				"Administrative removal cleared. Pending approvals were not recreated.");
 	}
 
 	@Transactional
 	void deleteDraft(CurrentUser user, long id, Integer version, String reason) {
-		requireRequestAdmin(user);
+		requireDraftAdmin(user);
 		String cleanReason = requireReason(reason);
 		PurchaseRequest request = requests.getInGroupForUpdate(user.groupId(), id);
+		assertRequestVisible(user, request);
 		requireVersion(version, request);
 		Matrix matrix = RequestAdminActions.evaluate(request, links.counts(request.getId()));
 		requireAllowed(matrix, Action.DELETE_DRAFT);
@@ -275,8 +368,8 @@ class RequestAdminService {
 				block = matrix.of(Action.DELETE_DRAFT).explanation();
 			}
 			candidates.add(new RequestAdminViews.CleanupCandidate(request.getId(), request.getNumber(),
-					request.getTitle(), request.getStatus().name(), request.isArchived(), companyRef(request),
-					toViewCounts(counts), toViewActions(matrix), recommended, block));
+					request.getTitle(), request.getStatus().name(), request.isArchived(), request.isRemoved(),
+					companyRef(request), toViewCounts(counts), toViewActions(matrix), recommended, block));
 		}
 		purgeExpiredPreviews();
 		String token = UUID.randomUUID().toString();
@@ -334,9 +427,6 @@ class RequestAdminService {
 				RequestAdminViews.ReasonPayload payload = new RequestAdminViews.ReasonPayload(null, reason);
 				switch (Action.valueOf(recommended)) {
 					case DELETE_DRAFT -> {
-						if (!CONFIRM_DELETE.equals(body.confirmation()) && !"APPLY".equals(body.confirmation())) {
-							throw ApiProblemException.conflict("confirmation-required", "DELETE confirmation required.");
-						}
 						PurchaseRequest before = requests.getInGroup(user.groupId(), id);
 						String number = before.getNumber();
 						deleteDraft(user, id, before.getVersion(), reason);
@@ -366,9 +456,95 @@ class RequestAdminService {
 				skipped++;
 			}
 		}
-		// One-shot token: retries must re-preview (avoids double processing).
 		previews.remove(body.previewToken());
 		return new RequestAdminViews.CleanupExecuteResult(ids.size(), succeeded, skipped, results);
+	}
+
+	private void applyCorrection(CurrentUser user, PurchaseRequest request,
+			RequestAdminViews.AdminCorrectionPayload body) {
+		OrganizationDirectory.CompanyRef company = organization.findCompany(request.getRequestingCompanyId())
+			.orElseThrow(ApiProblemException::notFound);
+		RequestPayload payload = toRequestPayload(request, body);
+		// Administrative actors are not the requester; validate as if self then replace requester checks.
+		List<FieldViolation> errors = new ArrayList<>(
+				validator.validateDraft(user, company, payload.withRequesterId(user.id()), maxLines)
+					.stream()
+					.filter(e -> !"requesterId".equals(e.field()))
+					.toList());
+		if (payload.requesterId() == null || users.findContact(payload.requesterId())
+			.filter(c -> c.active() && c.companyId() == company.id())
+			.isEmpty()) {
+			errors.add(FieldViolation.of("requesterId", "requester-not-allowed"));
+		}
+		if (!errors.isEmpty()) {
+			throw new ValidationFailedException(errors);
+		}
+		String currency = StringUtils.hasText(payload.currency()) ? payload.currency() : request.getCurrencyCode();
+		requestService.apply(request, payload, currency);
+	}
+
+	private static RequestPayload toRequestPayload(PurchaseRequest request, RequestAdminViews.AdminCorrectionPayload body) {
+		List<RequestPayload.LinePayload> lines;
+		if (body.lines() != null && !body.lines().isEmpty()) {
+			lines = body.lines()
+				.stream()
+				.map(l -> new RequestPayload.LinePayload(l.id(), l.description(), l.itemReference(), l.quantity(),
+						l.unit(), l.estimatedUnitPrice(), l.requiredDate(), l.deliveryLocation()))
+				.toList();
+		}
+		else {
+			lines = request.getLines()
+				.stream()
+				.sorted(Comparator.comparingInt(PurchaseRequestLine::getLineNo))
+				.map(l -> new RequestPayload.LinePayload(l.getId(), l.getDescription(), l.getItemReference(),
+						l.getQuantity(), l.getUnitCode(), l.getEstimatedUnitPrice(), l.getRequiredDate(),
+						l.getDeliveryLocation()))
+				.toList();
+		}
+		String title = body.title() != null ? body.title() : request.getTitle();
+		Long categoryId = body.categoryId() != null ? body.categoryId() : request.getCategoryId();
+		String priority = body.priority() != null ? body.priority()
+				: (request.getPriority() == null ? null : request.getPriority().name());
+		String purchaseType = body.purchaseType() != null ? body.purchaseType()
+				: (request.getPurchaseType() == null ? null : request.getPurchaseType().name());
+		String currency = body.currency() != null ? body.currency() : request.getCurrencyCode();
+		Long departmentId = body.departmentId() != null ? body.departmentId() : request.getDepartmentId();
+		Long siteId = body.siteId() != null ? body.siteId() : request.getSiteId();
+		Long costCenterId = body.costCenterId() != null ? body.costCenterId() : request.getCostCenterId();
+		String justification = body.justification() != null ? body.justification() : request.getJustification();
+		String urgency = body.urgencyJustification() != null ? body.urgencyJustification()
+				: request.getUrgencyJustification();
+		var requiredDate = body.requiredDate() != null ? body.requiredDate() : request.getRequiredDate();
+		String delivery = body.deliveryLocation() != null ? body.deliveryLocation() : request.getDeliveryLocation();
+		String beneficiary = body.beneficiary() != null ? body.beneficiary() : request.getBeneficiary();
+		Long beneficiarySiteId = body.beneficiarySiteId() != null ? body.beneficiarySiteId()
+				: request.getBeneficiarySiteId();
+		String project = body.project() != null ? body.project() : request.getProject();
+		String budget = body.budgetLineRef() != null ? body.budgetLineRef() : request.getBudgetLineRef();
+		String equipment = body.equipmentRef() != null ? body.equipmentRef() : request.getEquipmentRef();
+		String maintenance = body.maintenanceOrderRef() != null ? body.maintenanceOrderRef()
+				: request.getMaintenanceOrderRef();
+		return new RequestPayload(body.version(), title, categoryId, priority, purchaseType, currency,
+				request.getRequestingCompanyId(), departmentId, siteId, costCenterId, request.getRequesterUserId(),
+				beneficiary, beneficiarySiteId, project, justification, urgency, budget, equipment, maintenance,
+				requiredDate, delivery, lines, null, null, null, null, null, null, null);
+	}
+
+	private Map<String, Object> snapshotContent(PurchaseRequest request) {
+		Map<String, Object> snap = new LinkedHashMap<>();
+		snap.put("title", nullToEmpty(request.getTitle()));
+		snap.put("justification", nullToEmpty(request.getJustification()));
+		snap.put("categoryId", request.getCategoryId() == null ? "" : request.getCategoryId().toString());
+		snap.put("priority", request.getPriority() == null ? "" : request.getPriority().name());
+		snap.put("purchaseType", request.getPurchaseType() == null ? "" : request.getPurchaseType().name());
+		snap.put("currency", nullToEmpty(request.getCurrencyCode()));
+		snap.put("departmentId", request.getDepartmentId() == null ? "" : request.getDepartmentId().toString());
+		snap.put("siteId", request.getSiteId() == null ? "" : request.getSiteId().toString());
+		snap.put("costCenterId", request.getCostCenterId() == null ? "" : request.getCostCenterId().toString());
+		snap.put("requiredDate", request.getRequiredDate() == null ? "" : request.getRequiredDate().toString());
+		snap.put("totalAmount", request.getTotalAmount() == null ? "0" : request.getTotalAmount().toPlainString());
+		snap.put("lineCount", request.getLines().size());
+		return snap;
 	}
 
 	private RequestAdminViews.Summary summary(PurchaseRequest request) {
@@ -376,61 +552,108 @@ class RequestAdminService {
 		Matrix matrix = RequestAdminActions.evaluate(request, counts);
 		return new RequestAdminViews.Summary(request.getId(), request.getNumber(), request.getTitle(),
 				request.getStatus().name(), request.getStatus().userStatus().name(), request.getStage().name(),
-				request.isArchived(), request.getTotalAmount(), request.getCurrencyCode(), request.getUpdatedAt(),
-				request.getSubmittedAt(), request.getArchivedAt(), companyRef(request), userRef(request.getRequesterUserId()),
-				matrix.allowedCodes(), toViewActions(matrix), toViewCounts(counts));
+				request.isArchived(), request.isRemoved(), request.getTotalAmount(), request.getCurrencyCode(),
+				request.getUpdatedAt(), request.getSubmittedAt(), request.getArchivedAt(), request.getRemovedAt(),
+				companyRef(request), userRef(request.getRequesterUserId()), matrix.allowedCodes(),
+				toViewActions(matrix), toViewCounts(counts));
 	}
 
 	private RequestAdminViews.Detail detail(PurchaseRequest request) {
 		LinkCounts counts = links.counts(request.getId());
 		Matrix matrix = RequestAdminActions.evaluate(request, counts);
 		String next = nextStep(request, matrix);
-		String note = request.isArchived()
-				? "Archived: hidden from everyday lists and dashboards that exclude archived records. Outstanding tasks should already be terminal or cancelled."
-				: "Active administrative view within your installation group only.";
+		String note;
+		String adminStatus;
+		if (request.isRemoved()) {
+			adminStatus = "REMOVED";
+			note = "Administratively removed: hidden from active work. History retained. Restore removed does not recreate pending approvals.";
+		}
+		else if (request.isArchived()) {
+			adminStatus = "ARCHIVED";
+			note = "Archived: hidden from everyday lists. Outstanding tasks should already be terminal or cancelled.";
+		}
+		else {
+			adminStatus = "ACTIVE";
+			note = "Active administrative view within authorised company or installation scope.";
+		}
+		List<RequestAdminViews.LineView> lines = request.getLines()
+			.stream()
+			.sorted(Comparator.comparingInt(PurchaseRequestLine::getLineNo))
+			.map(l -> new RequestAdminViews.LineView(l.getId(), l.getLineNo(), l.getDescription(),
+					l.getItemReference(), l.getQuantity(), l.getUnitCode(), l.getEstimatedUnitPrice(), l.getLineTotal(),
+					l.getRequiredDate(), l.getDeliveryLocation()))
+			.toList();
 		return new RequestAdminViews.Detail(request.getId(), request.getNumber(), request.getTitle(),
 				request.getStatus().name(), request.getStatus().userStatus().name(), request.getStage().name(),
-				request.getVersion(), request.isArchived(), request.getArchivedAt(), request.getArchivedByUserId(),
-				request.getArchiveReason(), request.getTotalAmount(), request.getCurrencyCode(), request.getJustification(),
-				request.getCreatedAt(), request.getUpdatedAt(), request.getSubmittedAt(), companyRef(request),
+				request.getVersion(), request.isArchived(), request.isRemoved(), request.getArchivedAt(),
+				request.getArchivedByUserId(), request.getArchiveReason(), request.getRemovedAt(),
+				request.getRemovedByUserId(), request.getRemoveReason(), request.getTotalAmount(),
+				request.getCurrencyCode(), request.getJustification(), request.getCategoryId(),
+				request.getPriority() == null ? null : request.getPriority().name(),
+				request.getPurchaseType() == null ? null : request.getPurchaseType().name(), request.getDepartmentId(),
+				request.getSiteId(), request.getCostCenterId(), request.getRequiredDate(), request.getCreatedAt(),
+				request.getUpdatedAt(), request.getSubmittedAt(), companyRef(request),
 				userRef(request.getRequesterUserId()), userRef(request.getEnteredByUserId()),
-				request.getCurrentOwnerUserId() == null ? null : userRef(request.getCurrentOwnerUserId()),
-				toViewActions(matrix), toViewCounts(counts), links.items(request.getId()), next, note);
+				request.getCurrentOwnerUserId() == null ? null : userRef(request.getCurrentOwnerUserId()), lines,
+				toViewActions(matrix), toViewCounts(counts), links.items(request.getId()), next, note, adminStatus);
 	}
 
 	private static String nextStep(PurchaseRequest request, Matrix matrix) {
+		if (request.isRemoved()) {
+			return "Administratively removed. Restore removed only if the record must reappear; then return/correct/resubmit if work continues.";
+		}
 		if (request.isArchived()) {
 			return "No active work. Restore only if the record must reappear in normal lists.";
 		}
 		return switch (request.getStatus()) {
-			case DRAFT -> matrix.allows(Action.DELETE_DRAFT)
-					? "Draft: author continues in Requests, or admin may correct/delete when eligible."
-					: "Draft: correct limited fields or leave for the author.";
-			case CREATED, IN_APPROVAL -> "Approvers act in Approvals / My work. Admin may return or cancel with a reason.";
-			case REVISION_REQUESTED, PURCHASING_RETURNED -> "Author revises and resubmits from the request form.";
+			case DRAFT -> matrix.allows(Action.CORRECT_DRAFT)
+					? "Draft: use Correct draft for full header/line edits, or Delete when eligible."
+					: "Draft: leave for the author or inspect only.";
+			case CREATED, IN_APPROVAL ->
+				"Approvers act in Approvals / My work. GLOBAL_ADMIN may correct (new round), return or cancel with a reason.";
+			case REVISION_REQUESTED, PURCHASING_RETURNED ->
+				"Author revises and resubmits, or GLOBAL_ADMIN may correct submitted with a new approval round.";
 			case REJECTED, CANCELLED, CLOSED -> "Terminal. Archive to clear everyday lists without destroying history.";
 			case ORDERED, ORDER_CONFIRMED, SHIPPED, DELIVERED, ACCEPTED, INVOICED, PAID ->
-				"Commitment or later — administrative hard-delete/cancel is blocked. Use operational modules.";
-			default -> "Follow role-appropriate inbox (Purchasing, Logistics, Receipts) for the current stage.";
+				"Commitment or later — material correction/remove/cancel blocked. Use operational modules.";
+			default -> "Follow role-appropriate inbox for the current stage.";
 		};
 	}
 
-	private Specification<PurchaseRequest> filter(String q, Long companyId, String status, Boolean archived) {
+	private Specification<PurchaseRequest> filter(CurrentUser user, String q, Long companyId, String status,
+			Boolean archived, Boolean removed) {
 		return (root, query, cb) -> {
 			List<Predicate> predicates = new ArrayList<>();
-			if (companyId != null) {
+			if (!user.isGlobalAdmin()) {
+				Set<Long> companies = user.adminCompanyIds();
+				if (companies.isEmpty()) {
+					predicates.add(cb.disjunction());
+				}
+				else if (companyId != null) {
+					predicates.add(cb.equal(root.get("requestingCompanyId"), companyId));
+				}
+				else {
+					predicates.add(root.get("requestingCompanyId").in(companies));
+				}
+			}
+			else if (companyId != null) {
 				predicates.add(cb.equal(root.get("requestingCompanyId"), companyId));
 			}
 			if (StringUtils.hasText(status)) {
 				RequestStatus parsed = RequestStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
 				predicates.add(cb.equal(root.get("status"), parsed));
 			}
-			// null = all (admin needs both); false = active everyday list; true = archive only.
 			if (Boolean.FALSE.equals(archived)) {
 				predicates.add(cb.isNull(root.get("archivedAt")));
 			}
 			else if (Boolean.TRUE.equals(archived)) {
 				predicates.add(cb.isNotNull(root.get("archivedAt")));
+			}
+			if (Boolean.FALSE.equals(removed)) {
+				predicates.add(cb.isNull(root.get("removedAt")));
+			}
+			else if (Boolean.TRUE.equals(removed)) {
+				predicates.add(cb.isNotNull(root.get("removedAt")));
 			}
 			if (StringUtils.hasText(q)) {
 				String pattern = "%" + escapeLike(q.strip().toLowerCase(Locale.ROOT)) + "%";
@@ -462,12 +685,15 @@ class RequestAdminService {
 				predicates.add(Boolean.TRUE.equals(filter.archived()) ? cb.isNotNull(root.get("archivedAt"))
 						: cb.isNull(root.get("archivedAt")));
 			}
+			if (filter != null && filter.removed() != null) {
+				predicates.add(Boolean.TRUE.equals(filter.removed()) ? cb.isNotNull(root.get("removedAt"))
+						: cb.isNull(root.get("removedAt")));
+			}
 			if (filter != null && StringUtils.hasText(filter.q())) {
 				String pattern = "%" + escapeLike(filter.q().strip().toLowerCase(Locale.ROOT)) + "%";
 				predicates.add(cb.or(cb.like(cb.lower(root.get("number")), pattern, '\\'),
 						cb.like(cb.lower(root.get("title")), pattern, '\\')));
 			}
-			// Never include the protected UAT number in destructive recommendations path as selected-all default.
 			predicates.add(cb.or(cb.isNull(root.get("number")),
 					cb.notEqual(root.get("number"), RequestAdminActions.PROTECTED_NUMBER)));
 			if (predicates.isEmpty()) {

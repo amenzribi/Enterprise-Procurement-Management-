@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, homeRedirectGuard, permissionGuard } from './core/auth/auth.guards';
+import { anyPermissionGuard, authGuard, guestGuard, homeRedirectGuard, permissionGuard } from './core/auth/auth.guards';
 import { unsavedChangesGuard } from './features/requests/unsaved-changes.guard';
 import { findPlannedItem } from './layout/navigation';
 import { Shell } from './layout/shell/shell';
@@ -63,13 +63,13 @@ export const routes: Routes = [
       {
         path: 'admin/requests',
         title: 'requestAdmin.title',
-        canActivate: [permissionGuard('REQUEST_ADMIN')],
+        canActivate: [anyPermissionGuard('REQUEST_ADMIN', 'REQUEST_DRAFT_ADMIN')],
         loadComponent: () => import('./features/admin/request-admin').then((m) => m.RequestAdminPage),
       },
       {
         path: 'admin/requests/:id',
         title: 'requestAdmin.detailTitle',
-        canActivate: [permissionGuard('REQUEST_ADMIN')],
+        canActivate: [anyPermissionGuard('REQUEST_ADMIN', 'REQUEST_DRAFT_ADMIN')],
         loadComponent: () => import('./features/admin/request-admin').then((m) => m.RequestAdminDetailPage),
       },
       {

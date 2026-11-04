@@ -64,6 +64,16 @@ class ApprovalRulesAdmin {
 	@Transactional(readOnly = true)
 	List<ApprovalViews.Rule> list(CurrentUser admin, Long companyId) {
 		Absences.requireAdmin(admin);
+		if (companyId != null) {
+			requireCompanyScope(admin, companyId);
+		}
+		else if (!admin.isGlobalAdmin()) {
+			return store.latestRules(admin.groupId(), null)
+				.stream()
+				.filter(r -> admin.canAdminCompany(r.companyId()))
+				.map(this::view)
+				.toList();
+		}
 		return store.latestRules(admin.groupId(), companyId).stream().map(this::view).toList();
 	}
 
@@ -188,7 +198,17 @@ class ApprovalRulesAdmin {
 
 	private ApprovalStore.Rule ruleOfGroup(CurrentUser admin, long id) {
 		Absences.requireAdmin(admin);
-		return store.rule(id).filter(r -> r.groupId() == admin.groupId()).orElseThrow(ApiProblemException::notFound);
+		ApprovalStore.Rule rule = store.rule(id)
+			.filter(r -> r.groupId() == admin.groupId())
+			.orElseThrow(ApiProblemException::notFound);
+		requireCompanyScope(admin, rule.companyId());
+		return rule;
+	}
+
+	private static void requireCompanyScope(CurrentUser admin, long companyId) {
+		if (!admin.isGlobalAdmin() && !admin.canAdminCompany(companyId)) {
+			throw ApiProblemException.notFound();
+		}
 	}
 
 	private List<ApprovalStore.Stage> validate(CurrentUser admin, RuleInput input) {
@@ -196,6 +216,9 @@ class ApprovalRulesAdmin {
 		if (input.companyId() == null || organization.findCompany(input.companyId())
 			.filter(c -> c.groupId() == admin.groupId())
 			.isEmpty()) {
+			errors.add(FieldViolation.of("companyId", "company-not-allowed"));
+		}
+		else if (!admin.isGlobalAdmin() && !admin.canAdminCompany(input.companyId())) {
 			errors.add(FieldViolation.of("companyId", "company-not-allowed"));
 		}
 		if (!StringUtils.hasText(input.name())) {

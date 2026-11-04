@@ -47,8 +47,16 @@ Format : Compte → menu/URL → champs → bouton → **attendu** → prochain 
    **Attendu** : nouvelles tâches de nouveau chez Karim (et/ou Hichem en ANY direct) ; tâches déjà déléguées restent chez Hichem.  
    **Résultat réel** : Not executed by user
 
-## D. Compte sans REQUEST_ADMIN (1 min)
+## D. ADMIN société vs GLOBAL_ADMIN (2 min)
 
-1. `admin@demo.local` → tenter `/admin/requests`.  
-   **Attendu** : accès refusé / menu absent.  
+1. `admin@demo.local` → `/admin/requests` → ouvrir un **brouillon** DEMO-TN-PLT → **Corriger le brouillon** (titre + motif) → enregistrer.  
+   **Attendu** : succès ; audit `REQUEST_ADMIN_DRAFT_CORRECTED`.  
+   **Résultat réel** : Not executed by user
+
+2. Sur une demande **IN_APPROVAL** : tenter Correct submitted / Remove.  
+   **Attendu** : refusé (403) — réservé `GLOBAL_ADMIN`.  
+   **Résultat réel** : Not executed by user
+
+3. `global.admin@demo.local` → même demande → Correct submitted (confirmation nouveau tour) ou Remove.  
+   **Attendu** : nouveau `round_no` / masquage listes selon l’action.  
    **Résultat réel** : Not executed by user

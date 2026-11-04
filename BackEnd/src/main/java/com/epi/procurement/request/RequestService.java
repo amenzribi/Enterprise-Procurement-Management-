@@ -311,7 +311,8 @@ class RequestService {
 	 * totals: line total = round(quantity x price) to the currency's minor units, request total = sum of rounded
 	 * line totals (S1DR-17).
 	 */
-	private void apply(PurchaseRequest request, RequestPayload p, String currency) {
+	/** Package-visible so request administration can reuse the same line/header apply rules. */
+	void apply(PurchaseRequest request, RequestPayload p, String currency) {
 		int minorUnits = reference.currency(currency).map(RequestReferenceData.Currency::minorUnits).orElse(2);
 		List<BigDecimal> lineTotals = new ArrayList<>();
 		List<FieldViolation> errors = new ArrayList<>();

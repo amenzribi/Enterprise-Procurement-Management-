@@ -65,8 +65,10 @@ class DemoUserSeeder implements ApplicationRunner {
 					List.of(new Grant(Role.GROUP_MANAGEMENT, false, false),
 							new Grant(Role.MANAGEMENT_APPROVER, "DEMO-TN-PLT"),
 							new Grant(Role.MANAGEMENT_APPROVER, "DEMO-FR-PLT"))),
+			// ADMIN is company-scoped: one explicit grant per demo company (no auto-grant for future companies).
 			new DemoUser("admin@demo.local", "Platform Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
-					List.of(new Grant(Role.ADMIN, false, false))),
+					List.of(new Grant(Role.ADMIN, "DEMO-HOLD"), new Grant(Role.ADMIN, "DEMO-TN-PLT"),
+							new Grant(Role.ADMIN, "DEMO-FR-PLT"), new Grant(Role.ADMIN, "DEMO-CPA"))),
 			new DemoUser("global.admin@demo.local", "Global Administrator (Demo)", "DEMO-HOLD", "DEMO-HQ", null, "en",
 					List.of(new Grant(Role.GLOBAL_ADMIN, false, false))),
 			new DemoUser("contact.skf@demo.local", "SKF Contact (Demo)", "DEMO-CPA", "DEMO-RADES", "DEMO-PURCH", "en",

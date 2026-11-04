@@ -168,6 +168,9 @@ class AuthenticationIntegrationTests extends SqlServerTestSupport {
 		ApiClient admin = signedIn("admin@demo.local");
 		long adminId = userId("admin@demo.local");
 		assertThat(admin.get("/actuator/health").expectStatus(200).body()).contains("components");
+		List<Long> adminCompanies = jdbc.queryForList(
+				"SELECT company_id FROM user_role WHERE user_id = ? AND role = 'ADMIN' AND company_id IS NOT NULL",
+				Long.class, adminId);
 		try {
 			jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'ADMIN'", adminId);
 			assertThat(admin.get("/actuator/health").expectStatus(200).body()).isEqualTo("{\"status\":\"UP\"}");
@@ -175,7 +178,10 @@ class AuthenticationIntegrationTests extends SqlServerTestSupport {
 			assertThat(admin.get("/api/v1/system/status").expectStatus(200).body()).doesNotContain("productVersion\":\"");
 		}
 		finally {
-			jdbc.update("INSERT INTO user_role (user_id, role) VALUES (?, 'ADMIN')", adminId);
+			for (Long companyId : adminCompanies) {
+				jdbc.update("INSERT INTO user_role (user_id, role, company_id, department_id) VALUES (?, 'ADMIN', ?, NULL)",
+						adminId, companyId);
+			}
 		}
 
 		ApiClient ceo = signedIn("ceo@demo.local");

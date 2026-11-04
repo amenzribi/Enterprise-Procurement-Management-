@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.epi.procurement.identity.CurrentUserProvider;
 
 /**
- * GLOBAL_ADMIN request administration — installation/group scoped. Separate from ordinary request, approval and
- * purchasing APIs.
+ * Request administration — GLOBAL_ADMIN (full) and company ADMIN (draft scope). Separate from ordinary request,
+ * approval and purchasing APIs.
  */
 @RestController
 @RequestMapping("/api/v1/admin/requests")
@@ -34,9 +34,9 @@ class RequestAdminController {
 	@GetMapping
 	RequestAdminViews.Page search(@RequestParam(required = false) String q,
 			@RequestParam(required = false) Long companyId, @RequestParam(required = false) String status,
-			@RequestParam(required = false) Boolean archived, @RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size) {
-		return service.search(currentUser.require(), q, companyId, status, archived, page, size);
+			@RequestParam(required = false) Boolean archived, @RequestParam(required = false) Boolean removed,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+		return service.search(currentUser.require(), q, companyId, status, archived, removed, page, size);
 	}
 
 	@GetMapping("/{id}")
@@ -67,8 +67,25 @@ class RequestAdminController {
 
 	@PostMapping("/{id}/correct-draft")
 	RequestAdminViews.MutationResult correctDraft(@PathVariable long id,
-			@RequestBody RequestAdminViews.DraftCorrectionPayload body) {
+			@RequestBody RequestAdminViews.AdminCorrectionPayload body) {
 		return service.correctDraft(currentUser.require(), id, body);
+	}
+
+	@PostMapping("/{id}/correct-submitted")
+	RequestAdminViews.MutationResult correctSubmitted(@PathVariable long id,
+			@RequestBody RequestAdminViews.AdminCorrectionPayload body) {
+		return service.correctSubmitted(currentUser.require(), id, body);
+	}
+
+	@PostMapping("/{id}/remove")
+	RequestAdminViews.MutationResult remove(@PathVariable long id, @RequestBody RequestAdminViews.ReasonPayload body) {
+		return service.remove(currentUser.require(), id, body);
+	}
+
+	@PostMapping("/{id}/restore-removed")
+	RequestAdminViews.MutationResult restoreRemoved(@PathVariable long id,
+			@RequestBody RequestAdminViews.ReasonPayload body) {
+		return service.restoreRemoved(currentUser.require(), id, body);
 	}
 
 	@DeleteMapping("/{id}")
@@ -80,8 +97,9 @@ class RequestAdminController {
 
 	@PostMapping("/cleanup/preview")
 	RequestAdminViews.CleanupPreview preview(@RequestBody(required = false) RequestAdminViews.CleanupFilter filter) {
-		return service.previewCleanup(currentUser.require(), filter == null ? new RequestAdminViews.CleanupFilter(null,
-				null, null, null, null, null, null) : filter);
+		return service.previewCleanup(currentUser.require(),
+				filter == null ? new RequestAdminViews.CleanupFilter(null, null, null, null, null, null, null, null)
+						: filter);
 	}
 
 	@PostMapping("/cleanup/execute")
@@ -91,13 +109,18 @@ class RequestAdminController {
 
 	@GetMapping("/action-matrix")
 	Map<String, Object> actionMatrixDoc() {
-		RequestAdminService.requireRequestAdmin(currentUser.require());
+		RequestAdminService.requireDraftAdmin(currentUser.require());
 		return Map.of("protectedNumber", RequestAdminActions.PROTECTED_NUMBER, "maxCleanupBatch",
 				RequestAdminActions.MAX_CLEANUP_BATCH, "actions",
-				Map.of("DELETE", "Permanent removal — eligible drafts only", "CANCEL",
+				Map.of("CORRECT_DRAFT", "Full draft header/line correction (GLOBAL_ADMIN or company ADMIN)",
+						"CORRECT_SUBMITTED",
+						"GLOBAL_ADMIN material correction with new approval round (pre-commitment)", "REMOVE",
+						"GLOBAL_ADMIN logical hide from active work; retains history", "RESTORE_REMOVED",
+						"Clears logical removal; does not recreate pending approvals", "DELETE_DRAFT",
+						"Permanent removal — eligible drafts only", "CANCEL",
 						"Ends supported pre-commitment workflow; preserves number and completed decisions", "ARCHIVE",
-						"Hides from active lists; preserves history; does not reverse PO/receipt/payment", "RESTORE",
-						"Returns to normal lists without reopening cancelled business states"));
+						"Hides terminal history from active lists; distinct from REMOVE", "RESTORE",
+						"Returns archived terminal history to normal lists"));
 	}
 
 }

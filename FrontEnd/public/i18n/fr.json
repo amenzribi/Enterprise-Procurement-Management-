@@ -1518,7 +1518,7 @@
     "deleted": "Brouillon éligible définitivement supprimé.",
     "empty": {
       "title": "Aucune demande",
-      "message": "Ajustez les filtres. Les archives n’apparaissent que si le filtre archive les inclut."
+      "message": "Ajustez les filtres. Les enregistrements archives ou retires n'apparaissent que si le filtre les inclut."
     },
     "cols": {
       "reference": "Référence",
@@ -1526,16 +1526,20 @@
       "company": "Société",
       "requester": "Demandeur",
       "status": "Statut",
-      "actions": "Actions admin"
+      "actions": "Actions admin",
+      "owner": "Prochain responsable"
     },
     "act": {
       "ARCHIVE": "Archiver",
       "RESTORE": "Restaurer",
-      "CANCEL": "Annuler le flux",
+      "CANCEL": "Annuler le circuit",
       "DELETE_DRAFT": "Supprimer le brouillon",
-      "RETURN_FOR_REVISION": "Renvoyer pour révision",
+      "RETURN_FOR_REVISION": "Renvoyer pour revision",
       "CORRECT_DRAFT": "Corriger le brouillon",
-      "VIEW": "Voir"
+      "VIEW": "Voir",
+      "CORRECT_SUBMITTED": "Corriger la demande soumise",
+      "REMOVE": "Retirer (logique)",
+      "RESTORE_REMOVED": "Retablir le retrait"
     },
     "cleanup": {
       "title": "Prévisualisation du nettoyage",
@@ -1545,6 +1549,51 @@
       "warn": "Rien ne s’exécute avant confirmation. La référence UAT DEMO-TN-PLT-PR-2026-000490 n’est jamais supprimée définitivement. Un nouvel essai exige une nouvelle prévisualisation.",
       "ready": "Prévisualisation prête — vérifiez puis confirmez.",
       "done": "Nettoyage terminé. Vérifiez les résultats par enregistrement si certains ont été ignorés."
+    },
+    "removedFilter": "Filtre de retrait",
+    "removedAll": "Actives et retirees",
+    "removedActive": "Non retirees",
+    "removedOnly": "Retirees seulement",
+    "removed": "Retiree",
+    "businessStatus": "Statut metier",
+    "noOwner": "Aucun",
+    "actionDone": "Action administrative terminee.",
+    "adminStatus": {
+      "ACTIVE": "Statut administratif : actif",
+      "ARCHIVED": "Statut administratif : archive",
+      "REMOVED": "Statut administratif : retire"
+    },
+    "link": {
+      "approvals": "Approbations",
+      "rfqs": "DAA",
+      "quotations": "Devis",
+      "awards": "Attributions",
+      "pos": "Commandes",
+      "shipments": "Expeditions",
+      "receipts": "Receptions",
+      "invoices": "Factures"
+    },
+    "form": {
+      "draftHeading": "Corriger le brouillon",
+      "submittedHeading": "Corriger la demande soumise",
+      "draftHint": "Modifiez les memes champs que le formulaire metier. Un motif obligatoire est audite.",
+      "submittedHint": "Les changements materiels annulent les approbations en cours et les liens inutilises, puis demarrent un nouveau tour. Les decisions anterieures restent historiques.",
+      "title": "Titre",
+      "justification": "Justification",
+      "priority": "Priorite",
+      "purchaseType": "Type d'achat",
+      "currency": "Devise",
+      "requiredDate": "Date requise",
+      "categoryId": "Id categorie",
+      "departmentId": "Id departement",
+      "siteId": "Id site",
+      "costCenterId": "Id centre de cout",
+      "lines": "Lignes",
+      "description": "Description",
+      "quantity": "Quantite",
+      "unit": "Unite",
+      "unitPrice": "Prix unitaire",
+      "addLine": "Ajouter une ligne"
     }
   },
   "passwordSetup": {

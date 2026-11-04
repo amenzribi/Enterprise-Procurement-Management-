@@ -3,6 +3,7 @@ package com.epi.procurement.organization;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -38,7 +39,7 @@ public class OrganizationAdmin {
 	@Transactional(readOnly = true)
 	public List<CompanyRow> companies(Actor admin) {
 		requireAdmin(admin);
-		return jdbc.query("""
+		List<CompanyRow> all = jdbc.query("""
 				SELECT id, code, legal_name, company_type, country_code, currency_code, default_language, time_zone,
 				       purchasing_mode, parent_company_id, erp_company_code, is_active, version
 				FROM company WHERE group_id = ? ORDER BY code""", (rs, i) -> new CompanyRow(rs.getLong("id"),
@@ -46,11 +47,19 @@ public class OrganizationAdmin {
 				rs.getString("country_code"), rs.getString("currency_code"), rs.getString("default_language"),
 				rs.getString("time_zone"), rs.getString("purchasing_mode"), rs.getObject("parent_company_id", Long.class),
 				rs.getString("erp_company_code"), rs.getBoolean("is_active"), rs.getInt("version")), admin.groupId());
+		if (admin.globalAdmin()) {
+			return all;
+		}
+		return all.stream().filter(c -> admin.adminCompanyIds().contains(c.id())).toList();
 	}
 
 	@Transactional
 	public CompanyRow createCompany(Actor admin, CompanyBody body) {
 		requireAdmin(admin);
+		if (!admin.globalAdmin()) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"Only a global administrator can create companies. New companies are not granted to existing company administrators automatically.");
+		}
 		require(body.code(), "code");
 		require(body.legalName(), "legalName");
 		Long id = jdbc.queryForObject("SELECT NEXT VALUE FOR seq_company", Long.class);
@@ -174,6 +183,9 @@ public class OrganizationAdmin {
 		if (n == null || n == 0) {
 			throw ApiProblemException.notFound();
 		}
+		if (!admin.globalAdmin() && !admin.adminCompanyIds().contains(companyId)) {
+			throw ApiProblemException.notFound();
+		}
 	}
 
 	private static void requireAdmin(Actor user) {
@@ -193,7 +205,11 @@ public class OrganizationAdmin {
 				action, null, null, null, null));
 	}
 
-	public record Actor(long userId, String displayName, long companyId, long groupId, boolean admin) {
+	public record Actor(long userId, String displayName, long companyId, long groupId, boolean admin,
+			boolean globalAdmin, Set<Long> adminCompanyIds) {
+		public Actor {
+			adminCompanyIds = adminCompanyIds == null ? Set.of() : Set.copyOf(adminCompanyIds);
+		}
 	}
 
 	private static String blank(String value) {

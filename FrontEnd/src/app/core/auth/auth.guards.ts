@@ -37,3 +37,13 @@ export function permissionGuard(permission: Permission): CanActivateFn {
   return () =>
     hasPermission(inject(AuthService).me(), permission) ? true : inject(Router).createUrlTree(['/not-found']);
 }
+
+/** Passes when the signed-in user holds any of the listed permissions. */
+export function anyPermissionGuard(...permissions: Permission[]): CanActivateFn {
+  return () => {
+    const me = inject(AuthService).me();
+    return permissions.some((p) => hasPermission(me, p))
+      ? true
+      : inject(Router).createUrlTree(['/not-found']);
+  };
+}

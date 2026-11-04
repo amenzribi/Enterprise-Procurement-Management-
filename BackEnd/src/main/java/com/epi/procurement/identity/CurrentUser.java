@@ -1,6 +1,7 @@
 package com.epi.procurement.identity;
 
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -36,6 +37,26 @@ public record CurrentUser(long id, String email, String displayName, long compan
 
 	public boolean isGlobalAdmin() {
 		return hasRole(Role.GLOBAL_ADMIN);
+	}
+
+	/** Company-scoped ADMIN (one or more explicit company grants). */
+	public boolean isCompanyAdmin() {
+		return !isGlobalAdmin() && hasRole(Role.ADMIN);
+	}
+
+	/** Companies this ADMIN may administer. Empty when not a company ADMIN. */
+	public Set<Long> adminCompanyIds() {
+		Set<Long> ids = new LinkedHashSet<>();
+		for (RoleGrant grant : grants) {
+			if (grant.role() == Role.ADMIN && grant.companyId() != null) {
+				ids.add(grant.companyId());
+			}
+		}
+		return Set.copyOf(ids);
+	}
+
+	public boolean canAdminCompany(long companyId) {
+		return isGlobalAdmin() || hasRoleIn(Role.ADMIN, companyId);
 	}
 
 }

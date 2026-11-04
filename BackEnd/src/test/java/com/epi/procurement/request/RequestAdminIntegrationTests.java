@@ -27,20 +27,22 @@ class RequestAdminIntegrationTests extends SqlServerTestSupport {
 	private static final ZoneId TUNIS = ZoneId.of("Africa/Tunis");
 
 	@Test
-	void onlyGlobalAdminHoldsRequestAdminCapability() {
+	void globalAdminAndCompanyAdminHoldScopedRequestAdminCapabilities() {
 		ApiClient global = signedIn("global.admin@demo.local");
 		assertThat((List<String>) global.get("/api/v1/me").expectStatus(200).json("$.permissions"))
-			.contains("REQUEST_ADMIN")
+			.contains("REQUEST_ADMIN", "REQUEST_DRAFT_ADMIN")
 			.doesNotContain("PURCHASING_ACT", "APPROVAL_ACT");
 
-		assertThat((List<String>) signedIn("admin@demo.local").get("/api/v1/me").json("$.permissions"))
+		ApiClient companyAdmin = signedIn("admin@demo.local");
+		assertThat((List<String>) companyAdmin.get("/api/v1/me").json("$.permissions"))
+			.contains("REQUEST_DRAFT_ADMIN")
 			.doesNotContain("REQUEST_ADMIN");
 		assertThat((List<String>) signedIn("requester.tn@demo.local").get("/api/v1/me").json("$.permissions"))
-			.doesNotContain("REQUEST_ADMIN");
+			.doesNotContain("REQUEST_ADMIN", "REQUEST_DRAFT_ADMIN");
 		assertThat((List<String>) signedIn("buyer@demo.local").get("/api/v1/me").json("$.permissions"))
-			.doesNotContain("REQUEST_ADMIN");
+			.doesNotContain("REQUEST_ADMIN", "REQUEST_DRAFT_ADMIN");
 
-		signedIn("admin@demo.local").get("/api/v1/admin/requests").expectStatus(403);
+		companyAdmin.get("/api/v1/admin/requests").expectStatus(200);
 		signedIn("requester.tn@demo.local").get("/api/v1/admin/requests").expectStatus(403);
 		global.get("/api/v1/admin/requests?size=5").expectStatus(200);
 	}
@@ -219,6 +221,72 @@ class RequestAdminIntegrationTests extends SqlServerTestSupport {
 			.code()).isEqualTo("version-conflict");
 		global.delete("/api/v1/admin/requests/" + staleDraft.id() + "?version=" + staleDraft.version()
 				+ "&reason=cleanup%20stale%20fixture").expectStatus(204);
+	}
+
+	@Test
+	void companyAdminCorrectsDraftInScopeAndIsDeniedElevatedActions() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		ApiClient companyAdmin = signedIn("admin@demo.local");
+		ApiClient global = signedIn("global.admin@demo.local");
+
+		ApiClient.Response draft = sami.post("/api/v1/requests", json(tnDraft("Admin-IT company draft")))
+			.expectStatus(201);
+		long draftId = draft.id();
+		ApiClient.Response corrected = companyAdmin
+			.post("/api/v1/admin/requests/" + draftId + "/correct-draft",
+					"{\"version\":" + draft.version()
+							+ ",\"reason\":\"Company admin draft fix\",\"title\":\"Admin-IT company draft fixed\"}")
+			.expectStatus(200);
+		assertThat((String) corrected.json("$.detail.title")).isEqualTo("Admin-IT company draft fixed");
+
+		ApiClient.Response submitted = sami
+			.post("/api/v1/requests/" + draftId + "/submit",
+					"{\"version\":" + corrected.json("$.detail.version") + "}")
+			.expectStatus(200);
+		long requestId = submitted.id();
+		int roundBefore = jdbc.queryForObject("SELECT round_no FROM purchase_request WHERE id = ?", Integer.class,
+				requestId);
+		companyAdmin
+			.post("/api/v1/admin/requests/" + requestId + "/correct-submitted",
+					"{\"version\":" + submitted.version()
+							+ ",\"reason\":\"Should be forbidden for company admin\",\"title\":\"Nope\"}")
+			.expectStatus(403);
+		companyAdmin
+			.post("/api/v1/admin/requests/" + requestId + "/remove",
+					"{\"version\":" + submitted.version() + ",\"reason\":\"Should be forbidden\"}")
+			.expectStatus(403);
+
+		ApiClient.Response afterCorrect = global
+			.post("/api/v1/admin/requests/" + requestId + "/correct-submitted",
+					"{\"version\":" + submitted.version()
+							+ ",\"reason\":\"GLOBAL_ADMIN material fix\",\"title\":\"Admin-IT submitted corrected\"}")
+			.expectStatus(200);
+		assertThat((String) afterCorrect.json("$.detail.title")).isEqualTo("Admin-IT submitted corrected");
+		assertThat((String) afterCorrect.json("$.detail.status")).isEqualTo("IN_APPROVAL");
+		int roundAfter = jdbc.queryForObject("SELECT round_no FROM purchase_request WHERE id = ?", Integer.class,
+				requestId);
+		assertThat(roundAfter).isEqualTo(roundBefore + 1);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status = 'PENDING'",
+				Integer.class, requestId)).isPositive();
+		assertThat(jdbc.queryForObject(
+				"SELECT COUNT(*) FROM audit_event WHERE entity_id = ? AND action = 'REQUEST_ADMIN_SUBMITTED_CORRECTED'",
+				Integer.class, Long.toString(requestId))).isEqualTo(1);
+
+		ApiClient.Response detail = global.get("/api/v1/admin/requests/" + requestId).expectStatus(200);
+		global.post("/api/v1/admin/requests/" + requestId + "/remove",
+				"{\"version\":" + detail.json("$.version") + ",\"reason\":\"Logical remove IT\"}").expectStatus(200);
+		assertThat((Boolean) global.get("/api/v1/admin/requests/" + requestId).json("$.removed")).isTrue();
+		assertThat((List<Integer>) sami.get("/api/v1/requests?scope=mine&size=100").expectStatus(200).json("$.items[*].id"))
+			.doesNotContain((int) requestId);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status = 'PENDING'",
+				Integer.class, requestId)).isZero();
+
+		detail = global.get("/api/v1/admin/requests/" + requestId).expectStatus(200);
+		global.post("/api/v1/admin/requests/" + requestId + "/restore-removed",
+				"{\"version\":" + detail.json("$.version") + ",\"reason\":\"Restore removed IT\"}").expectStatus(200);
+		assertThat((Boolean) global.get("/api/v1/admin/requests/" + requestId).json("$.removed")).isFalse();
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status = 'PENDING'",
+				Integer.class, requestId)).isZero();
 	}
 
 	private long ensureForeignGroup() {

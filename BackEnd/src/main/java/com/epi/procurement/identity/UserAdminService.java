@@ -47,6 +47,7 @@ public class UserAdminService {
 		requireUserAdmin(actor);
 		return store.search(actor.groupId(), text, active, page, size)
 			.stream()
+			.filter(r -> actor.isGlobalAdmin() || actor.canAdminCompany(r.companyId()))
 			.map(r -> new UserAdminViews.ListItem(r.id(), r.email(), r.displayName(), r.companyId(), r.companyCode(),
 					r.active()))
 			.toList();
@@ -56,7 +57,15 @@ public class UserAdminService {
 		requireUserAdmin(actor);
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertCanManage(actor, account);
+		assertSameGroup(actor, account);
+		if (!actor.isGlobalAdmin() && !actor.canAdminCompany(account.companyId())
+				&& !store.listGrants(userId).stream().anyMatch(g -> g.companyId() != null && actor.canAdminCompany(g.companyId()))) {
+			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
+		}
+		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"Company administrators cannot manage global administrators.");
+		}
 		return toDetail(account);
 	}
 
@@ -138,7 +147,7 @@ public class UserAdminService {
 		requireUserAdmin(actor);
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertCanManage(actor, account);
+		assertSameGroup(actor, account);
 		UserAdminStore.RoleGrantRow grant = store.findGrant(grantId)
 			.filter(g -> g.userId() == userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "Role grant not found."));
@@ -155,6 +164,10 @@ public class UserAdminService {
 		}
 		if (!actor.isGlobalAdmin() && COMPANY_ADMIN_FORBIDDEN.contains(Role.parse(grant.role()).orElse(Role.REQUESTER))) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden", "You cannot manage this role.");
+		}
+		if (!actor.isGlobalAdmin() && (grant.companyId() == null || !actor.canAdminCompany(grant.companyId()))) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"You cannot modify role grants outside your authorised companies.");
 		}
 		store.deleteGrant(grantId, userId);
 		store.bumpCredentialsVersion(userId);
@@ -223,7 +236,11 @@ public class UserAdminService {
 	private void addGrantInternal(CurrentUser actor, long userId, UserAdminViews.GrantRequest grant, boolean audit) {
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertCanManage(actor, account);
+		assertSameGroup(actor, account);
+		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"Company administrators cannot manage global administrators.");
+		}
 		Role role = Role.parse(grant.role() == null ? "" : grant.role().trim().toUpperCase(Locale.ROOT))
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-role", "Unsupported role."));
 		if (role == Role.SUPPLIER_CONTACT) {
@@ -231,13 +248,13 @@ public class UserAdminService {
 					"Supplier contacts are invited from messaging, not user administration.");
 		}
 		if (!actor.isGlobalAdmin()) {
-			if (COMPANY_ADMIN_FORBIDDEN.contains(role) || role == Role.GLOBAL_ADMIN) {
+			if (COMPANY_ADMIN_FORBIDDEN.contains(role) || role == Role.GLOBAL_ADMIN || role == Role.ADMIN) {
 				throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
 						"Company administrators cannot grant this role.");
 			}
-			if (grant.companyId() == null || !store.companyInGroup(grant.companyId(), actor.groupId())) {
-				throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-company",
-						"Role grants must target a company in your organisation.");
+			if (grant.companyId() == null || !actor.canAdminCompany(grant.companyId())) {
+				throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+						"You can only grant roles in companies you administer.");
 			}
 		}
 		Long companyId = role.isGroupWide() ? null : grant.companyId();
@@ -246,10 +263,10 @@ public class UserAdminService {
 				throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-company",
 						"Company-scoped roles require a valid company.");
 			}
-		}
-		else if (!actor.isGlobalAdmin() && role == Role.ADMIN) {
-			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
-					"Company administrators cannot grant ADMIN.");
+			if (role == Role.ADMIN && !actor.isGlobalAdmin()) {
+				throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+						"Only a global administrator can grant ADMIN.");
+			}
 		}
 		Long departmentId = grant.departmentId();
 		if (departmentId != null) {
@@ -289,19 +306,48 @@ public class UserAdminService {
 		}
 	}
 
+	/** Home company + security actions (activate, password, sessions). */
 	private void assertCanManage(CurrentUser actor, UserAdminStore.AccountRow account) {
-		if (!store.companyInGroup(account.companyId(), actor.groupId())) {
-			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
-		}
+		assertSameGroup(actor, account);
 		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
 					"Company administrators cannot manage global administrators.");
 		}
+		if (!actor.isGlobalAdmin() && !actor.canAdminCompany(account.companyId())) {
+			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
+		}
+		if (!actor.isGlobalAdmin() && hasGrantsOutsideAdminScope(actor, account.id())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "out-of-scope-grants",
+					"This account has role grants outside your authorised companies. A global administrator must perform account-wide security changes.");
+		}
+	}
+
+	private void assertSameGroup(CurrentUser actor, UserAdminStore.AccountRow account) {
+		if (!store.companyInGroup(account.companyId(), actor.groupId())) {
+			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
+		}
+	}
+
+	private boolean hasGrantsOutsideAdminScope(CurrentUser actor, long userId) {
+		Set<Long> allowed = actor.adminCompanyIds();
+		for (UserAdminStore.RoleGrantRow grant : store.listGrants(userId)) {
+			if (grant.companyId() == null) {
+				return true;
+			}
+			if (!allowed.contains(grant.companyId())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void validateHome(CurrentUser actor, long companyId, Long siteId, Long departmentId) {
 		if (!store.companyInGroup(companyId, actor.groupId())) {
 			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-company", "Company is not in your group.");
+		}
+		if (!actor.isGlobalAdmin() && !actor.canAdminCompany(companyId)) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"You can only place users in companies you administer.");
 		}
 		if (siteId != null && !store.siteInCompany(siteId, companyId)) {
 			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-site", "Site does not belong to the company.");

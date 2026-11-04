@@ -2,7 +2,7 @@ package com.epi.procurement.identity;
 
 /**
  * A role held in a company (and optionally a department). {@code companyId == null} means every company of the
- * user's group and is only stored for group-wide roles (GROUP_MANAGEMENT, ADMIN).
+ * user's group and is only stored for group-wide roles (GROUP_MANAGEMENT, GLOBAL_ADMIN, SUPPLIER_CONTACT).
  */
 public record RoleGrant(Role role, Long companyId, Long departmentId) {
 

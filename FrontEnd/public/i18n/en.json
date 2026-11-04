@@ -1518,7 +1518,7 @@
     "deleted": "Eligible draft permanently deleted.",
     "empty": {
       "title": "No requests match",
-      "message": "Adjust filters. Archived records appear only when the archive filter includes them."
+      "message": "Adjust filters. Archived and removed records appear only when those filters include them."
     },
     "cols": {
       "reference": "Reference",
@@ -1526,7 +1526,8 @@
       "company": "Company",
       "requester": "Requester",
       "status": "Status",
-      "actions": "Admin actions"
+      "actions": "Admin actions",
+      "owner": "Next responsible"
     },
     "act": {
       "ARCHIVE": "Archive",
@@ -1535,7 +1536,10 @@
       "DELETE_DRAFT": "Delete draft",
       "RETURN_FOR_REVISION": "Return for revision",
       "CORRECT_DRAFT": "Correct draft",
-      "VIEW": "View"
+      "VIEW": "View",
+      "CORRECT_SUBMITTED": "Correct submitted",
+      "REMOVE": "Remove (logical)",
+      "RESTORE_REMOVED": "Restore removed"
     },
     "cleanup": {
       "title": "Cleanup preview",
@@ -1545,6 +1549,51 @@
       "warn": "Nothing runs until you confirm. Protected UAT reference DEMO-TN-PLT-PR-2026-000490 is never hard-deleted. Retries require a new preview.",
       "ready": "Cleanup preview ready — review and confirm.",
       "done": "Cleanup finished. Review per-record outcomes if some were skipped."
+    },
+    "removedFilter": "Removal filter",
+    "removedAll": "Active and removed",
+    "removedActive": "Not removed",
+    "removedOnly": "Removed only",
+    "removed": "Removed",
+    "businessStatus": "Business status",
+    "noOwner": "None",
+    "actionDone": "Administrative action completed.",
+    "adminStatus": {
+      "ACTIVE": "Administrative status: active",
+      "ARCHIVED": "Administrative status: archived",
+      "REMOVED": "Administrative status: removed"
+    },
+    "link": {
+      "approvals": "Approvals",
+      "rfqs": "RFQs",
+      "quotations": "Quotations",
+      "awards": "Awards",
+      "pos": "Purchase orders",
+      "shipments": "Shipments",
+      "receipts": "Receipts",
+      "invoices": "Invoices"
+    },
+    "form": {
+      "draftHeading": "Correct draft",
+      "submittedHeading": "Correct submitted request",
+      "draftHint": "Edit the same fields as the business draft form. A reason is mandatory and audited.",
+      "submittedHint": "Material changes cancel pending approvals and unused links, then start a new approval round. Prior decisions stay historical.",
+      "title": "Title",
+      "justification": "Justification",
+      "priority": "Priority",
+      "purchaseType": "Purchase type",
+      "currency": "Currency",
+      "requiredDate": "Required date",
+      "categoryId": "Category id",
+      "departmentId": "Department id",
+      "siteId": "Site id",
+      "costCenterId": "Cost centre id",
+      "lines": "Lines",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitPrice": "Unit price",
+      "addLine": "Add line"
     }
   },
   "passwordSetup": {

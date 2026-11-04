@@ -202,6 +202,16 @@ class PurchaseRequest {
 	@Column(name = "archive_reason", length = 1000)
 	private String archiveReason;
 
+	@Column(name = "removed_at")
+	private Instant removedAt;
+
+	@Column(name = "removed_by_user_id")
+	private Long removedByUserId;
+
+	@Nationalized
+	@Column(name = "remove_reason", length = 1000)
+	private String removeReason;
+
 	@Version
 	private int version;
 
@@ -311,6 +321,36 @@ class PurchaseRequest {
 
 	String getArchiveReason() {
 		return archiveReason;
+	}
+
+	void markRemoved(long actorUserId, String reason, Instant now) {
+		this.removedAt = now;
+		this.removedByUserId = actorUserId;
+		this.removeReason = reason;
+		touch(actorUserId, now);
+	}
+
+	void clearRemoval(long actorUserId, Instant now) {
+		this.removedAt = null;
+		this.removedByUserId = null;
+		this.removeReason = null;
+		touch(actorUserId, now);
+	}
+
+	boolean isRemoved() {
+		return removedAt != null;
+	}
+
+	Instant getRemovedAt() {
+		return removedAt;
+	}
+
+	Long getRemovedByUserId() {
+		return removedByUserId;
+	}
+
+	String getRemoveReason() {
+		return removeReason;
 	}
 
 	Long getId() {

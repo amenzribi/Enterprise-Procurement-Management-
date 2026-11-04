@@ -163,7 +163,12 @@ class Absences {
 	}
 
 	private void requireSameGroup(CurrentUser admin, long userId) {
-		users.findContact(userId).filter(c -> c.groupId() == admin.groupId()).orElseThrow(ApiProblemException::notFound);
+		UserDirectory.UserContact contact = users.findContact(userId)
+			.filter(c -> c.groupId() == admin.groupId())
+			.orElseThrow(ApiProblemException::notFound);
+		if (!admin.isGlobalAdmin() && !admin.canAdminCompany(contact.companyId())) {
+			throw ApiProblemException.notFound();
+		}
 	}
 
 	static void requireAdmin(CurrentUser user) {

@@ -32,25 +32,43 @@ class RequestAdminActionsTest {
 	}
 
 	@Test
-	void inApprovalMayReturnOrCancelNotDelete() {
+	void inApprovalMayReturnCancelCorrectSubmittedOrRemove() {
 		PurchaseRequest request = draft("In approval");
 		request.markSubmitted("DEMO-TN-PLT-PR-2026-009999", Instant.parse("2026-01-02T00:00:00Z"));
 		request.transitionTo(RequestStatus.IN_APPROVAL, 1L, Instant.parse("2026-01-02T00:00:00Z"));
 		var matrix = RequestAdminActions.evaluate(request, emptyLinks());
 		assertThat(matrix.allows(Action.RETURN_FOR_REVISION)).isTrue();
 		assertThat(matrix.allows(Action.CANCEL)).isTrue();
+		assertThat(matrix.allows(Action.CORRECT_SUBMITTED)).isTrue();
+		assertThat(matrix.allows(Action.REMOVE)).isTrue();
 		assertThat(matrix.allows(Action.DELETE_DRAFT)).isFalse();
 		assertThat(matrix.allows(Action.CORRECT_DRAFT)).isFalse();
 	}
 
 	@Test
-	void orderedOrPoBlocksCancelAndDelete() {
+	void removedBlocksElevatedActionsExceptRestoreRemoved() {
+		PurchaseRequest request = draft("Removed");
+		request.markSubmitted("DEMO-TN-PLT-PR-2026-006666", Instant.parse("2026-01-02T00:00:00Z"));
+		request.transitionTo(RequestStatus.IN_APPROVAL, 1L, Instant.parse("2026-01-02T00:00:00Z"));
+		request.markRemoved(9L, "hide from active work", Instant.parse("2026-01-06T00:00:00Z"));
+		var matrix = RequestAdminActions.evaluate(request, emptyLinks());
+		assertThat(matrix.allows(Action.RESTORE_REMOVED)).isTrue();
+		assertThat(matrix.allows(Action.REMOVE)).isFalse();
+		assertThat(matrix.allows(Action.CORRECT_SUBMITTED)).isFalse();
+		assertThat(matrix.allows(Action.CANCEL)).isFalse();
+	}
+
+	@Test
+	void orderedOrPoBlocksCancelDeleteCorrectAndRemove() {
 		PurchaseRequest request = draft("Ordered");
 		request.markSubmitted("DEMO-TN-PLT-PR-2026-008888", Instant.parse("2026-01-03T00:00:00Z"));
 		request.transitionTo(RequestStatus.ORDERED, 1L, Instant.parse("2026-01-03T00:00:00Z"));
 		var matrix = RequestAdminActions.evaluate(request, new LinkCounts(0, 0, 0, 0, 1, 0, 0, 0));
 		assertThat(matrix.allows(Action.CANCEL)).isFalse();
 		assertThat(matrix.of(Action.CANCEL).reasonCode()).isEqualTo("commitment-exists");
+		assertThat(matrix.allows(Action.CORRECT_SUBMITTED)).isFalse();
+		assertThat(matrix.of(Action.CORRECT_SUBMITTED).reasonCode()).isEqualTo("commitment-exists");
+		assertThat(matrix.allows(Action.REMOVE)).isFalse();
 		assertThat(matrix.allows(Action.DELETE_DRAFT)).isFalse();
 		assertThat(matrix.allows(Action.ARCHIVE)).isFalse();
 	}

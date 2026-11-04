@@ -1,0 +1,217 @@
+{
+  "checks": [
+    {
+      "name": "GA has REQUEST_ADMIN+DRAFT",
+      "ok": true,
+      "detail": "['REQUEST_ADMIN', 'REQUEST_DRAFT_ADMIN']"
+    },
+    {
+      "name": "company ADMIN has DRAFT only",
+      "ok": true,
+      "detail": "['REQUEST_DRAFT_ADMIN']"
+    },
+    {
+      "name": "TN-only login + DRAFT_ADMIN",
+      "ok": true,
+      "detail": "['REQUEST_DRAFT_ADMIN']"
+    },
+    {
+      "name": "TN-only org list is TN only",
+      "ok": true,
+      "detail": "200 ['DEMO-TN-PLT']"
+    },
+    {
+      "name": "TN-only FR sites 404",
+      "ok": true,
+      "detail": "404"
+    },
+    {
+      "name": "TN-only CPA sites 404",
+      "ok": true,
+      "detail": "404"
+    },
+    {
+      "name": "TN-only TN sites 200",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "TN-only cannot expand ADMIN to FR",
+      "ok": true,
+      "detail": "403 {'detail': 'Company administrators cannot grant this role.', 'instance': '/api/v1/admin/accounts/751/roles', 'status': 403, 'title': 'Forbidden', 'code': 'forbidden'}"
+    },
+    {
+      "name": "TN-only users exclude FR/CPA home company",
+      "ok": true,
+      "detail": "foreign=0 total=7"
+    },
+    {
+      "name": "TN-only rules exclude FR/CPA",
+      "ok": true,
+      "detail": "foreign=0 total=7"
+    },
+    {
+      "name": "TN-only absences admin status",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "TN-only absences exclude FR/CPA",
+      "ok": true,
+      "detail": "foreign=0"
+    },
+    {
+      "name": "TN-only import jobs status",
+      "ok": true,
+      "detail": "404"
+    },
+    {
+      "name": "TN-only cannot import into FR",
+      "ok": true,
+      "detail": "404"
+    },
+    {
+      "name": "create TN draft",
+      "ok": true,
+      "detail": "201"
+    },
+    {
+      "name": "GA correct draft fields+lines",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "GA draft title/lines applied",
+      "ok": true,
+      "detail": "VERIFY-ADMIN-DRAFT-CORRECTED"
+    },
+    {
+      "name": "TN-only correct TN draft",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "create FR draft",
+      "ok": true,
+      "detail": "201"
+    },
+    {
+      "name": "TN-only cannot see FR draft",
+      "ok": true,
+      "detail": "404"
+    },
+    {
+      "name": "submit TN draft",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "admin@demo denied correct-submitted",
+      "ok": true,
+      "detail": "403"
+    },
+    {
+      "name": "admin@demo denied remove",
+      "ok": true,
+      "detail": "403"
+    },
+    {
+      "name": "TN-only denied correct-submitted",
+      "ok": true,
+      "detail": "403"
+    },
+    {
+      "name": "submitted has pending approvals",
+      "ok": true,
+      "detail": "pending=2 round=1"
+    },
+    {
+      "name": "GA correct submitted",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "after correct status IN_APPROVAL",
+      "ok": true,
+      "detail": "IN_APPROVAL"
+    },
+    {
+      "name": "correct-submitted bumps round",
+      "ok": true,
+      "detail": "1->2"
+    },
+    {
+      "name": "old round tasks no longer pending",
+      "ok": true,
+      "detail": "cancelled_old=2 pending_new=2"
+    },
+    {
+      "name": "GA logical remove",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "removed hidden from requester active list",
+      "ok": true,
+      "detail": "[1753, 1752]"
+    },
+    {
+      "name": "admin detail removed=true",
+      "ok": true,
+      "detail": "True"
+    },
+    {
+      "name": "remove clears pending approvals",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "GA restore removed",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "after restore removed=false",
+      "ok": true,
+      "detail": "False"
+    },
+    {
+      "name": "restore does not reactivate old approvals",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "audit REQUEST_ADMIN_DRAFT_CORRECTED",
+      "ok": true,
+      "detail": "751|TN-Only Admin (Verify)|VERIFY TN-only draft correction|DRAFT|DRAFT|{\"before\":{\"title\":\"VERIFY-ADMIN-DRAFT-CORRECTED\",\"justification\":\"verify justification\",\"categoryId\":\"151\",\"priority\":\""
+    },
+    {
+      "name": "audit REQUEST_ADMIN_SUBMITTED_CORRECTED",
+      "ok": true,
+      "detail": "601|Global Administrator (Demo)|VERIFY GA submitted material correction|IN_APPROVAL|IN_APPROVAL|{\"after\":{\"title\":\"VERIFY-ADMIN-SUBMITTED-CORRECTED\",\"justification\":\"material change for new round\",\"categoryId\":\"151\","
+    },
+    {
+      "name": "audit REQUEST_ADMIN_REMOVED",
+      "ok": true,
+      "detail": "601|Global Administrator (Demo)|VERIFY logical remove|IN_APPROVAL|IN_APPROVAL|{\"removed\":true}"
+    },
+    {
+      "name": "audit REQUEST_ADMIN_RESTORE_REMOVED",
+      "ok": true,
+      "detail": "601|Global Administrator (Demo)|VERIFY restore removed|IN_APPROVAL|IN_APPROVAL|{\"note\":\"Pending approvals were not recreated; return/resubmit or correct to start a new round if work continues.\",\"remo"
+    },
+    {
+      "name": "admin removed filter works",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "UAT-01 preserved",
+      "ok": true,
+      "detail": "DEMO-TN-PLT-PR-2026-000490"
+    }
+  ],
+  "revision": "a9a8740",
+  "tnOnly": "admin.tn.only@demo.local",
+  "requestId": 1755
+}

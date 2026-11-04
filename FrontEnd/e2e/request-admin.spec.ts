@@ -47,7 +47,9 @@ test('GLOBAL_ADMIN opens draft detail with Correct draft when eligible', async (
   await expect(global.getByText(t('en', 'requestAdmin.actionMatrix'))).toBeVisible();
   const correct = global.getByRole('button', { name: t('en', 'requestAdmin.act.CORRECT_DRAFT') });
   if (await correct.isVisible()) {
-    await expect(global.getByText(t('en', 'requestAdmin.form.draftHeading'))).toBeVisible();
+    await expect(
+      global.getByRole('heading', { name: t('en', 'requestAdmin.form.draftHeading') }),
+    ).toBeVisible();
     await global.locator('input[formControlName="title"]').fill('Admin e2e corrected draft');
     await global.getByText(t('en', 'requestAdmin.reason')).locator('xpath=..').locator('textarea').fill(
       'Playwright draft correction',

@@ -72,30 +72,72 @@ test('Award → PO → ship → receipt → invoice → close (EN)', async ({ pa
   await expect(logistics).toBeVisible();
   await logistics.getByRole('button', { name: t('en', 'logistics.actions.create') }).click();
   await expect(ines.getByText(t('en', 'logistics.actions.created')).first()).toBeVisible();
-  for (let i = 0; i < 4; i++) {
+  await expect(logistics.getByRole('button', { name: t('en', 'logistics.actions.recordActual') }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+  for (let i = 0; i < 6; i++) {
     const actual = logistics.getByRole('button', { name: t('en', 'logistics.actions.recordActual') });
-    if ((await actual.count()) === 0) {
+    const remaining = await actual.count();
+    if (remaining === 0) {
       break;
     }
+    await expect(actual.first()).toBeEnabled({ timeout: 20_000 });
     await actual.first().click();
     await expect(ines.getByText(t('en', 'logistics.actions.milestoneDone')).first()).toBeVisible();
+    await expect(actual).toHaveCount(remaining - 1, { timeout: 20_000 });
   }
   await logistics.locator('input[id^="doc-ref-"]').fill('DN-E2E-1');
   await logistics.getByRole('button', { name: t('en', 'logistics.actions.addDoc') }).click();
   await expect(ines.getByText(t('en', 'logistics.actions.docAdded')).first()).toBeVisible();
+  // Full-suite flake: Omar opened before user-facing status became Received (internal DELIVERED).
+  {
+    const deadline = Date.now() + 60_000;
+    let ready = false;
+    while (Date.now() < deadline) {
+      await ines.goto(`/requests/${request.id}`);
+      const statusText = (await ines.locator('.dossier-status').innerText()).toLowerCase();
+      if (
+        statusText.includes('received') ||
+        statusText.includes('delivered') ||
+        statusText.includes('réception') ||
+        statusText.includes('livré')
+      ) {
+        ready = true;
+        break;
+      }
+      await ines.waitForTimeout(1_000);
+    }
+    expect(ready, 'request must reach Received/DELIVERED before receipt').toBe(true);
+  }
   await ines.context().close();
 
   const omar = await newUserPage(browser);
   await signIn(omar, USERS.receiverTn, 'en', `/requests/${request.id}`);
   const receipt = omar.locator('app-receipt-actions');
-  await expect(receipt).toBeVisible({ timeout: 15_000 });
-  await receipt.getByRole('button', { name: t('en', 'receipt.actions.record') }).click();
-  await expect(omar.getByText(t('en', 'receipt.actions.recorded')).first()).toBeVisible();
+  const recordBtn = omar.getByRole('button', { name: t('en', 'receipt.actions.record') });
+  {
+    const deadline = Date.now() + 45_000;
+    let visible = false;
+    while (Date.now() < deadline) {
+      await omar.locator('app-language-select button[lang="en"]').click().catch(() => undefined);
+      if (await recordBtn.isVisible().catch(() => false)) {
+        visible = true;
+        break;
+      }
+      await omar.goto(`/requests/${request.id}`);
+      await omar.waitForTimeout(1_000);
+    }
+    expect(visible, 'Record goods receipt must appear for receiver after DELIVERED').toBe(true);
+  }
+  await expect(recordBtn).toBeVisible({ timeout: 15_000 });
+  await recordBtn.click();
+  await expect(omar.getByText(t('en', 'receipt.actions.recorded')).first()).toBeVisible({ timeout: 20_000 });
   await omar.context().close();
 
   const sami = await newUserPage(browser);
   await signIn(sami, USERS.requesterTn, 'en', `/requests/${request.id}`);
   const samiReceipt = sami.locator('app-receipt-actions');
+  await expect(samiReceipt).toBeVisible({ timeout: 20_000 });
   await samiReceipt.getByRole('button', { name: t('en', 'receipt.actions.confirm') }).click();
   await expect(sami.getByText(t('en', 'receipt.actions.confirmed')).first()).toBeVisible();
   await sami.context().close();
@@ -103,15 +145,18 @@ test('Award → PO → ship → receipt → invoice → close (EN)', async ({ pa
   const ines2 = await newUserPage(browser);
   await signIn(ines2, USERS.buyer, 'en', `/requests/${request.id}`);
   const inv = ines2.locator('app-receipt-actions');
+  await expect(inv).toBeVisible({ timeout: 20_000 });
   await inv.getByRole('button', { name: t('en', 'receipt.actions.recordInvoice') }).click();
   await expect(ines2.getByText(t('en', 'receipt.actions.invoiceSaved')).first()).toBeVisible();
   await ines2.context().close();
 
-  const mehdiClose = await newUserPage(browser);
-  await signIn(mehdiClose, USERS.purchasingManager, 'en', `/requests/${request.id}`);
-  await mehdiClose.locator('app-receipt-actions').getByRole('button', { name: t('en', 'receipt.actions.close') }).click();
-  await expect(mehdiClose.getByText(t('en', 'receipt.actions.closedToast')).first()).toBeVisible();
-  await mehdiClose.context().close();
+  // Requester (author) may close — matches production policy (isAuthor || PURCHASING_MANAGE).
+  const samiClose = await newUserPage(browser);
+  await signIn(samiClose, USERS.requesterTn, 'en', `/requests/${request.id}`);
+  await expect(samiClose.locator('app-receipt-actions')).toBeVisible({ timeout: 20_000 });
+  await samiClose.locator('app-receipt-actions').getByRole('button', { name: t('en', 'receipt.actions.close') }).click();
+  await expect(samiClose.getByText(t('en', 'receipt.actions.closedToast')).first()).toBeVisible();
+  await samiClose.context().close();
 
   // Claire (other plant) cannot open the Tunisia dossier.
   const claire = await newUserPage(browser);

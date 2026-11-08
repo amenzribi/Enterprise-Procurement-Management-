@@ -1,5 +1,6 @@
 :host {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); // Wide tables scroll inside their own wrapper.
   gap: var(--space-5);
 }
 

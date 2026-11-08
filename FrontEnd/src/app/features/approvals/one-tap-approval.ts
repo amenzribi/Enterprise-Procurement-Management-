@@ -43,7 +43,7 @@ export function takeTokenFromFragment(document: Document): string | null {
   template: `
     <div class="page">
       <header class="top">
-        <span class="brand"><span class="brand-mark" aria-hidden="true">EP</span>{{ 'app.name' | translate }}</span>
+        <span class="brand"><span class="brand-mark" aria-hidden="true">P</span>{{ 'app.name' | translate }}</span>
         <app-language-select />
       </header>
 

@@ -1,5 +1,6 @@
-@use '@fontsource-variable/inter';
-// Arabic glyphs only (unicode-range): Latin text keeps Inter. Self-hosted, no public CDN (S2-AC-01).
+@use '@fontsource-variable/geist';
+@use '@fontsource-variable/geist-mono';
+// Arabic glyphs only (unicode-range): Latin text keeps Geist. Self-hosted, no public CDN (S2-AC-01).
 @use '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
 @use '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
 @use '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
@@ -24,7 +25,6 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
-  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
 }
 
@@ -41,7 +41,7 @@ h2,
 h3 {
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tight);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   text-wrap: balance;
 }
 
@@ -64,6 +64,15 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+// Nothing may push a phone screen wider than the viewport.
+select {
+  max-inline-size: 100%;
+}
+
+.table-wrap {
+  overflow-x: auto;
 }
 
 // Numbers line up in tables, totals and identifiers
@@ -137,6 +146,11 @@ textarea {
 .prose {
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+// Identifiers and field labels read as ledger entries.
+.mono {
+  font-family: var(--font-mono);
 }
 
 .is-overdue {

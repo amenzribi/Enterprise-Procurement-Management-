@@ -15,21 +15,18 @@ export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
-      padding: 0.125rem var(--space-2);
-      border-radius: var(--radius-pill);
-      font-size: var(--text-xs);
-      font-weight: var(--weight-medium);
+      font-size: var(--text-sm);
       line-height: 1.5;
       white-space: nowrap;
-      background: var(--badge-soft);
-      color: var(--badge-strong);
+      color: var(--color-text);
     }
 
     .dot {
       inline-size: 0.375rem;
       block-size: 0.375rem;
       border-radius: 50%;
-      background: currentColor;
+      background: var(--badge-strong);
+      flex-shrink: 0;
     }
 
     :host(.tone-success) { --badge-soft: var(--color-success-soft); --badge-strong: var(--color-success); }

@@ -42,6 +42,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
     .actions {
       display: flex;
+      flex-wrap: wrap;
       gap: var(--space-2);
     }
 

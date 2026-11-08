@@ -2,7 +2,7 @@
   display: block;
 }
 
-// Two panes: the product's promise on the harbour-ink surface, the form on paper. On phones only the form remains.
+// Two panes: the product's promise on paper, the form on white, split by a hairline. Static by decision (DESIGN.md). On phones only the form remains.
 .page {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
@@ -15,7 +15,8 @@
   justify-content: space-between;
   gap: var(--space-10);
   padding: var(--space-10) clamp(var(--space-8), 5vw, var(--space-12));
-  background: var(--color-nav);
+  background: var(--color-paper);
+  border-inline-end: 1px solid var(--color-line);
   color: var(--color-nav-text);
 }
 
@@ -31,19 +32,19 @@
   inline-size: 2.25rem;
   block-size: 2.25rem;
   border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: #ffffff;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
 }
 
 .brand-product {
   color: var(--color-nav-text-strong);
   font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
 }
 
-// The one memorable element: the product promise set as three stacked lines, the last carried by the accent rule.
+// The product promise, set as three stacked lines in the page's one large type size.
 .principle {
   display: flex;
   flex-direction: column;
@@ -53,17 +54,11 @@
 .principle-line {
   color: var(--color-nav-text-strong);
   font-size: clamp(1.75rem, 3.2vw, 2.75rem);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   line-height: 1.1;
   letter-spacing: -0.02em;
   // Measured in the line's own large type, so each statement keeps to one or two lines.
   max-inline-size: 16ch;
-}
-
-.principle-line:last-child {
-  padding-inline-start: var(--space-4);
-  border-inline-start: 3px solid var(--color-accent-on-dark);
-  color: var(--color-accent-on-dark);
 }
 
 .brand-foot {

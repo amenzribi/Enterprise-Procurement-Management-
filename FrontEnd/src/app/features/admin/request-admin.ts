@@ -231,7 +231,7 @@ interface CleanupPreview {
                 <td>{{ row.title }}</td>
                 <td>{{ row.company.code }} — {{ row.company.name }}</td>
                 <td>{{ row.requester.displayName }}</td>
-                <td>{{ row.status }}</td>
+                <td>{{ 'requests.status.' + row.status | translate }}</td>
                 <td>{{ row.allowedActions.join(', ') || '—' }}</td>
               </tr>
             }

@@ -113,6 +113,22 @@ export function gapList(item: QueueItem): string {
         </select>
       </div>
       <div class="field">
+        <label for="queue-sort">{{ 'requests.list.sortBy' | translate }}</label>
+        <select id="queue-sort" (change)="onSort($any($event.target).value)">
+          @for (sort of sorts; track sort) {
+            <option [value]="sort" [selected]="query().sort === sort">{{ 'purchasing.sorts.' + sort | translate }}</option>
+          }
+        </select>
+      </div>
+      <details class="more" [open]="advancedCount() > 0">
+        <summary>
+          {{ 'purchasing.inbox.moreFilters' | translate }}
+          @if (advancedCount() > 0) {
+            <span class="tabular">({{ advancedCount() }})</span>
+          }
+        </summary>
+        <div class="more-fields">
+      <div class="field">
         <label for="queue-mode">{{ 'purchasing.inbox.mode' | translate }}</label>
         <select id="queue-mode" (change)="navigate({ mode: $any($event.target).value || null, page: null })">
           <option value="" [selected]="!query().purchaseMode">{{ 'purchasing.inbox.all' | translate }}</option>
@@ -190,14 +206,8 @@ export function gapList(item: QueueItem): string {
         <label for="queue-amount-max">{{ 'purchasing.inbox.amountMax' | translate }}</label>
         <input id="queue-amount-max" type="number" min="0" step="0.01" [value]="query().amountMax ?? ''" (change)="navigate({ amountMax: $any($event.target).value || null, page: null })" />
       </div>
-      <div class="field">
-        <label for="queue-sort">{{ 'requests.list.sortBy' | translate }}</label>
-        <select id="queue-sort" (change)="onSort($any($event.target).value)">
-          @for (sort of sorts; track sort) {
-            <option [value]="sort" [selected]="query().sort === sort">{{ 'purchasing.sorts.' + sort | translate }}</option>
-          }
-        </select>
-      </div>
+        </div>
+      </details>
     </div>
 
     <p class="visually-hidden" role="status" aria-live="polite">
@@ -350,6 +360,14 @@ export class PurchasingInboxPage {
   load(): void {
     this.reload$.next();
     this.count.refresh();
+  }
+
+  /** Filters folded under "More filters"; the panel stays open while any is applied. */
+  protected advancedCount(): number {
+    const q = this.query();
+    return [q.purchaseMode, q.buyingCompanyId, q.countryCode, q.categoryId, q.buyerUserId, q.requesterUserId, q.complete, q.requiredFrom, q.requiredTo, q.amountMin, q.amountMax].filter(
+      (value) => value !== null && value !== undefined && value !== '',
+    ).length;
   }
 
   protected navigate(changes: Record<string, string | number | null>): void {

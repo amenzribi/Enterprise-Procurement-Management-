@@ -57,7 +57,7 @@ import { NotificationService } from './notification.service';
     }
 
     .toast--error .toast-icon {
-      color: #ff9b8f;
+      color: var(--color-danger);
     }
 
     .toast-text {

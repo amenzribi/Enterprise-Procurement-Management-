@@ -22,7 +22,9 @@ import { InboxItem } from '../approvals/approval.models';
 import { PurchasingApi } from '../purchasing/purchasing.api';
 import { QueueItem } from '../purchasing/purchasing.models';
 import { Page, RequestListItem } from '../requests/request.models';
+import { formatMoney, minorUnitsOf } from '../requests/money';
 import { userStatusTone } from '../requests/request-status';
+import { elapsedText } from '../../shared/relative-time';
 import { RequestsApi } from '../requests/requests.api';
 
 interface NoticeItem {
@@ -80,6 +82,20 @@ type LoadState = 'loading' | 'ready' | 'error';
         (retry)="load()"
       />
     } @else {
+      @if (nextApproval(); as next) {
+        <section class="next" [attr.aria-label]="'overview.next.label' | translate">
+          <div class="next-body">
+            <p class="next-label">{{ 'overview.next.count' | translate: { count: approvalTotal() } }}</p>
+            <h2 class="next-title">{{ next.title }}</h2>
+            <p class="next-meta">
+              <bdi class="mono">{{ next.number }}</bdi>
+              <span class="tabular"><bdi>{{ money(next) }}</bdi></span>
+              <span>{{ 'approvals.inbox.waiting' | translate: { elapsed: elapsed(next.waitingSince) } }}</span>
+            </p>
+          </div>
+          <a appButton routerLink="/approvals">{{ 'overview.next.action' | translate }}</a>
+        </section>
+      }
       <div class="grid">
         <app-panel [heading]="'overview.awaiting.title' | translate">
           @if (approvals().length === 0 && purchasing().length === 0) {
@@ -93,18 +109,18 @@ type LoadState = 'loading' | 'ready' | 'error';
               @for (item of approvals(); track item.taskId) {
                 <li>
                   <a [routerLink]="['/requests', item.requestId]">
-                    <span class="ref tabular"><bdi>{{ item.number || ('requests.list.draftNumber' | translate) }}</bdi></span>
                     <span class="title">{{ item.title }}</span>
                     <app-status-badge tone="warning">{{ 'overview.awaiting.approve' | translate }}</app-status-badge>
+                    <span class="ref tabular"><bdi>{{ item.number || ('requests.list.draftNumber' | translate) }}</bdi></span>
                   </a>
                 </li>
               }
               @for (item of purchasing(); track item.requestId) {
                 <li>
                   <a [routerLink]="['/requests', item.requestId]">
-                    <span class="ref tabular"><bdi>{{ item.number || ('requests.list.draftNumber' | translate) }}</bdi></span>
                     <span class="title">{{ item.title }}</span>
                     <app-status-badge tone="info">{{ 'overview.awaiting.purchasing' | translate }}</app-status-badge>
+                    <span class="ref tabular"><bdi>{{ item.number || ('requests.list.draftNumber' | translate) }}</bdi></span>
                   </a>
                 </li>
               }
@@ -135,9 +151,9 @@ type LoadState = 'loading' | 'ready' | 'error';
               @for (item of mine(); track item.id) {
                 <li>
                   <a [routerLink]="['/requests', item.id]">
-                    <span class="ref tabular"><bdi>{{ item.number || ('requests.list.draftNumber' | translate) }}</bdi></span>
                     <span class="title">{{ item.title }}</span>
                     <app-status-badge [tone]="tone(item)">{{ 'requests.userStatus.' + (item.userStatus || item.status) | translate }}</app-status-badge>
+                    <span class="ref tabular"><bdi>{{ item.number || ('requests.list.draftNumber' | translate) }}</bdi></span>
                   </a>
                 </li>
               }
@@ -175,38 +191,74 @@ type LoadState = 'loading' | 'ready' | 'error';
     :host {
       display: block;
     }
+    .next {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-block-end: var(--space-6);
+      padding: var(--space-5);
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+    }
+    .next-body {
+      display: grid;
+      gap: var(--space-1);
+      min-inline-size: 0;
+    }
+    .next-label {
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+    }
+    .next-title {
+      font-size: var(--text-lg);
+      overflow-wrap: anywhere;
+    }
+    .next-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-4);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-      gap: var(--space-6);
+      gap: var(--space-4);
       align-items: start;
     }
     .work-list {
       list-style: none;
       margin: 0 0 var(--space-3);
       padding: 0;
-      display: grid;
-      gap: var(--space-2);
+    }
+    .work-list li + li {
+      border-block-start: 1px solid var(--color-line);
     }
     .work-list a {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: var(--space-1) var(--space-2);
-      padding: var(--space-3);
-      border: 1px solid var(--color-line);
-      border-radius: var(--radius-sm);
+      gap: 0 var(--space-3);
+      padding-block: var(--space-2);
       text-decoration: none;
       color: inherit;
       min-block-size: 2.75rem;
+    }
+    .work-list a:hover .title {
+      text-decoration: underline;
     }
     .work-list a:focus-visible {
       outline: 2px solid var(--color-focus, var(--color-accent));
       outline-offset: 2px;
     }
     .ref {
-      font-weight: var(--weight-semibold);
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
       overflow-wrap: anywhere;
-      user-select: all;
       grid-column: 1 / -1;
     }
     .title {
@@ -249,6 +301,8 @@ export class OverviewPage {
   protected readonly mine = signal<RequestListItem[]>([]);
   protected readonly notices = signal<NoticeItem[]>([]);
 
+  protected readonly approvalTotal = signal(0);
+  protected readonly nextApproval = computed(() => this.approvals()[0] ?? null);
   protected readonly isSupplier = computed(() => hasPermission(this.auth.me(), 'MESSAGING_SUPPLIER'));
   protected readonly canCreate = computed(() => hasPermission(this.auth.me(), 'REQUEST_CREATE'));
   protected readonly canApprove = computed(() => hasPermission(this.auth.me(), 'APPROVAL_ACT'));
@@ -260,6 +314,14 @@ export class OverviewPage {
 
   protected locale(): string {
     return this.language.locale();
+  }
+
+  protected money(item: InboxItem): string {
+    return formatMoney(item.amount ?? null, item.currency, minorUnitsOf(item.currency), this.language.locale()) || '—';
+  }
+
+  protected elapsed(iso: string): string {
+    return elapsedText(iso, Date.now(), this.language.locale());
   }
 
   protected tone(item: RequestListItem) {
@@ -275,8 +337,8 @@ export class OverviewPage {
     const approvals$ = this.canApprove()
       ? this.approvalsApi
           .inbox({ view: 'pending', q: null, sort: 'waitingSince', direction: 'desc', page: 0, size: 8 })
-          .pipe(catchError(() => of({ items: [] as InboxItem[] })))
-      : of({ items: [] as InboxItem[] });
+          .pipe(catchError(() => of({ items: [] as InboxItem[], totalItems: 0 })))
+      : of({ items: [] as InboxItem[], totalItems: 0 });
     const purchasing$ = this.canPurchase()
       ? this.purchasingApi
           .queue({
@@ -321,6 +383,7 @@ export class OverviewPage {
       .subscribe({
         next: (result) => {
           this.approvals.set(result.approvals.items ?? []);
+          this.approvalTotal.set(result.approvals.totalItems ?? 0);
           this.purchasing.set(result.purchasing.items ?? []);
           this.mine.set(result.mine.items ?? []);
           this.notices.set(result.notices.items ?? []);

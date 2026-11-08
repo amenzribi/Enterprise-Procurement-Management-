@@ -33,16 +33,15 @@
 }
 
 .tab[aria-pressed='true'] {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
 }
 
 .tab-count {
   min-inline-size: 1.25rem;
   padding-inline: var(--space-1);
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-accent-hover);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   line-height: 1.25rem;
   text-align: center;
@@ -65,7 +64,7 @@
 }
 
 .field input {
-  min-inline-size: min(18rem, 100%);
+  min-inline-size: min(22rem, 100%);
   padding-inline-start: 2.25rem;
 }
 
@@ -76,27 +75,106 @@
   color: var(--color-text-muted);
 }
 
-.cards {
+.workspace.is-split {
   display: grid;
-  gap: var(--space-3);
+  grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.cards {
   margin: 0;
   padding: 0;
   list-style: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
 }
 
 .card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-block-end: 1px solid var(--color-line);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.card:last-child {
+  border-block-end: 0;
+}
+
+.card.is-selected {
+  background: var(--color-surface-sunken);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+:host-context([dir='rtl']) .card.is-selected {
+  box-shadow: inset -2px 0 0 var(--color-accent);
+}
+
+.card.is-overdue-card .amount {
+  color: var(--color-danger);
+}
+
+.card.is-leaving {
+  opacity: 0;
+  transform: translateX(-0.5rem);
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+}
+
+:host-context([dir='rtl']) .card.is-leaving {
+  transform: translateX(0.5rem);
+}
+
+.pane {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  position: sticky;
+  inset-block-start: calc(var(--header-height) + var(--space-4));
+  padding: var(--space-5);
   border: 1px solid var(--color-line);
-  border-inline-start: 4px solid var(--color-accent);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
 
-.card.is-overdue-card {
-  border-inline-start-color: var(--color-danger);
+.pane > app-approval-actions,
+.pane > app-skeleton {
+  inline-size: 100%;
+}
+
+.pane-title {
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  inline-size: 100%;
+  margin: 0;
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--color-line);
+}
+
+.facts dt {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.facts .is-overdue {
+  color: var(--color-danger);
 }
 
 .card-main {
@@ -106,13 +184,13 @@
 }
 
 .card-number {
-  color: var(--color-accent-hover);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
 }
 
 .card-title {
-  font-size: var(--text-md);
+  font-size: var(--text-base);
   overflow-wrap: anywhere;
 }
 
@@ -146,8 +224,7 @@
 }
 
 .amount {
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
 }
 
 .amount-secondary,
@@ -163,8 +240,61 @@
   color: var(--color-danger);
 }
 
-.card-side a {
-  margin-block-start: var(--space-2);
+.card-side a,
+.card-side button {
+  margin-block-start: var(--space-1);
+}
+
+.workspace.is-split {
+  .card-meta,
+  .badges:empty,
+  .due-line:not(.is-overdue) {
+    display: none;
+  }
+
+  // The whole row selects; the title stays a real link to the full record, above the selection target.
+  .card {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .card:hover {
+    background: var(--color-surface-sunken);
+  }
+
+  .card-title a {
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-title,
+  .card-main {
+    gap: 0;
+  }
+}
+
+.row-select {
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.row-select::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.row-select:focus-visible {
+  outline: none;
+}
+
+.row-select:focus-visible::after {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 @media (max-width: 35.99rem) {
@@ -191,6 +321,26 @@
   .field {
     flex: 1 1 100%;
   }
+}
+
+// Purchasing inbox: secondary filters fold away and stay open while one is applied.
+.more {
+  flex-basis: 100%;
+}
+
+.more summary {
+  min-block-size: 2.75rem;
+  padding-block: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.more-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
 }
 
 .pagination {

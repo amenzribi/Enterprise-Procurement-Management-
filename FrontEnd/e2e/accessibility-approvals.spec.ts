@@ -48,8 +48,7 @@ for (const lang of ['en', 'ar'] as Lang[]) {
       await page.goto(`/approvals?q=${encodeURIComponent(request.number)}`);
       await expect(page.locator('html')).toHaveAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
       await expect(page.getByRole('heading', { level: 1, name: t(lang, 'approvals.inbox.title') })).toBeVisible();
-      await expect(page.getByText(request.number)).toBeVisible({ timeout: 20_000 });
-      await expect(page.locator('.card').first()).toBeVisible();
+      await expect(page.locator('.card').getByText(request.number)).toBeVisible({ timeout: 20_000 });
       await expectNoViolations(page, 'inbox');
       await noHorizontalScroll(page, 'inbox');
 

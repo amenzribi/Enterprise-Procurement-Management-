@@ -297,6 +297,15 @@ const ASSIGNABLE = [
       gap: 0.25rem;
       font-size: 0.9rem;
     }
+    label {
+      min-inline-size: 0;
+      max-inline-size: 100%;
+    }
+
+    select {
+      inline-size: 100%;
+    }
+
     input,
     select {
       min-block-size: 2.4rem;

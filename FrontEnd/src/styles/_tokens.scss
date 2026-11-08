@@ -1,38 +1,41 @@
 // Design tokens. Components use these custom properties only - never raw colour values.
 //
-// Palette rationale: a deep "harbour ink" navigation surface and a customs-teal accent echo the trade and
-// logistics world the product serves, on a cool neutral paper that keeps dense tables calm to read.
-// All text/background pairs below meet WCAG 2.2 AA (4.5:1) on every surface they can sit on, including row hover
-// (surface-sunken) and soft status fills. Light accent #0b6f6e: 5.98 on white, 5.27 on sunken, 5.07 on the softest
-// fills; white on accent 5.98. Dark accent #4fb8b4: >= 5.19 on every dark surface.
+// Direction "Ledger" (DESIGN.md): neutral paper, hairlines instead of shadows, and one deep green accent reserved
+// for interaction. Text and status pairs are chosen for WCAG 2.2 AA (4.5:1) on white, paper, row hover and soft fills.
 
 :root {
   color-scheme: light;
 
   // Neutrals
-  --color-paper: #f4f6f6;
+  --color-paper: #fafafa;
   --color-surface: #ffffff;
-  --color-surface-sunken: #eef1f2;
-  --color-line: #dde3e6;
-  --color-line-strong: #c3cdd2;
-  --color-text: #15222c;
-  --color-text-muted: #556570;
+  --color-surface-sunken: #f2f2f2;
+  --color-line: #e6e6e6;
+  --color-line-strong: #cfcfcf;
+  --color-text: #171717;
+  --color-text-muted: #5c5c5c;
   --color-text-inverse: #ffffff;
 
   // Navigation surface
-  --color-nav: #12202b;
-  --color-nav-raised: #1d303e;
-  --color-nav-text: #c7d1d8;
-  --color-nav-text-strong: #ffffff;
-  --color-nav-muted: #8fa1ad;
-  --color-nav-line: #2a3f4e;
+  --color-nav: #ffffff;
+  --color-nav-raised: #f2f2f2;
+  --color-nav-text: #4d4d4d;
+  --color-nav-text-strong: #171717;
+  --color-nav-muted: #666666;
+  --color-nav-line: #e6e6e6;
 
   // Accent (interactive)
-  --color-accent: #0b6f6e;
-  --color-accent-hover: #085756;
-  --color-accent-soft: #e2f1f0;
-  --color-accent-on-dark: #5cc4c0;
-  --color-focus: #0b6f6e;
+  --color-accent: #0b6b5e;
+  --color-accent-hover: #08564b;
+  --color-accent-soft: #e3f0ed;
+  --color-accent-on-dark: #0b6b5e; // Navigation is light in Ledger; the name is kept for its consumers.
+  --color-focus: #2f5fb3;
+
+  // Aliases used by older screens, so they follow the palette instead of their local fallbacks.
+  --color-border: var(--color-line);
+  --color-surface-muted: var(--color-surface-sunken);
+  --color-muted: var(--color-text-muted);
+  --color-warning-fg: var(--color-warning);
 
   // Status (text colour on its own soft background)
   --color-success: #1d7346;
@@ -43,24 +46,25 @@
   --color-danger-soft: #fce8e6;
   --color-info: #2b589c;
   --color-info-soft: #e6edf8;
-  --color-neutral: #556570;
-  --color-neutral-soft: #eceff1;
+  --color-neutral: #5c5c5c;
+  --color-neutral-soft: #efefef;
 
   // Typography
-  --font-sans: 'Inter Variable', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Geist Variable', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono Variable', 'IBM Plex Sans Arabic', ui-monospace, 'Cascadia Mono', monospace; // References and field labels
   --text-xs: 0.75rem;    // 12px - metadata only
   --text-sm: 0.8125rem;  // 13px - table cells, secondary text
   --text-base: 0.875rem; // 14px - UI default
   --text-md: 1rem;       // 16px - reading text
   --text-lg: 1.125rem;   // 18px - section titles
-  --text-xl: 1.5rem;     // 24px - page titles
+  --text-xl: 1.75rem;    // 28px - page titles
   --text-2xl: 2rem;      // 32px - overview title
   --leading-tight: 1.25;
   --leading-normal: 1.5;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
-  --tracking-tight: -0.011em;
+  --tracking-tight: -0.02em;
 
   // Spacing (4px grid)
   --space-1: 0.25rem;
@@ -74,23 +78,23 @@
   --space-12: 3rem;
 
   // Shape: small radius for controls, slightly larger for containers - hierarchy, not decoration
-  --radius-sm: 4px;
+  --radius-sm: 6px;
   --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-lg: 8px;
   --radius-pill: 999px;
 
   // Elevation: only for things that float above the page
-  --shadow-overlay: 0 12px 32px -8px rgb(18 32 43 / 0.28), 0 2px 6px rgb(18 32 43 / 0.12);
+  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.22), 0 0 0 1px rgb(0 0 0 / 0.06);
 
   // Layout
   --header-height: 3.5rem;
-  --sidebar-width: 16.5rem;
+  --sidebar-width: 15rem;
   --sidebar-rail-width: 4rem;
-  --content-max-width: 72rem;
+  --content-max-width: 84rem;
 
   // Motion
   --duration-fast: 120ms;
-  --duration-base: 200ms;
+  --duration-base: 180ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -106,6 +110,11 @@
   --color-text-muted: #a3b2bc;
   --color-nav: #0b141b;
   --color-nav-raised: #172631;
+  --color-nav-text: #c7d1d8;
+  --color-nav-text-strong: #ffffff;
+  --color-nav-muted: #8fa1ad;
+  --color-nav-line: #2a3f4e;
+  --color-accent-on-dark: #5cc4c0;
   --color-accent: #4fb8b4;
   // Text on the light dark-theme accent must be dark: white on #4fb8b4 is only 2.4:1 (CR-20), #0b141b is 8.5:1.
   --color-text-inverse: #0b141b;

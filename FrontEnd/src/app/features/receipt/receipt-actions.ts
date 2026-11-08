@@ -8,7 +8,9 @@ import { NotificationService } from '../../core/notifications/notification.servi
 import { Button } from '../../shared/ui/button';
 import { PurchaseRequest } from '../requests/request.models';
 import { ReceiptApi } from './receipt.api';
-import { ReceiptDossier } from './receipt.models';
+import { ReceiptDossier, ReceiptLineDraft } from './receipt.models';
+
+const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as const;
 
 @Component({
   selector: 'app-receipt-actions',
@@ -19,7 +21,7 @@ import { ReceiptDossier } from './receipt.models';
       <section class="panel decide" aria-labelledby="receipt-title">
         <h2 class="panel-title" id="receipt-title">{{ 'receipt.actions.title' | translate }}</h2>
         @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
+          <p class="error" role="alert">{{ 'errors.' + error() | translate }}</p>
         }
 
         @if (dossier(); as d) {
@@ -47,14 +49,51 @@ import { ReceiptDossier } from './receipt.models';
             </article>
           }
 
-          @if (canReceive() && d.receipts.length === 0 && isDeliveredStage()) {
+          @if (canReceive() && openLines().length > 0 && isDeliveredStage()) {
             <form class="form" (submit)="$event.preventDefault(); create()" novalidate>
+              @for (line of openLines(); track line.id) {
+                <fieldset class="line">
+                  <legend>{{ line.description }} <span class="muted small tabular">{{ line.received }} / {{ line.quantity }} {{ line.unit }}</span></legend>
+                  <div class="line-fields">
+                    <div>
+                      <label class="label" [for]="'rcpt-received-' + line.id">{{ 'receipt.actions.received' | translate }}</label>
+                      <input [id]="'rcpt-received-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).received" (input)="setDraft(line.id, 'received', $any($event.target).value)" />
+                    </div>
+                    <div>
+                      <label class="label" [for]="'rcpt-accepted-' + line.id">{{ 'receipt.actions.accepted' | translate }}</label>
+                      <input [id]="'rcpt-accepted-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).accepted" (input)="setDraft(line.id, 'accepted', $any($event.target).value)" />
+                    </div>
+                    <div>
+                      <label class="label" [for]="'rcpt-rejected-' + line.id">{{ 'receipt.actions.rejected' | translate }}</label>
+                      <input [id]="'rcpt-rejected-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).rejected" (input)="setDraft(line.id, 'rejected', $any($event.target).value)" />
+                    </div>
+                    <div>
+                      <label class="label" [for]="'rcpt-condition-' + line.id">{{ 'receipt.actions.condition' | translate }}</label>
+                      <select [id]="'rcpt-condition-' + line.id" (change)="setDraft(line.id, 'condition', $any($event.target).value)">
+                        @for (code of conditions; track code) {
+                          <option [value]="code" [selected]="draft(line.id).condition === code">{{ 'receipt.condition.' + code | translate }}</option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                </fieldset>
+              }
               <label class="label" for="rcpt-note">{{ 'receipt.actions.note' | translate }}</label>
               <input id="rcpt-note" [value]="note()" (input)="note.set($any($event.target).value)" />
               <label class="label" for="rcpt-photo">{{ 'receipt.actions.photoRef' | translate }}</label>
               <input id="rcpt-photo" [value]="photoRef()" (input)="photoRef.set($any($event.target).value)" />
               <p class="muted small">{{ 'receipt.actions.photoHint' | translate }}</p>
               <button appButton type="submit" [disabled]="busy()">{{ 'receipt.actions.record' | translate }}</button>
+            </form>
+          }
+
+          @if (canAcceptShortfall(d)) {
+            <form class="form" (submit)="$event.preventDefault(); acceptShortfall()" novalidate>
+              <p class="strong">{{ 'receipt.actions.shortfallTitle' | translate }}</p>
+              <p class="muted small">{{ 'receipt.actions.shortfallHint' | translate }}</p>
+              <label class="label" for="shortfall-reason">{{ 'receipt.actions.shortfallReason' | translate }} *</label>
+              <input id="shortfall-reason" [value]="shortfallReason()" (input)="shortfallReason.set($any($event.target).value)" />
+              <button appButton type="submit" [disabled]="busy() || shortfallReason().trim().length < 3">{{ 'receipt.actions.shortfallAccept' | translate }}</button>
             </form>
           }
 
@@ -66,6 +105,9 @@ import { ReceiptDossier } from './receipt.models';
                 · {{ 'receipt.actions.matchAttested' | translate }}
               }
             </p>
+            @if (inv.paymentStatus === 'PENDING' && canInvoice()) {
+              <button appButton variant="secondary" type="button" [disabled]="busy()" (click)="markPaid()">{{ 'receipt.actions.markPaid' | translate }}</button>
+            }
           } @else if (canInvoice() && isAcceptedOrLater()) {
             <form class="form" (submit)="$event.preventDefault(); saveInvoice()" novalidate>
               <label class="label" for="inv-no">{{ 'receipt.actions.invoiceNumber' | translate }}</label>
@@ -89,12 +131,18 @@ import { ReceiptDossier } from './receipt.models';
           } @else if (canClose()) {
             <form class="form" (submit)="$event.preventDefault(); close()" novalidate>
               @if (!d.closure.ready) {
-                <p class="muted small">{{ 'receipt.actions.closureMissing' | translate }}: {{ d.closure.missing.join(', ') }}</p>
+                <p class="muted small">{{ 'receipt.actions.closureMissing' | translate }}:
+                  @for (code of d.closure.missing; track code; let last = $last) {
+                    {{ 'receipt.closureMissingItem.' + code | translate }}@if (!last) {, }
+                  }
+                </p>
               }
               <label class="label" for="score">{{ 'receipt.actions.rating' | translate }}</label>
               <input id="score" type="number" min="1" max="5" [value]="rating()" (input)="rating.set($any($event.target).value)" />
-              <label class="label" for="waiver">{{ 'receipt.actions.waiver' | translate }}</label>
-              <input id="waiver" [value]="waiver()" (input)="waiver.set($any($event.target).value)" />
+              @if (canManage() && d.closure.missing.includes('outstanding-quantity')) {
+                <label class="label" for="waiver">{{ 'receipt.actions.waiver' | translate }}</label>
+                <input id="waiver" [value]="waiver()" (input)="waiver.set($any($event.target).value)" />
+              }
               <button appButton type="submit" [disabled]="busy()">{{ 'receipt.actions.close' | translate }}</button>
             </form>
           }
@@ -118,6 +166,12 @@ import { ReceiptDossier } from './receipt.models';
     .small { font-size: var(--text-sm); }
     .error { color: var(--color-danger); }
     .block { margin-block-end: var(--space-3); }
+    .strong { font-weight: var(--weight-medium); }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .line { margin: 0; padding: 0 0 var(--space-3); border: 0; border-block-end: 1px solid var(--color-line); }
+    .line legend { padding: 0; font-weight: var(--weight-medium); }
+    .line-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--space-2); margin-block-start: var(--space-2); }
+    .line-fields input, .line-fields select { inline-size: 100%; }
     ul { margin: 0 0 var(--space-2); padding-inline-start: 1.2rem; }
   `,
 })
@@ -131,12 +185,15 @@ export class ReceiptActions {
 
   protected readonly dossier = signal<ReceiptDossier | null>(null);
   protected readonly note = signal('');
-  protected readonly photoRef = signal('CAM-DEMO-1');
-  protected readonly invoiceNo = signal('INV-DEMO-1');
-  protected readonly invoiceAmount = signal('35');
-  protected readonly docRef = signal('PDF-REF-1');
-  protected readonly matchAttested = signal(true);
-  protected readonly rating = signal('5');
+  protected readonly conditions = RECEIPT_CONDITIONS;
+  protected readonly drafts = signal<Record<number, ReceiptLineDraft>>({});
+  protected readonly shortfallReason = signal('');
+  protected readonly photoRef = signal('');
+  protected readonly invoiceNo = signal('');
+  protected readonly invoiceAmount = signal('');
+  protected readonly docRef = signal('');
+  protected readonly matchAttested = signal(false);
+  protected readonly rating = signal('');
   protected readonly waiver = signal('');
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -188,6 +245,32 @@ export class ReceiptActions {
     return hasPermission(this.auth.me(), 'PURCHASING_MANAGE') || this.isAuthor();
   }
 
+  protected canManage(): boolean {
+    return hasPermission(this.auth.me(), 'PURCHASING_MANAGE');
+  }
+
+  protected openLines() {
+    return (this.dossier()?.purchaseOrder?.lines ?? []).filter((line) => Number(line.received) < Number(line.quantity));
+  }
+
+  protected draft(lineId: number): ReceiptLineDraft {
+    return this.drafts()[lineId] ?? { received: '', accepted: '', rejected: '0', condition: 'OK' };
+  }
+
+  protected setDraft(lineId: number, field: keyof ReceiptLineDraft, value: string): void {
+    this.drafts.update((all) => ({ ...all, [lineId]: { ...this.draft(lineId), [field]: value } }));
+  }
+
+  protected canAcceptShortfall(d: ReceiptDossier): boolean {
+    const status = this.request().status;
+    return (
+      this.canManage() &&
+      (status === 'NON_CONFORMING' || status === 'PARTIALLY_RECEIVED') &&
+      d.receipts.length > 0 &&
+      d.receipts.every((r) => r.status !== 'RECORDED')
+    );
+  }
+
   protected isDeliveredStage(): boolean {
     const s = this.request().status;
     return s === 'DELIVERED' || s === 'PARTIALLY_RECEIVED' || s === 'NON_CONFORMING';
@@ -202,12 +285,24 @@ export class ReceiptActions {
     this.busy.set(true);
     this.error.set(null);
     const evidence = this.photoRef().trim()
-      ? [{ kind: 'PHOTO', referenceNumber: this.photoRef().trim(), note: 'Metadata reference only' }]
+      ? [{ kind: 'PHOTO', referenceNumber: this.photoRef().trim() }]
       : [];
     this.api
       .createReceipt(
         this.request().id,
-        { requestVersion: this.request().version, note: this.note().trim() || undefined, evidence },
+        {
+          requestVersion: this.request().version,
+          note: this.note().trim() || undefined,
+          evidence,
+          lines: this.openLines().map((line) => ({
+            purchaseOrderLineId: line.id,
+            quantityReceived: Number(this.draft(line.id).received),
+            quantityAccepted: Number(this.draft(line.id).accepted),
+            quantityRejected: Number(this.draft(line.id).rejected),
+            quantityDamaged: 0,
+            condition: this.draft(line.id).condition,
+          })),
+        },
         newIdempotencyKey(),
       )
       .subscribe({
@@ -248,7 +343,7 @@ export class ReceiptActions {
           requestVersion: this.request().version,
           invoiceNumber: this.invoiceNo().trim(),
           amount: Number(this.invoiceAmount()),
-          currency: this.request().currency || 'EUR',
+          currency: this.dossier()?.purchaseOrder?.currency ?? this.request().currency,
           documentReference: this.docRef().trim() || undefined,
           matchAttested: this.matchAttested(),
           paymentStatus: 'PENDING',
@@ -268,6 +363,38 @@ export class ReceiptActions {
       });
   }
 
+  acceptShortfall(): void {
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.acceptShortfall(this.request().id, { requestVersion: this.request().version, reason: this.shortfallReason().trim() }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notifications.success('receipt.actions.shortfallAccepted');
+        this.changed.emit();
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.error.set(toApiProblem(error).code);
+      },
+    });
+  }
+
+  markPaid(): void {
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.markPaid(this.request().id, { requestVersion: this.request().version }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notifications.success('receipt.actions.paidToast');
+        this.changed.emit();
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.error.set(toApiProblem(error).code);
+      },
+    });
+  }
+
   close(): void {
     this.busy.set(true);
     this.api
@@ -276,7 +403,6 @@ export class ReceiptActions {
         {
           requestVersion: this.request().version,
           rating: Number(this.rating()) || undefined,
-          scoreComment: 'Demo score',
           waiverNote: this.waiver().trim() || undefined,
         },
         newIdempotencyKey(),
@@ -294,9 +420,25 @@ export class ReceiptActions {
       });
   }
 
+  /** Starts each open line at its full remaining quantity and the invoice at the purchase-order total. */
+  private prefill(d: ReceiptDossier): void {
+    const next: Record<number, ReceiptLineDraft> = {};
+    for (const line of d.purchaseOrder?.lines ?? []) {
+      const remaining = String(Number(line.quantity) - Number(line.received));
+      next[line.id] = this.drafts()[line.id] ?? { received: remaining, accepted: remaining, rejected: '0', condition: 'OK' };
+    }
+    this.drafts.set(next);
+    if (!this.invoiceAmount() && d.purchaseOrder) {
+      this.invoiceAmount.set(String(d.purchaseOrder.total));
+    }
+  }
+
   private reload(requestId: number): void {
     this.api.dossier(requestId).subscribe({
-      next: (d) => this.dossier.set(d),
+      next: (d) => {
+        this.dossier.set(d);
+        this.prefill(d);
+      },
       error: () => this.dossier.set(null),
     });
   }

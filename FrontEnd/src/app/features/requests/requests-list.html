@@ -193,6 +193,7 @@
                     <td><app-status-badge [tone]="tone(item)">{{ statusLabel(item) | translate }}</app-status-badge></td>
                     <td class="numeric tabular">{{ total(item) || '—' }}</td>
                     <td class="tabular">{{ item.requiredDate ? (item.requiredDate | date: 'mediumDate' : undefined : locale()) : '—' }}</td>
+                    <td class="tabular muted">{{ item.createdAt ? (item.createdAt | date: 'short' : undefined : locale()) : '—' }}</td>
                     <td class="tabular muted">{{ item.updatedAt ? (item.updatedAt | date: 'short' : undefined : locale()) : '—' }}</td>
                   </tr>
                 }

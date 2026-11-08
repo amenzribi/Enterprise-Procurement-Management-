@@ -98,8 +98,8 @@ class ReceiptStore {
 				actorId, UtcTimes.db(now));
 	}
 
-	void confirmReceipt(long receiptId, long actorId, Instant now, String note) {
-		jdbc.update("""
+	int confirmReceipt(long receiptId, long actorId, Instant now, String note) {
+		return jdbc.update("""
 				UPDATE goods_receipt SET status = 'CONFIRMED', confirmed_at = ?, confirmed_by_user_id = ?,
 				    note = COALESCE(?, note), version = version + 1 WHERE id = ? AND status = 'RECORDED'""",
 				UtcTimes.db(now), actorId, note, receiptId);
@@ -155,6 +155,18 @@ class ReceiptStore {
 	void updateInvoicePayment(long invoiceId, String paymentStatus) {
 		jdbc.update("UPDATE supplier_invoice SET payment_status = ?, version = version + 1 WHERE id = ?", paymentStatus,
 				invoiceId);
+	}
+
+	boolean hasShortfallAcceptance(long requestId) {
+		Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM shortfall_acceptance WHERE request_id = ?", Integer.class,
+				requestId);
+		return n != null && n > 0;
+	}
+
+	void insertShortfallAcceptance(long requestId, long actorId, Instant now, String reason) {
+		jdbc.update("""
+				INSERT INTO shortfall_acceptance (id, request_id, accepted_by_user_id, accepted_at, reason)
+				VALUES (NEXT VALUE FOR seq_shortfall_acceptance, ?, ?, ?, ?)""", requestId, actorId, UtcTimes.db(now), reason);
 	}
 
 	Optional<ScoreRow> findScore(long requestId) {

@@ -62,6 +62,16 @@ class ReceiptController {
 				() -> ResponseEntity.ok(receipts.recordInvoice(user, requestId, body)));
 	}
 
+	@PostMapping("/requests/{requestId}/shortfall-acceptance")
+	ReceiptDossierView shortfall(@PathVariable long requestId, @RequestBody ShortfallBody body) {
+		return receipts.acceptShortfall(currentUser.require(), requestId, body);
+	}
+
+	@PostMapping("/requests/{requestId}/invoice/paid")
+	ReceiptDossierView invoicePaid(@PathVariable long requestId, @RequestBody InvoicePaidBody body) {
+		return receipts.markInvoicePaid(currentUser.require(), requestId, body);
+	}
+
 	@PostMapping("/requests/{requestId}/close")
 	ResponseEntity<?> close(@PathVariable long requestId, @RequestBody(required = false) CloseBody body,
 			@RequestHeader(name = Idempotency.HEADER, required = false) String key) {

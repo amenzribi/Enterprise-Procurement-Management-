@@ -217,6 +217,7 @@ export interface RequestListItem {
   totalAmount?: Amount | null;
   currency: string;
   requiredDate?: string | null;
+  createdAt?: string | null;
   updatedAt?: string | null;
   submittedAt?: string | null;
   requester?: PersonOption | null;

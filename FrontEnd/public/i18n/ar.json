@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Procurement Intelligence",
+    "name": "Procurement 360",
     "suite": "من الطلب إلى الاستلام"
   },
   "language": {
@@ -121,6 +121,11 @@
     "notices": {
       "title": "إشعارات غير مقروءة",
       "empty": "لا إشعارات غير مقروءة."
+    },
+    "next": {
+      "label": "موافقتك التالية",
+      "count": "{{count}} بانتظار قرارك",
+      "action": "فتح الموافقات"
     }
   },
   "planned": {
@@ -289,7 +294,10 @@
     "preview-expired": "انتهت معاينة التنظيف. أعد المعاينة قبل التأكيد.",
     "confirmation-required": "أكّد التنظيف صراحة بعد مراجعة المعاينة.",
     "version-conflict": "تغيّر الطلب منذ تحميلك. حدّث ثم أعد المحاولة.",
-    "archived": "استعد الطلب من الأرشيف أولاً، أو اترك السجل المؤرشف كما هو."
+    "archived": "استعد الطلب من الأرشيف أولاً، أو اترك السجل المؤرشف كما هو.",
+    "unconfirmed-receipts": "أكّد جميع الاستلامات أولًا.",
+    "already-paid": "تم وضع علامة مدفوعة على هذه الفاتورة مسبقًا.",
+    "not-invoiced": "سجّل الفاتورة أولًا."
   },
   "auth": {
     "signOut": "تسجيل الخروج",
@@ -779,7 +787,15 @@
       },
       "informationRequested": "تم طرح سؤال",
       "waiting": "بالانتظار {{elapsed}}",
-      "review": "المراجعة واتخاذ القرار"
+      "review": "المراجعة واتخاذ القرار",
+      "showDecision": "اتخاذ القرار هنا",
+      "openRecord": "فتح السجل الكامل",
+      "facts": {
+        "amount": "المبلغ",
+        "requester": "مقدم الطلب",
+        "waiting": "الانتظار",
+        "due": "الاستحقاق"
+      }
     },
     "decide": {
       "title": "قرارك",
@@ -1068,7 +1084,8 @@
       "assignedTo": "مُسند إلى {{name}}",
       "unassigned": "غير مُسند",
       "gaps": "ناقص: {{list}}",
-      "proposed": "شركة الشراء مقترحة"
+      "proposed": "شركة الشراء مقترحة",
+      "moreFilters": "مزيد من عوامل التصفية"
     },
     "sorts": {
       "requiredDate": "التاريخ المطلوب",
@@ -1380,7 +1397,15 @@
       "close": "تأكيد الإغلاق",
       "closed": "هذا الطلب مغلق",
       "closedToast": "تم إغلاق الطلب",
-      "closureMissing": "ما زال مطلوباً"
+      "closureMissing": "ما زال مطلوباً",
+      "condition": "الحالة",
+      "shortfallTitle": "القبول مع وجود نقص",
+      "shortfallHint": "اقبل ما تم تسليمه رغم الكمية المرفوضة أو الناقصة حتى يتابع الطلب إلى الفاتورة والإغلاق.",
+      "shortfallReason": "السبب",
+      "shortfallAccept": "القبول مع وجود نقص",
+      "shortfallAccepted": "تم القبول مع وجود نقص.",
+      "markPaid": "وضع علامة مدفوعة",
+      "paidToast": "تم وضع علامة مدفوعة على الفاتورة."
     },
     "status": {
       "RECORDED": "مسجّل",
@@ -1396,6 +1421,12 @@
     "payment": {
       "PENDING": "الدفع معلّق",
       "PAID": "مدفوع"
+    },
+    "closureMissingItem": {
+      "acceptance": "القبول",
+      "invoice": "الفاتورة",
+      "match-attested": "إقرار مطابقة الفاتورة",
+      "outstanding-quantity": "الكمية المتبقية"
     }
   },
   "dashboards": {

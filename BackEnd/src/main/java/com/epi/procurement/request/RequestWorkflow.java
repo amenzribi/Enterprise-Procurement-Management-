@@ -108,6 +108,15 @@ public class RequestWorkflow {
 			java.math.BigDecimal amountMax, Boolean complete, String sort, boolean descending, int page, int size) {
 	}
 
+	private static <E extends Enum<E>> E parameter(Class<E> type, String value, String name) {
+		try {
+			return Enum.valueOf(type, value);
+		}
+		catch (IllegalArgumentException ex) {
+			throw ApiProblemException.invalidParameter(name);
+		}
+	}
+
 	private static Specification<PurchaseRequest> purchasingSpec(PurchasingQuery query) {
 		return (root, q, cb) -> {
 			java.util.ArrayList<jakarta.persistence.criteria.Predicate> all = new java.util.ArrayList<>();
@@ -115,7 +124,7 @@ public class RequestWorkflow {
 			all.add(cb.isNull(root.get("archivedAt")));
 			all.add(cb.isNull(root.get("removedAt")));
 			if (StringUtils.hasText(query.status())) {
-				all.add(cb.equal(root.get("status"), RequestStatus.valueOf(query.status())));
+				all.add(cb.equal(root.get("status"), parameter(RequestStatus.class, query.status(), "status")));
 			}
 			else {
 				all.add(root.get("status")
@@ -137,14 +146,14 @@ public class RequestWorkflow {
 				all.add(cb.equal(root.get("categoryId"), query.categoryId()));
 			}
 			if (StringUtils.hasText(query.priority())) {
-				all.add(cb.equal(root.get("priority"), Priority.valueOf(query.priority())));
+				all.add(cb.equal(root.get("priority"), parameter(Priority.class, query.priority(), "priority")));
 			}
 			if (StringUtils.hasText(query.purchaseType())) {
-				all.add(cb.equal(root.get("purchaseType"), PurchaseType.valueOf(query.purchaseType())));
+				all.add(cb.equal(root.get("purchaseType"), parameter(PurchaseType.class, query.purchaseType(), "purchaseType")));
 			}
 			if (StringUtils.hasText(query.purchaseMode())) {
 				all.add(cb.equal(root.get("purchaseMode"),
-						com.epi.procurement.organization.PurchasingMode.valueOf(query.purchaseMode())));
+						parameter(com.epi.procurement.organization.PurchasingMode.class, query.purchaseMode(), "purchaseMode")));
 			}
 			if (query.buyerUserId() != null) {
 				all.add(cb.equal(root.get("assignedBuyerUserId"), query.buyerUserId()));

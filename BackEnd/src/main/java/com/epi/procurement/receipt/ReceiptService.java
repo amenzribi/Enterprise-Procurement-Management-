@@ -1,6 +1,7 @@
 package com.epi.procurement.receipt;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ import com.epi.procurement.identity.CurrentUser;
 import com.epi.procurement.identity.Role;
 import com.epi.procurement.notification.Notice;
 import com.epi.procurement.notification.Notifications;
+import com.epi.procurement.organization.ExchangeRates;
 import com.epi.procurement.organization.OrganizationDirectory;
 import com.epi.procurement.platform.web.ApiProblemException;
 import com.epi.procurement.platform.web.FieldViolation;
@@ -42,6 +44,9 @@ class ReceiptService {
 
 	private static final Set<String> EVIDENCE_KINDS = Set.of("PHOTO", "DAMAGE_REPORT", "DELIVERY_NOTE", "OTHER");
 
+	/** Exclusive upper bound of a DECIMAL(19,4) column. */
+	private static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000000000000");
+
 	private final ReceiptStore store;
 
 	private final ReceiptNumbering numbering;
@@ -50,6 +55,8 @@ class ReceiptService {
 
 	private final OrganizationDirectory organization;
 
+	private final ExchangeRates rates;
+
 	private final AuditLog auditLog;
 
 	private final Notifications notifications;
@@ -57,12 +64,13 @@ class ReceiptService {
 	private final Clock clock;
 
 	ReceiptService(ReceiptStore store, ReceiptNumbering numbering, RequestWorkflow requests,
-			OrganizationDirectory organization, AuditLog auditLog, Notifications notifications,
+			OrganizationDirectory organization, ExchangeRates rates, AuditLog auditLog, Notifications notifications,
 			ObjectProvider<Clock> clock) {
 		this.store = store;
 		this.numbering = numbering;
 		this.requests = requests;
 		this.organization = organization;
+		this.rates = rates;
 		this.auditLog = auditLog;
 		this.notifications = notifications;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
@@ -122,7 +130,8 @@ class ReceiptService {
 			BigDecimal accepted = nz(lineBody.quantityAccepted());
 			BigDecimal rejected = nz(lineBody.quantityRejected());
 			BigDecimal damaged = nz(lineBody.quantityDamaged());
-			if (received.signum() <= 0) {
+			if (received.signum() <= 0 || !validQuantity(received) || !validQuantity(accepted)
+					|| !validQuantity(rejected) || !validQuantity(damaged)) {
 				throw new ValidationFailedException(List.of(FieldViolation.of("lines", "invalid-quantity")));
 			}
 			if (accepted.add(rejected).compareTo(received) > 0 || damaged.compareTo(received) > 0) {
@@ -183,7 +192,10 @@ class ReceiptService {
 					"The receipt was changed by someone else. Reload it and try again.");
 		}
 		Instant now = clock.instant();
-		store.confirmReceipt(receiptId, user.id(), now, trim(body == null ? null : body.note()));
+		// The status above was read before the request lock: a concurrent confirmation shows up here.
+		if (store.confirmReceipt(receiptId, user.id(), now, trim(body == null ? null : body.note())) == 0) {
+			throw ApiProblemException.conflict("invalid-state", "This receipt is already confirmed.");
+		}
 		ReceiptStore.PoSnap po = store.findPo(request.id()).orElseThrow(ApiProblemException::notFound);
 		boolean full = true;
 		boolean anyBad = false;
@@ -238,6 +250,62 @@ class ReceiptService {
 		return buildDossier(after);
 	}
 
+	/**
+	 * A purchasing manager accepts what was delivered despite a rejected or missing quantity (D-01). Every receipt must
+	 * be confirmed first, so the decision is taken on the final counts. The request then follows the normal invoice and
+	 * closure path.
+	 */
+	@Transactional
+	ReceiptDossierView acceptShortfall(CurrentUser user, long requestId, ShortfallBody body) {
+		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
+		if (!user.hasRoleIn(Role.PURCHASING_MANAGER, request.buyingCompanyId())) {
+			throw ApiProblemException.forbidden();
+		}
+		requireRequestVersion(body == null ? null : body.requestVersion(), request);
+		RequestStatus status = RequestStatus.valueOf(request.status());
+		if (status != RequestStatus.NON_CONFORMING && status != RequestStatus.PARTIALLY_RECEIVED) {
+			throw ApiProblemException.conflict("invalid-state", "Only a partial or non-conforming receipt can be accepted.");
+		}
+		List<ReceiptStore.ReceiptRow> receipts = store.receiptsForRequest(requestId);
+		if (receipts.isEmpty() || receipts.stream().anyMatch(r -> "RECORDED".equals(r.status()))) {
+			throw ApiProblemException.conflict("unconfirmed-receipts", "Confirm every receipt before accepting a shortfall.");
+		}
+		if (!StringUtils.hasText(body.reason()) || body.reason().strip().length() < 3) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("reason", "required")));
+		}
+		Instant now = clock.instant();
+		String reason = body.reason().strip();
+		store.insertShortfallAcceptance(requestId, user.id(), now, reason);
+		requests.enterReceiptStatus(requestId, RequestStatus.ACCEPTED, user.id(), now, "shortfall-accepted");
+		RequestSnapshot after = requests.currentLocked(requestId);
+		audit(user, after, "SHORTFALL_ACCEPTED", after.status(), reason, null);
+		notifyAuthors(after, "SHORTFALL_ACCEPTED", user);
+		return buildDossier(after);
+	}
+
+	/** Records payment of a pending invoice (D-02). Closure does not depend on it, so it may follow closure. */
+	@Transactional
+	ReceiptDossierView markInvoicePaid(CurrentUser user, long requestId, InvoicePaidBody body) {
+		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
+		requireBuyer(user, request);
+		requireRequestVersion(body == null ? null : body.requestVersion(), request);
+		if ("CANCELLED".equals(request.status())) {
+			throw ApiProblemException.conflict("invalid-state", "A cancelled request cannot be paid.");
+		}
+		ReceiptStore.InvoiceRow invoice = store.findInvoice(requestId)
+			.orElseThrow(() -> ApiProblemException.conflict("not-invoiced", "Record the invoice first."));
+		if ("PAID".equals(invoice.paymentStatus())) {
+			throw ApiProblemException.conflict("already-paid", "This invoice is already marked as paid.");
+		}
+		Instant now = clock.instant();
+		store.updateInvoicePayment(invoice.id(), "PAID");
+		requests.enterFinanceStatus(requestId, RequestStatus.PAID, user.id(), now, "invoice-paid");
+		RequestSnapshot after = requests.currentLocked(requestId);
+		audit(user, after, "INVOICE_PAID", after.status(), null, "{\"invoiceId\":" + invoice.id() + "}");
+		notifyAuthors(after, "INVOICE_PAID", user);
+		return buildDossier(after);
+	}
+
 	@Transactional
 	InvoiceView recordInvoice(CurrentUser user, long requestId, InvoiceBody body) {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
@@ -258,9 +326,17 @@ class ReceiptService {
 		if (!"PENDING".equals(payment) && !"PAID".equals(payment)) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("paymentStatus", "invalid")));
 		}
+		String currency = body.currency().strip().toUpperCase(Locale.ROOT);
+		if (!rates.currencyExists(currency)) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("currency", "invalid")));
+		}
+		BigDecimal amount = body.amount().setScale(rates.minorUnits(currency), RoundingMode.HALF_UP);
+		if (amount.signum() <= 0 || amount.compareTo(MAX_AMOUNT) >= 0) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("amount", "invalid")));
+		}
 		Instant now = clock.instant();
-		long id = store.insertInvoice(requestId, po.id(), body.invoiceNumber().strip(), body.amount(),
-				body.currency().strip().toUpperCase(Locale.ROOT), trim(body.documentReference()),
+		long id = store.insertInvoice(requestId, po.id(), body.invoiceNumber().strip(), amount, currency,
+				trim(body.documentReference()),
 				Boolean.TRUE.equals(body.matchAttested()), payment, user.id(), now);
 		RequestStatus finance = "PAID".equals(payment) ? RequestStatus.PAID : RequestStatus.INVOICED;
 		requests.enterFinanceStatus(requestId, finance, user.id(), now, "supplier-invoice");
@@ -275,7 +351,11 @@ class ReceiptService {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
 		requireCloser(user, request);
 		requireRequestVersion(body == null ? null : body.requestVersion(), request);
-		ClosureView closure = evaluateClosure(request, trim(body == null ? null : body.waiverNote()));
+		// Only a purchasing manager may waive an outstanding quantity (sprint-7 "Unresolved").
+		String waiver = user.hasRoleIn(Role.PURCHASING_MANAGER, request.buyingCompanyId())
+				? trim(body == null ? null : body.waiverNote())
+				: null;
+		ClosureView closure = evaluateClosure(request, waiver);
 		if (!closure.ready()) {
 			throw ApiProblemException.conflict("closure-not-ready",
 					"Closure conditions are not met: " + String.join(", ", closure.missing()));
@@ -293,7 +373,7 @@ class ReceiptService {
 		}
 		requests.closeRequest(requestId, user.id(), now, "closure-confirmed");
 		RequestSnapshot after = requests.currentLocked(requestId);
-		audit(user, after, "REQUEST_CLOSED", after.status(), trim(body == null ? null : body.waiverNote()), null);
+		audit(user, after, "REQUEST_CLOSED", after.status(), waiver, null);
 		notifyAuthors(after, "REQUEST_CLOSED", user);
 		return buildDossier(after);
 	}
@@ -305,7 +385,19 @@ class ReceiptService {
 		boolean closed = "CLOSED".equals(request.status());
 		ClosureView closure = closed ? new ClosureView(true, List.of(), true, rating)
 				: evaluateClosure(request, null);
-		return new ReceiptDossierView(receipts, invoice, closure, store.hasServiceAcceptance(request.id()));
+		return new ReceiptDossierView(receipts, invoice, closure, store.hasServiceAcceptance(request.id()),
+				store.hasShortfallAcceptance(request.id()), purchaseOrderSummary(request.id()));
+	}
+
+	private PurchaseOrderSummary purchaseOrderSummary(long requestId) {
+		return store.findPo(requestId)
+			.map(po -> new PurchaseOrderSummary(po.currency(), po.totalAmount(),
+					store.poLines(po.id())
+						.stream()
+						.map(l -> new PurchaseOrderLineSummary(l.id(), l.description(), l.quantity(), l.unit(),
+								store.receivedQuantity(l.id())))
+						.toList()))
+			.orElse(null);
 	}
 
 	private ClosureView evaluateClosure(RequestSnapshot request, String waiverNote) {
@@ -320,7 +412,7 @@ class ReceiptService {
 		else if (!store.findInvoice(request.id()).orElseThrow().matchAttested()) {
 			missing.add("match-attested");
 		}
-		if (!store.hasServiceAcceptance(request.id())) {
+		if (!store.hasServiceAcceptance(request.id()) && !store.hasShortfallAcceptance(request.id())) {
 			ReceiptStore.PoSnap po = store.findPo(request.id()).orElse(null);
 			if (po != null) {
 				for (ReceiptStore.PoLineSnap line : store.poLines(po.id())) {
@@ -435,6 +527,11 @@ class ReceiptService {
 			throw new ValidationFailedException(List.of(FieldViolation.of("condition", "invalid")));
 		}
 		return code;
+	}
+
+	/** Non-negative and storable in DECIMAL(19,4) without silent rounding. */
+	private static boolean validQuantity(BigDecimal value) {
+		return value.signum() >= 0 && value.stripTrailingZeros().scale() <= 4 && value.compareTo(MAX_AMOUNT) < 0;
 	}
 
 	private static BigDecimal nz(BigDecimal value) {

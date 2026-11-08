@@ -45,9 +45,9 @@ public class UserAdminService {
 
 	public List<UserAdminViews.ListItem> list(CurrentUser actor, String text, Boolean active, int page, int size) {
 		requireUserAdmin(actor);
-		return store.search(actor.groupId(), text, active, page, size)
+		// Scope belongs in the query: filtering after OFFSET/FETCH returned short or empty pages.
+		return store.search(actor.groupId(), actor.isGlobalAdmin() ? null : actor.adminCompanyIds(), text, active, page, size)
 			.stream()
-			.filter(r -> actor.isGlobalAdmin() || actor.canAdminCompany(r.companyId()))
 			.map(r -> new UserAdminViews.ListItem(r.id(), r.email(), r.displayName(), r.companyId(), r.companyCode(),
 					r.active()))
 			.toList();
@@ -148,6 +148,10 @@ public class UserAdminService {
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
 		assertSameGroup(actor, account);
+		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"Company administrators cannot manage global administrators.");
+		}
 		UserAdminStore.RoleGrantRow grant = store.findGrant(grantId)
 			.filter(g -> g.userId() == userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "Role grant not found."));

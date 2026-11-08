@@ -166,7 +166,12 @@ class UserAdminStore {
 		return count != null && count > 0;
 	}
 
-	List<UserListRow> search(long groupId, String text, Boolean active, int page, int size) {
+	/** {@code companyIds} restricts the home company; {@code null} means every company of the group. */
+	List<UserListRow> search(long groupId, java.util.Set<Long> companyIds, String text, Boolean active, int page,
+			int size) {
+		if (companyIds != null && companyIds.isEmpty()) {
+			return List.of();
+		}
 		int offset = Math.max(0, page) * Math.min(Math.max(size, 1), 100);
 		int limit = Math.min(Math.max(size, 1), 100);
 		StringBuilder sql = new StringBuilder("""
@@ -175,6 +180,10 @@ class UserAdminStore {
 				WHERE c.group_id = :group""");
 		Map<String, Object> params = new java.util.HashMap<>();
 		params.put("group", groupId);
+		if (companyIds != null) {
+			sql.append(" AND u.company_id IN (:companies)");
+			params.put("companies", companyIds);
+		}
 		if (active != null) {
 			sql.append(" AND u.is_active = :active");
 			params.put("active", active ? 1 : 0);

@@ -155,8 +155,8 @@ class OrderingStore {
 				version = version + 1 WHERE id = ? AND status = 'DRAFT'""", UtcTimes.db(now), actorId, poId);
 	}
 
-	void confirmPo(long poId, String note, long actorId, Instant now) {
-		jdbc.update("""
+	int confirmPo(long poId, String note, long actorId, Instant now) {
+		return jdbc.update("""
 				UPDATE purchase_order SET status = 'CONFIRMED', confirmed_at = ?, confirmed_by_user_id = ?,
 				confirmation_note = ?, version = version + 1 WHERE id = ? AND status = 'ISSUED'""", UtcTimes.db(now),
 				actorId, note, poId);

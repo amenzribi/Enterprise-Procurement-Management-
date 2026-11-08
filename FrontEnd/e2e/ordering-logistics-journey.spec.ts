@@ -146,6 +146,8 @@ test('Award → PO → ship → receipt → invoice → close (EN)', async ({ pa
   await signIn(ines2, USERS.buyer, 'en', `/requests/${request.id}`);
   const inv = ines2.locator('app-receipt-actions');
   await expect(inv).toBeVisible({ timeout: 20_000 });
+  await inv.locator('#inv-no').fill('INV-E2E-1');
+  await inv.locator('input[type="checkbox"]').check();
   await inv.getByRole('button', { name: t('en', 'receipt.actions.recordInvoice') }).click();
   await expect(ines2.getByText(t('en', 'receipt.actions.invoiceSaved')).first()).toBeVisible();
   await ines2.context().close();

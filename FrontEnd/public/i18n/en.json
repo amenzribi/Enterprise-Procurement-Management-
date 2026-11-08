@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Procurement Intelligence",
+    "name": "Procurement 360",
     "suite": "Request to receipt"
   },
   "language": {
@@ -121,6 +121,11 @@
     "notices": {
       "title": "Unread notifications",
       "empty": "No unread notifications."
+    },
+    "next": {
+      "label": "Your next approval",
+      "count": "{{count}} waiting for your decision",
+      "action": "Open approvals"
     }
   },
   "planned": {
@@ -289,7 +294,10 @@
     "preview-expired": "The cleanup preview expired. Run preview again before confirming.",
     "confirmation-required": "Confirm the cleanup action explicitly after reviewing the preview.",
     "version-conflict": "The request changed since you loaded it. Refresh and try again.",
-    "archived": "Restore the request from the archive before this action, or leave the archived history as-is."
+    "archived": "Restore the request from the archive before this action, or leave the archived history as-is.",
+    "unconfirmed-receipts": "Confirm every receipt first.",
+    "already-paid": "This invoice is already marked as paid.",
+    "not-invoiced": "Record the invoice first."
   },
   "auth": {
     "signOut": "Sign out",
@@ -779,7 +787,15 @@
       },
       "informationRequested": "Question asked",
       "waiting": "Waiting {{elapsed}}",
-      "review": "Review and decide"
+      "review": "Review and decide",
+      "showDecision": "Decide here",
+      "openRecord": "Open full record",
+      "facts": {
+        "amount": "Amount",
+        "requester": "Requester",
+        "waiting": "Waiting",
+        "due": "Due"
+      }
     },
     "decide": {
       "title": "Your decision",
@@ -1068,7 +1084,8 @@
       "assignedTo": "Assigned to {{name}}",
       "unassigned": "Not assigned",
       "gaps": "Missing: {{list}}",
-      "proposed": "Buying company proposed"
+      "proposed": "Buying company proposed",
+      "moreFilters": "More filters"
     },
     "sorts": {
       "requiredDate": "Required date",
@@ -1380,7 +1397,15 @@
       "close": "Confirm closure",
       "closed": "This request is closed",
       "closedToast": "Request closed",
-      "closureMissing": "Still needed"
+      "closureMissing": "Still needed",
+      "condition": "Condition",
+      "shortfallTitle": "Accept with shortfall",
+      "shortfallHint": "Accept what was delivered despite the rejected or missing quantity, so the request can continue to invoice and closure.",
+      "shortfallReason": "Reason",
+      "shortfallAccept": "Accept with shortfall",
+      "shortfallAccepted": "Accepted with shortfall.",
+      "markPaid": "Mark as paid",
+      "paidToast": "Invoice marked as paid."
     },
     "status": {
       "RECORDED": "Recorded",
@@ -1396,6 +1421,12 @@
     "payment": {
       "PENDING": "Payment pending",
       "PAID": "Paid"
+    },
+    "closureMissingItem": {
+      "acceptance": "acceptance",
+      "invoice": "invoice",
+      "match-attested": "invoice match attestation",
+      "outstanding-quantity": "outstanding quantity"
     }
   },
   "dashboards": {

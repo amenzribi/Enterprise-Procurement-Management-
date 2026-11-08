@@ -249,7 +249,10 @@ class OrderingService {
 		Instant now = clock.instant();
 		String note = body != null && StringUtils.hasText(body.confirmationNote()) ? body.confirmationNote().strip()
 				: null;
-		store.confirmPo(poId, note, user.id(), now);
+		// The status above was read before the request lock: a concurrent confirmation shows up here.
+		if (store.confirmPo(poId, note, user.id(), now) == 0) {
+			return toPo(store.findPo(poId).orElseThrow(ApiProblemException::notFound));
+		}
 		RequestSnapshot after = requests.currentLocked(po.requestId());
 		audit(user, after, "PO_CONFIRMED", after.status(), note, "{\"poId\":" + poId + "}");
 		notifyAuthors(after, "PO_CONFIRMED", user);

@@ -20,6 +20,8 @@ spring:
       # Instants are stored as DATETIME2(3) in UTC (DR-17).
       hibernate.type.preferred_instant_jdbc_type: TIMESTAMP
       hibernate.jdbc.time_zone: UTC
+      # Lists map entities with their lines: fetch those in batches instead of one query per request.
+      hibernate.default_batch_fetch_size: 50
   flyway:
     locations: classpath:db/migration
     # Missing repeatable (demo) migrations are tolerated only by the dev/local/test profiles (CR-28): outside

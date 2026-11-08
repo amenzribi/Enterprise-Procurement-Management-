@@ -26,6 +26,14 @@ export class ReceiptApi {
     return this.http.post<SupplierInvoice>(`${API}/requests/${requestId}/invoice`, body, idempotencyHeaders(key));
   }
 
+  acceptShortfall(requestId: number, body: { requestVersion: number; reason: string }): Observable<ReceiptDossier> {
+    return this.http.post<ReceiptDossier>(`${API}/requests/${requestId}/shortfall-acceptance`, body);
+  }
+
+  markPaid(requestId: number, body: { requestVersion: number }): Observable<ReceiptDossier> {
+    return this.http.post<ReceiptDossier>(`${API}/requests/${requestId}/invoice/paid`, body);
+  }
+
   close(requestId: number, body: unknown, key: string): Observable<ReceiptDossier> {
     return this.http.post<ReceiptDossier>(`${API}/requests/${requestId}/close`, body, idempotencyHeaders(key));
   }

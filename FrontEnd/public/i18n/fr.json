@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Procurement Intelligence",
+    "name": "Procurement 360",
     "suite": "De la demande à la réception"
   },
   "language": {
@@ -121,6 +121,11 @@
     "notices": {
       "title": "Notifications non lues",
       "empty": "Aucune notification non lue."
+    },
+    "next": {
+      "label": "Votre prochaine validation",
+      "count": "{{count}} en attente de votre décision",
+      "action": "Ouvrir les validations"
     }
   },
   "planned": {
@@ -289,7 +294,10 @@
     "preview-expired": "La prévisualisation du nettoyage a expiré. Relancez la prévisualisation avant de confirmer.",
     "confirmation-required": "Confirmez explicitement le nettoyage après avoir relu la prévisualisation.",
     "version-conflict": "La demande a changé depuis votre chargement. Actualisez puis réessayez.",
-    "archived": "Restaurez d’abord la demande de l’archive, ou laissez l’historique archivé tel quel."
+    "archived": "Restaurez d’abord la demande de l’archive, ou laissez l’historique archivé tel quel.",
+    "unconfirmed-receipts": "Confirmez d’abord toutes les réceptions.",
+    "already-paid": "Cette facture est déjà marquée comme payée.",
+    "not-invoiced": "Enregistrez d’abord la facture."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -779,7 +787,15 @@
       },
       "informationRequested": "Question posée",
       "waiting": "En attente {{elapsed}}",
-      "review": "Examiner et décider"
+      "review": "Examiner et décider",
+      "showDecision": "Décider ici",
+      "openRecord": "Ouvrir le dossier complet",
+      "facts": {
+        "amount": "Montant",
+        "requester": "Demandeur",
+        "waiting": "En attente",
+        "due": "Échéance"
+      }
     },
     "decide": {
       "title": "Votre décision",
@@ -1068,7 +1084,8 @@
       "assignedTo": "Affectée à {{name}}",
       "unassigned": "Non affectée",
       "gaps": "Manquant : {{list}}",
-      "proposed": "Société d’achat proposée"
+      "proposed": "Société d’achat proposée",
+      "moreFilters": "Plus de filtres"
     },
     "sorts": {
       "requiredDate": "Date souhaitée",
@@ -1380,7 +1397,15 @@
       "close": "Confirmer la clôture",
       "closed": "Cette demande est clôturée",
       "closedToast": "Demande clôturée",
-      "closureMissing": "Encore nécessaire"
+      "closureMissing": "Encore nécessaire",
+      "condition": "État",
+      "shortfallTitle": "Accepter avec écart",
+      "shortfallHint": "Accepter ce qui a été livré malgré la quantité rejetée ou manquante, afin que la demande puisse passer à la facture et à la clôture.",
+      "shortfallReason": "Motif",
+      "shortfallAccept": "Accepter avec écart",
+      "shortfallAccepted": "Accepté avec écart.",
+      "markPaid": "Marquer comme payée",
+      "paidToast": "Facture marquée comme payée."
     },
     "status": {
       "RECORDED": "Enregistrée",
@@ -1396,6 +1421,12 @@
     "payment": {
       "PENDING": "Paiement en attente",
       "PAID": "Payé"
+    },
+    "closureMissingItem": {
+      "acceptance": "acceptation",
+      "invoice": "facture",
+      "match-attested": "attestation de concordance de la facture",
+      "outstanding-quantity": "quantité restante"
     }
   },
   "dashboards": {

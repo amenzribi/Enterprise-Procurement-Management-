@@ -25,7 +25,7 @@ final class RequestViews {
 
 	record Summary(long id, String number, String title, String status, String userStatus, String stage,
 			BigDecimal totalAmount,
-			String currency, LocalDate requiredDate, Instant updatedAt, Instant submittedAt, UserRef requester,
+			String currency, LocalDate requiredDate, Instant createdAt, Instant updatedAt, Instant submittedAt, UserRef requester,
 			Ref requestingCompany, List<String> actions) {
 	}
 

@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,6 +23,7 @@ import com.epi.procurement.audit.AuditLog;
 import com.epi.procurement.audit.AuditRecord;
 import com.epi.procurement.identity.CurrentUser;
 import com.epi.procurement.identity.Role;
+import com.epi.procurement.identity.RoleGrant;
 import com.epi.procurement.notification.Notice;
 import com.epi.procurement.notification.Notifications;
 import com.epi.procurement.organization.OrganizationDirectory;
@@ -90,22 +92,30 @@ class LogisticsService {
 		}
 		int safePage = Math.max(0, page);
 		int safeSize = size < 1 || size > 100 ? 20 : size;
-		List<RequestLogisticsQueries.ConfirmedPoInboxRow> rows = requestLogistics
-			.confirmedPoInbox(user.groupId(), q)
-			.stream()
-			.filter(row -> user.hasRoleIn(Role.PURCHASING_MANAGER, row.buyingCompanyId())
-					|| user.hasRoleIn(Role.BUYER, row.buyingCompanyId()))
-			.toList();
-		int from = Math.min(safePage * safeSize, rows.size());
-		int to = Math.min(from + safeSize, rows.size());
-		List<LogisticsInboxItem> items = rows.subList(from, to).stream()
+		RequestLogisticsQueries.ConfirmedPoInboxPage result = requestLogistics.confirmedPoInbox(user.groupId(),
+				inboxCompanies(user), q, safePage, safeSize);
+		List<LogisticsInboxItem> items = result.rows().stream()
 			.map(row -> new LogisticsInboxItem(row.requestId(), row.requestNumber(), row.requestTitle(),
 					row.requestStatus(), row.poId(), row.poNumber(), row.poStatus(), row.shipmentId(),
 					row.shipmentNumber(), row.shipmentStatus(), row.shipmentKind(), row.poCreatedAt(),
 					"DELIVERED".equals(row.shipmentStatus()) || "DELIVERED".equals(row.requestStatus())))
 			.toList();
-		return new LogisticsInboxPage(items, safePage, safeSize, rows.size(),
-				rows.isEmpty() ? 0 : (rows.size() + safeSize - 1) / safeSize);
+		int total = (int) result.total();
+		return new LogisticsInboxPage(items, safePage, safeSize, total, total == 0 ? 0 : (total + safeSize - 1) / safeSize);
+	}
+
+	/** Buying companies of the user's purchasing grants; {@code null} when a grant is not company-bound. */
+	private static Set<Long> inboxCompanies(CurrentUser user) {
+		Set<Long> companies = new HashSet<>();
+		for (Role role : List.of(Role.PURCHASING_MANAGER, Role.BUYER)) {
+			for (RoleGrant grant : user.grants(role)) {
+				if (grant.companyId() == null) {
+					return null;
+				}
+				companies.add(grant.companyId());
+			}
+		}
+		return companies;
 	}
 
 	@Transactional(readOnly = true)

@@ -1,6 +1,9 @@
 package com.epi.procurement.request;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -15,7 +18,7 @@ import com.epi.procurement.platform.persistence.UtcTimes;
 
 /**
  * Request-module SQL for the logistics confirmed-PO inbox. Keeps {@code purchase_request} table access inside
- * this module (architecture rule S1CR-08) while logistics applies role/company filters on the result.
+ * this module (architecture rule S1CR-08) with the role/company scope applied in the query.
  */
 @Service
 public class RequestLogisticsQueries {
@@ -31,16 +34,25 @@ public class RequestLogisticsQueries {
 			Long shipmentId, String shipmentNumber, String shipmentStatus, String shipmentKind) {
 	}
 
+	public record ConfirmedPoInboxPage(List<ConfirmedPoInboxRow> rows, long total) {
+	}
+
+	/**
+	 * One page of confirmed purchase orders. {@code buyingCompanyIds} restricts the buying company; {@code null} means
+	 * every company of the group.
+	 */
 	@Transactional(readOnly = true)
-	public List<ConfirmedPoInboxRow> confirmedPoInbox(long groupId, String q) {
+	public ConfirmedPoInboxPage confirmedPoInbox(long groupId, Collection<Long> buyingCompanyIds, String q, int page,
+			int size) {
+		if (buyingCompanyIds != null && buyingCompanyIds.isEmpty()) {
+			return new ConfirmedPoInboxPage(List.of(), 0);
+		}
 		String text = q == null ? "" : q.strip().toLowerCase(Locale.ROOT);
 		boolean filter = !text.isEmpty();
 		String like = "%" + text.replace("%", "[%]").replace("_", "[_]") + "%";
-		String sql = """
-				SELECT po.id AS po_id, po.number AS po_number, po.status AS po_status, po.created_at AS po_created_at,
-				       po.buying_company_id,
-				       pr.id AS request_id, pr.number AS request_number, pr.title AS request_title, pr.status AS request_status,
-				       s.id AS shipment_id, s.number AS shipment_number, s.status AS shipment_status, s.kind AS shipment_kind
+		List<Object> args = new ArrayList<>();
+		args.add(groupId);
+		StringBuilder from = new StringBuilder("""
 				FROM purchase_order po
 				JOIN purchase_request pr ON pr.id = po.request_id
 				OUTER APPLY (
@@ -49,14 +61,30 @@ public class RequestLogisticsQueries {
 				  ORDER BY created_at DESC, id DESC
 				) s
 				WHERE pr.group_id = ? AND po.status = 'CONFIRMED'
-				""" + (filter
-				? " AND (LOWER(pr.number) LIKE ? OR LOWER(po.number) LIKE ? OR LOWER(ISNULL(s.number,'')) LIKE ? OR LOWER(pr.title) LIKE ?)"
-				: "") + """
-				 ORDER BY po.created_at DESC, po.id DESC""";
-		if (filter) {
-			return jdbc.query(sql, INBOX, groupId, like, like, like, like);
+				""");
+		if (buyingCompanyIds != null) {
+			from.append(" AND po.buying_company_id IN (")
+				.append(String.join(",", Collections.nCopies(buyingCompanyIds.size(), "?")))
+				.append(")");
+			args.addAll(buyingCompanyIds);
 		}
-		return jdbc.query(sql, INBOX, groupId);
+		if (filter) {
+			from.append(" AND (LOWER(pr.number) LIKE ? OR LOWER(po.number) LIKE ? OR LOWER(ISNULL(s.number,'')) LIKE ?"
+					+ " OR LOWER(pr.title) LIKE ?)");
+			args.addAll(List.of(like, like, like, like));
+		}
+		Long total = jdbc.queryForObject("SELECT COUNT(*) " + from, Long.class, args.toArray());
+		List<Object> pageArgs = new ArrayList<>(args);
+		pageArgs.add(page * size);
+		pageArgs.add(size);
+		List<ConfirmedPoInboxRow> rows = jdbc.query("""
+				SELECT po.id AS po_id, po.number AS po_number, po.status AS po_status, po.created_at AS po_created_at,
+				       po.buying_company_id,
+				       pr.id AS request_id, pr.number AS request_number, pr.title AS request_title, pr.status AS request_status,
+				       s.id AS shipment_id, s.number AS shipment_number, s.status AS shipment_status, s.kind AS shipment_kind
+				""" + from + " ORDER BY po.created_at DESC, po.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY", INBOX,
+				pageArgs.toArray());
+		return new ConfirmedPoInboxPage(rows, total == null ? 0 : total);
 	}
 
 	private static final RowMapper<ConfirmedPoInboxRow> INBOX = (rs, i) -> new ConfirmedPoInboxRow(rs.getLong("po_id"),

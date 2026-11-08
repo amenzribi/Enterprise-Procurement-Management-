@@ -1,5 +1,7 @@
 # Project handover (current)
 
+> **2026-11-08 stabilization pass:** the current state, verdict and open decisions are in [HANDOFF.md](../../HANDOFF.md) and [stabilization-review.md](../reviews/stabilization-review.md). Sections below predate that pass; Flyway is now at V18 in the working tree.
+
 Updated after the **usability** implementation pass (admin clarity, My work, newest-first lists, references, logistics inbox, FR guides). Developer self-labelled evidence only — **not** independent QA/reviewer sign-off.
 
 ## Git (local only — not pushed)

@@ -106,6 +106,23 @@ class UserAdminIntegrationTests extends SqlServerTestSupport {
 	}
 
 	@Test
+	void companyAdminListIsScopedBeforePagination() {
+		ApiClient admin = signedIn("admin@demo.local");
+		Integer inScope = jdbc.queryForObject("""
+				SELECT COUNT(*) FROM user_account u WHERE u.company_id IN (
+				    SELECT company_id FROM user_role WHERE role = 'ADMIN' AND company_id IS NOT NULL
+				    AND user_id = (SELECT id FROM user_account WHERE email = 'admin@demo.local'))""", Integer.class);
+		assertThat(inScope).isPositive();
+		// Every page up to the in-scope total must be full: scope applied after OFFSET/FETCH leaves holes.
+		for (int page = 0; page < inScope; page++) {
+			List<?> items = admin.get("/api/v1/admin/accounts?page=" + page + "&size=1").expectStatus(200).json("$");
+			assertThat(items).as("page %d", page).hasSize(1);
+		}
+		List<?> beyond = admin.get("/api/v1/admin/accounts?page=" + inScope + "&size=1").expectStatus(200).json("$");
+		assertThat(beyond).isEmpty();
+	}
+
+	@Test
 	void secondGlobalAdminCanBeDeactivatedButNotBelowOne() {
 		ApiClient admin = signedIn("global.admin@demo.local");
 		long companyId = ((Number) admin.get("/api/v1/admin/organization/companies").expectStatus(200).json("$[0].id"))

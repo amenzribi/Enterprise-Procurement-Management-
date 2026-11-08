@@ -307,7 +307,6 @@ test('AUTO-UAT 20-step request to closure (EN)', async ({ page, browser }) => {
   const closePanel = samiClose.locator('app-receipt-actions');
   await expect(closePanel).toBeVisible({ timeout: 20_000 });
   await closePanel.locator('#score').fill('5');
-  await closePanel.locator('#waiver').fill('');
   await closePanel.getByRole('button', { name: t('en', 'receipt.actions.close') }).click();
   await expect(samiClose.getByText(t('en', 'receipt.actions.closedToast')).first()).toBeVisible();
   await expect(samiClose.locator('.dossier-status')).toContainText(t('en', 'requests.userStatus.CLOSED'));

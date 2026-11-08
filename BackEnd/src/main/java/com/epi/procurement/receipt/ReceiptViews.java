@@ -51,5 +51,17 @@ record ClosureView(boolean ready, List<String> missing, boolean closed, Integer 
 }
 
 record ReceiptDossierView(List<ReceiptView> receipts, InvoiceView invoice, ClosureView closure,
-		boolean serviceAccepted) {
+		boolean serviceAccepted, boolean shortfallAccepted, PurchaseOrderSummary purchaseOrder) {
+}
+
+record PurchaseOrderSummary(String currency, BigDecimal total, List<PurchaseOrderLineSummary> lines) {
+}
+
+record PurchaseOrderLineSummary(long id, String description, BigDecimal quantity, String unit, BigDecimal received) {
+}
+
+record ShortfallBody(Integer requestVersion, String reason) {
+}
+
+record InvoicePaidBody(Integer requestVersion) {
 }

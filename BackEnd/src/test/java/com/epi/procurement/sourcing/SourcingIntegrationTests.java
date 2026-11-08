@@ -90,6 +90,113 @@ class SourcingIntegrationTests extends SqlServerTestSupport {
 	}
 
 	@Test
+	void quoteChargesCannotBeNegativeAndAreRoundedToMinorUnits() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = accept(assign(approve(submit(sami, request("Quote charges")))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+		long rfqId = ((Number) rfq.json("$.id")).longValue();
+		long rfqSupplierId = ((Number) rfq.json("$.suppliers[0].id")).longValue();
+		long rfqLineId = ((Number) rfq.json("$.lines[0].id")).longValue();
+		String token = ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/suppliers/" + rfqSupplierId + "/link", "{}")
+			.expectStatus(200)
+			.json("$.token");
+		ApiClient anon = client();
+		anon.csrf();
+		anon.post("/api/v1/quote-links/submit", JSON.writeValueAsString(Map.of("token", token, "currency", "EUR",
+				"freightAmount", -500, "dutyAmount", 0, "otherAmount", 0, "lines",
+				List.of(Map.of("rfqLineId", rfqLineId, "quantity", 1, "unitPrice", 30))))).expectStatus(422);
+		anon.post("/api/v1/quote-links/submit", JSON.writeValueAsString(Map.of("token", token, "currency", "EUR",
+				"freightAmount", new java.math.BigDecimal("5.005"), "dutyAmount", 0, "otherAmount", 0, "lines",
+				List.of(Map.of("rfqLineId", rfqLineId, "quantity", 1, "unitPrice", 30))))).expectStatus(200);
+		assertThat(jdbc.queryForObject("SELECT freight_amount FROM quotation WHERE rfq_id = ?", java.math.BigDecimal.class,
+				rfqId)).isEqualByComparingTo("5.01");
+	}
+
+	@Test
+	void concurrentFirstSupplierSubmissionsDoNotFail() throws Exception {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = accept(assign(approve(submit(sami, request("Double submit")))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+		long rfqId = ((Number) rfq.json("$.id")).longValue();
+		long rfqSupplierId = ((Number) rfq.json("$.suppliers[0].id")).longValue();
+		long rfqLineId = ((Number) rfq.json("$.lines[0].id")).longValue();
+		String token = ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/suppliers/" + rfqSupplierId + "/link", "{}")
+			.expectStatus(200)
+			.json("$.token");
+		String body = JSON.writeValueAsString(Map.of("token", token, "currency", "EUR", "freightAmount", 1, "dutyAmount",
+				0, "otherAmount", 0, "lines", List.of(Map.of("rfqLineId", rfqLineId, "quantity", 1, "unitPrice", 30))));
+		var pool = java.util.concurrent.Executors.newFixedThreadPool(4);
+		try {
+			java.util.concurrent.Callable<Integer> call = () -> {
+				ApiClient anon = client();
+				anon.csrf();
+				return anon.post("/api/v1/quote-links/submit", body).status();
+			};
+			for (var result : pool.invokeAll(List.of(call, call, call, call))) {
+				assertThat(result.get()).isEqualTo(200);
+			}
+			assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM quotation WHERE rfq_id = ?", Integer.class, rfqId))
+				.isEqualTo(1);
+		}
+		finally {
+			pool.shutdownNow();
+		}
+	}
+
+	@Test
+	void supplierLinkIsNeutralOnceEvaluationHasStarted() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = accept(assign(approve(submit(sami, request("Frozen quote")))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+		long rfqId = ((Number) rfq.json("$.id")).longValue();
+		long rfqSupplierId = ((Number) rfq.json("$.suppliers[0].id")).longValue();
+		long rfqLineId = ((Number) rfq.json("$.lines[0].id")).longValue();
+		String token = ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/suppliers/" + rfqSupplierId + "/link", "{}")
+			.expectStatus(200)
+			.json("$.token");
+		String body = JSON.writeValueAsString(Map.of("token", token, "currency", "EUR", "freightAmount", 1, "dutyAmount",
+				0, "otherAmount", 0, "lines", List.of(Map.of("rfqLineId", rfqLineId, "quantity", 1, "unitPrice", 30))));
+		ApiClient anon = client();
+		anon.csrf();
+		anon.post("/api/v1/quote-links/submit", body).expectStatus(200);
+		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		ines.post("/api/v1/sourcing/requests/" + id + "/validate-technical",
+				"{\"requestVersion\":" + version + ",\"comment\":\"Fits\"}").expectStatus(200);
+		anon.post("/api/v1/quote-links/submit", body).expectStatus(404);
+	}
+
+	@Test
+	void closingAnRfqTwiceAuditsOnce() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = accept(assign(approve(submit(sami, request("Close twice")))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		long rfqId = ((Number) ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + skf + "]}").expectStatus(200).json("$.id")).longValue();
+		ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/close", "{}").expectStatus(200);
+		ines.post("/api/v1/sourcing/rfqs/" + rfqId + "/close", "{}").expectStatus(200);
+		assertThat(jdbc.queryForObject("""
+				SELECT COUNT(*) FROM audit_event WHERE entity_type = 'PURCHASE_REQUEST' AND entity_id = ?
+				AND action = 'RFQ_CLOSED'""", Integer.class, Long.toString(id))).isEqualTo(1);
+	}
+
+	@Test
+	void unknownQueueFilterValuesAreBadRequests() {
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.get("/api/v1/purchasing/queue?status=NOPE").expectStatus(400);
+		mehdi.get("/api/v1/purchasing/queue?priority=NOPE").expectStatus(400);
+	}
+
+	@Test
 	void reissueQuoteLinkRevokesPreviousTokenAndClosedRfqIsNeutral404() {
 		ApiClient sami = signedIn("requester.tn@demo.local");
 		long id = accept(assign(approve(submit(sami, request("Revoke link")))));

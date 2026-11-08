@@ -45,6 +45,9 @@ class SourcingService {
 
 	private static final Duration LINK_TTL = Duration.ofDays(14);
 
+	/** Exclusive upper bound of a DECIMAL(19,4) column. */
+	private static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000000000000");
+
 	private final SourcingStore store;
 
 	private final RequestWorkflow requests;
@@ -172,8 +175,12 @@ class SourcingService {
 			throw new ValidationFailedException(List.of(FieldViolation.of("token", "required")));
 		}
 		TokenContext ctx = requireValidToken(body.token());
+		long requestId = store.findRfq(ctx.supplier().rfqId()).orElseThrow(ApiProblemException::notFound).requestId();
+		// Same lock as the buyer path: a double submit must not race on the one-quote-per-supplier constraint.
+		RequestSnapshot locked = requests.lockForApproval(requestId);
 		SourcingStore.RfqRow rfq = store.findRfq(ctx.supplier().rfqId()).orElseThrow(ApiProblemException::notFound);
-		if (!"OPEN".equals(rfq.status())) {
+		if (!"OPEN".equals(rfq.status())
+				|| (!"SOURCING".equals(locked.status()) && !"QUOTES_RECEIVED".equals(locked.status()))) {
 			// Neutral 404 for anonymous callers (S4SL-08) — do not reveal RFQ state.
 			throw ApiProblemException.notFound();
 		}
@@ -225,8 +232,9 @@ class SourcingService {
 		SourcingStore.RfqRow rfq = store.findRfq(rfqId).orElseThrow(ApiProblemException::notFound);
 		RequestSnapshot request = requests.requireVisible(user, rfq.requestId());
 		requireSourcingActor(user, request);
-		store.closeRfq(rfqId, clock.instant());
-		audit(user, request, "RFQ_CLOSED", request.status(), null, "{\"rfqId\":" + rfqId + "}");
+		if (store.closeRfq(rfqId, clock.instant()) > 0) {
+			audit(user, request, "RFQ_CLOSED", request.status(), null, "{\"rfqId\":" + rfqId + "}");
+		}
 		return detail(store.findRfq(rfqId).orElseThrow());
 	}
 
@@ -288,7 +296,8 @@ class SourcingService {
 			}
 			BigDecimal lineAmount = null;
 			if (match.unitPrice() != null) {
-				if (match.unitPrice().signum() < 0) {
+				if (match.unitPrice().signum() < 0 || match.unitPrice().compareTo(MAX_AMOUNT) >= 0
+						|| match.unitPrice().multiply(qty).compareTo(MAX_AMOUNT) >= 0) {
 					throw new ValidationFailedException(List.of(FieldViolation.of("lines", "invalid-price")));
 				}
 				int minor = rates.minorUnits(currency);
@@ -297,10 +306,14 @@ class SourcingService {
 			}
 			normalized.add(new QuoteLineBody(rfqLine.id(), qty, match.unitPrice()));
 		}
+		int minorUnits = rates.minorUnits(currency);
+		BigDecimal freight = charge(body.freightAmount(), minorUnits, "freightAmount");
+		BigDecimal duty = charge(body.dutyAmount(), minorUnits, "dutyAmount");
+		BigDecimal other = charge(body.otherAmount(), minorUnits, "otherAmount");
 		Long existing = store.findQuoteByRfqSupplier(supplier.id()).map(SourcingStore.QuoteRow::id).orElse(null);
 		long quoteId = store.upsertQuote(existing, rfq.id(), supplier.id(), supplier.supplierId(), currency,
 				body.validUntil(), body.leadTimeDays(), trim(body.paymentTerms()), trim(body.incoterm()),
-				nz(body.freightAmount()), nz(body.dutyAmount()), nz(body.otherAmount()), merchandise, trim(body.notes()),
+				freight, duty, other, merchandise, trim(body.notes()),
 				source, actorUserId, now);
 		for (QuoteLineBody line : normalized) {
 			BigDecimal lineAmount = line.unitPrice() == null ? null
@@ -437,6 +450,15 @@ class SourcingService {
 		catch (NoSuchAlgorithmException ex) {
 			throw new IllegalStateException(ex);
 		}
+	}
+
+	/** An optional charge: never negative (it would lower the landed cost), rounded to the currency's minor units. */
+	private static BigDecimal charge(BigDecimal value, int minorUnits, String field) {
+		BigDecimal amount = nz(value).setScale(minorUnits, RoundingMode.HALF_UP);
+		if (amount.signum() < 0 || amount.compareTo(MAX_AMOUNT) >= 0) {
+			throw new ValidationFailedException(List.of(FieldViolation.of(field, "invalid")));
+		}
+		return amount;
 	}
 
 	private static BigDecimal nz(BigDecimal value) {

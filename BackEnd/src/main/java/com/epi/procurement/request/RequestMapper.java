@@ -50,7 +50,7 @@ class RequestMapper {
 		return requests.stream()
 			.map(r -> new RequestViews.Summary(r.getId(), r.getNumber(), r.getTitle(), r.getStatus().name(),
 					r.getStatus().userStatus().name(), r.getStage().name(), money(r.getTotalAmount(), r.getCurrencyCode(), minorUnits), r.getCurrencyCode(),
-					r.getRequiredDate(), r.getUpdatedAt(), r.getSubmittedAt(), userRef(people, r.getRequesterUserId()),
+					r.getRequiredDate(), r.getCreatedAt(), r.getUpdatedAt(), r.getSubmittedAt(), userRef(people, r.getRequesterUserId()),
 					companies.computeIfAbsent(r.getRequestingCompanyId(), this::company), policy.actions(user, r)))
 			.toList();
 	}

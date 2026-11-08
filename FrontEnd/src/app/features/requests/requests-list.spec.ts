@@ -67,6 +67,17 @@ describe('RequestsListPage', () => {
     request.flush({ items: [], page: 0, size: 20, totalItems: 0 });
   });
 
+  it('renders one cell for every column header', async () => {
+    pending().flush({ items: ITEMS, page: 0, size: 20, totalItems: 2 });
+    await fixture.whenStable();
+
+    const headers = element().querySelectorAll('thead th').length;
+    expect(headers).toBeGreaterThan(0);
+    element()
+      .querySelectorAll('tbody tr')
+      .forEach((row) => expect(row.querySelectorAll('td').length).toBe(headers));
+  });
+
   it('lists requests with their number, or "Draft" when not yet submitted', async () => {
     pending().flush({ items: ITEMS, page: 0, size: 20, totalItems: 2 });
     await fixture.whenStable();

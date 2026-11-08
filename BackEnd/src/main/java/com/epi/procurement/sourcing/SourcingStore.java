@@ -146,9 +146,10 @@ class SourcingStore {
 				WHERE quotation_id = ?""", QUOTE_LINE, quotationId);
 	}
 
-	void closeRfq(long rfqId, Instant now) {
-		jdbc.update("UPDATE rfq SET status = 'CLOSED', closed_at = ?, version = version + 1 WHERE id = ?", UtcTimes.db(now),
-				rfqId);
+	int closeRfq(long rfqId, Instant now) {
+		return jdbc.update(
+				"UPDATE rfq SET status = 'CLOSED', closed_at = ?, version = version + 1 WHERE id = ? AND status = 'OPEN'",
+				UtcTimes.db(now), rfqId);
 	}
 
 	boolean assignmentAccepted(long requestId, long buyerUserId) {

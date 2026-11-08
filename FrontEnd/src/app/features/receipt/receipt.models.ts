@@ -3,6 +3,21 @@ export interface ReceiptDossier {
   invoice: SupplierInvoice | null;
   closure: { ready: boolean; missing: string[]; closed: boolean; rating: number | null };
   serviceAccepted: boolean;
+  shortfallAccepted: boolean;
+  purchaseOrder: PurchaseOrderSummary | null;
+}
+
+export interface PurchaseOrderSummary {
+  currency: string;
+  total: number;
+  lines: { id: number; description: string; quantity: number; unit: string; received: number }[];
+}
+
+export interface ReceiptLineDraft {
+  received: string;
+  accepted: string;
+  rejected: string;
+  condition: string;
 }
 
 export interface GoodsReceipt {

@@ -98,3 +98,11 @@ run on JDK 25 before this runtime target is considered validated.
 
 E-mail (SMTP) from S2 via a transactional outbox and scheduled sender, localised in the recipient's stored language,
 with deep links to the action. In-app notifications in S3. Push/PWA later.
+
+## Procurement control rules (2026-11-09)
+
+Decided by the product owner on the developer's recommendation.
+
+- Two people on a goods receipt: the person who recorded it cannot confirm it (`self-confirmation`, 403).
+- An expired quotation cannot be awarded (`quote-expired`, 409).
+- An award whose quantity differs from the request needs a reason, kept in the award's audit comment (`quantityReason`, 422 without one).

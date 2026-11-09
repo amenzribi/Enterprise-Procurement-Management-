@@ -107,6 +107,17 @@ class OrderingService {
 			throw ApiProblemException.conflict("quote-incomplete", "The quotation is missing prices.");
 		}
 		Instant now = clock.instant();
+		if (quote.validUntil() != null && quote.validUntil().isBefore(LocalDate.ofInstant(now, ZoneOffset.UTC))) {
+			throw ApiProblemException.conflict("quote-expired", "This quotation has expired. Ask the supplier to refresh it.");
+		}
+		String auditComment = body.reason().strip();
+		if (lines.stream().anyMatch(l -> l.quantity().compareTo(l.requestedQuantity()) != 0)) {
+			if (!StringUtils.hasText(body.quantityReason()) || body.quantityReason().strip().length() < 3
+					|| body.quantityReason().strip().length() > 500) {
+				throw new ValidationFailedException(List.of(FieldViolation.of("quantityReason", "required")));
+			}
+			auditComment += " | Quantity differs from the request: " + body.quantityReason().strip();
+		}
 		BigDecimal freight = nz(quote.freight());
 		BigDecimal duty = nz(quote.duty());
 		BigDecimal other = nz(quote.other());
@@ -124,7 +135,7 @@ class OrderingService {
 		}
 		requests.enterAwarded(requestId, user.id(), now);
 		RequestSnapshot after = requests.currentLocked(requestId);
-		audit(user, after, "AWARD_RECORDED", after.status(), body.reason().strip(),
+		audit(user, after, "AWARD_RECORDED", after.status(), auditComment,
 				"{\"awardId\":" + awardId + ",\"quotationId\":" + quote.id() + "}");
 		notifyAuthors(after, "AWARD_RECORDED", user);
 		return toAward(store.findAward(awardId).orElseThrow());

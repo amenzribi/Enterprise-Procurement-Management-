@@ -78,7 +78,10 @@ Decided by the product owner on the developer's recommendation, 2026-11-08. Fina
 | D-04 | The form sends the purchase-order currency and starts from its total. There is still no server rejection of a different currency. | `invoices in the purchase-order currency…` |
 | New | The invoice and receipt forms were pre-filled with demo values (`INV-DEMO-1`, amount 35, an attested match, rating 5). All removed; the attestation is now a deliberate tick. Receipt errors now show translated text, not codes. | Unit tests; both closure journeys |
 
-The rows for D-01, D-02 and D-04 below record the findings as first reported.
+| D-03 | The person who recorded a receipt cannot confirm it (403 `self-confirmation`). | `theRecorderOfAReceiptCannotConfirmIt` |
+| D-07 | An expired quote cannot be awarded (409 `quote-expired`). A quantity that differs from the request needs a reason, kept in the award's audit comment (422 without one). | `anExpiredQuoteCannotBeAwarded`, `aQuantityDifferentFromTheRequestNeedsARecordedReason` |
+
+The rows for D-01, D-02, D-03, D-04 and D-07 below record the findings as first reported.
 
 **Correction, 2026-11-09:** the receipt form described above as resolving D-01 was incomplete. It failed on lines that did not arrive, partial receipts and split shipments, and an unattested invoice could not be closed. Fixed and retested; see [verification-report.md](../design/verification-report.md).
 

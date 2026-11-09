@@ -8,7 +8,7 @@ import { NotificationService } from '../../core/notifications/notification.servi
 import { Button } from '../../shared/ui/button';
 import { PurchaseRequest } from '../requests/request.models';
 import { ReceiptApi } from './receipt.api';
-import { ReceiptDossier, ReceiptLineDraft } from './receipt.models';
+import { GoodsReceipt, ReceiptDossier, ReceiptLineDraft } from './receipt.models';
 
 const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as const;
 
@@ -41,7 +41,9 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
                   </li>
                 }
               </ul>
-              @if (r.status === 'RECORDED' && canConfirm()) {
+              @if (r.status === 'RECORDED' && recordedByMe(r)) {
+                <p class="muted small">{{ 'receipt.actions.otherMustConfirm' | translate }}</p>
+              } @else if (r.status === 'RECORDED' && canConfirm()) {
                 <button appButton type="button" [disabled]="busy()" (click)="confirm(r.id, r.version)">
                   {{ 'receipt.actions.confirm' | translate }}
                 </button>
@@ -238,6 +240,10 @@ export class ReceiptActions {
 
   protected canConfirm(): boolean {
     return this.isAuthor() || hasPermission(this.auth.me(), 'RECEIPT_ACT');
+  }
+
+  protected recordedByMe(receipt: GoodsReceipt): boolean {
+    return receipt.receivedByUserId !== undefined && receipt.receivedByUserId === this.auth.me()?.id;
   }
 
   protected canInvoice(): boolean {

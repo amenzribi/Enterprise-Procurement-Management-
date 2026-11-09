@@ -30,7 +30,7 @@ record CloseBody(Integer requestVersion, Integer rating, String scoreComment, St
 }
 
 record ReceiptView(long id, long requestId, long purchaseOrderId, Long shipmentId, String number, String status,
-		Instant receivedAt, Instant confirmedAt, String note, int version, List<ReceiptLineView> lines,
+		Instant receivedAt, Instant confirmedAt, String note, int version, long receivedByUserId, List<ReceiptLineView> lines,
 		List<EvidenceView> evidence) {
 }
 

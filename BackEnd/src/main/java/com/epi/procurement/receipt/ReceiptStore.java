@@ -198,7 +198,7 @@ class ReceiptStore {
 			rs.getLong("request_id"), rs.getLong("purchase_order_id"),
 			rs.getObject("shipment_id") == null ? null : rs.getLong("shipment_id"), rs.getString("number"),
 			rs.getString("status"), 			UtcTimes.instant(rs, "received_at"), UtcTimes.instant(rs, "confirmed_at"),
-			rs.getString("note"), rs.getInt("version"));
+			rs.getString("note"), rs.getInt("version"), rs.getLong("received_by_user_id"));
 
 	private static final RowMapper<LineRow> LINE = (rs, i) -> new LineRow(rs.getLong("id"),
 			rs.getLong("purchase_order_line_id"),
@@ -228,7 +228,7 @@ class ReceiptStore {
 	}
 
 	record ReceiptRow(long id, long requestId, long purchaseOrderId, Long shipmentId, String number, String status,
-			Instant receivedAt, Instant confirmedAt, String note, int version) {
+			Instant receivedAt, Instant confirmedAt, String note, int version, long receivedByUserId) {
 	}
 
 	record LineRow(long id, long poLineId, Long shipmentLineId, long requestLineId, short lineNo, String description,

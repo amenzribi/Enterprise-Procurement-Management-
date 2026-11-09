@@ -298,7 +298,9 @@
     "unconfirmed-receipts": "Confirmez d’abord toutes les réceptions.",
     "already-paid": "Cette facture est déjà marquée comme payée.",
     "not-invoiced": "Enregistrez d’abord la facture.",
-    "already-attested": "La concordance de cette facture est déjà attestée."
+    "already-attested": "La concordance de cette facture est déjà attestée.",
+    "self-confirmation": "Une autre personne doit confirmer une réception que vous avez enregistrée.",
+    "quote-expired": "Ce devis a expiré. Demandez au fournisseur de l’actualiser."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -1291,7 +1293,9 @@
       "issued": "Bon de commande émis",
       "confirmationNote": "Note de confirmation fournisseur",
       "confirm": "Enregistrer la confirmation fournisseur",
-      "confirmed": "Confirmation fournisseur enregistrée"
+      "confirmed": "Confirmation fournisseur enregistrée",
+      "quoteExpired": "expiré",
+      "quantityReason": "Pourquoi la quantité du devis diffère-t-elle de la demande ?"
     },
     "status": {
       "DRAFT": "Brouillon",
@@ -1408,7 +1412,8 @@
       "markPaid": "Marquer comme payée",
       "paidToast": "Facture marquée comme payée.",
       "attestNow": "Attester la concordance de la facture",
-      "attestedToast": "Concordance de la facture attestée."
+      "attestedToast": "Concordance de la facture attestée.",
+      "otherMustConfirm": "Vous avez enregistré cette réception : une autre personne doit la confirmer."
     },
     "status": {
       "RECORDED": "Enregistrée",

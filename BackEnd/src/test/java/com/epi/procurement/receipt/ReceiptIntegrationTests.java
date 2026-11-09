@@ -303,6 +303,50 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 	}
 
 	@Test
+	void theRecorderOfAReceiptCannotConfirmIt() {
+		long id = delivered("Two people");
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		int version = ((Number) omar.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		ApiClient.Response receipt = omar.post("/api/v1/receipts/requests/" + id + "/goods-receipts",
+				"{\"requestVersion\":" + version + "}").expectStatus(200);
+		String path = "/api/v1/receipts/goods-receipts/" + receipt.json("$.id") + "/confirm";
+		assertThat((String) omar.post(path, "{}").expectStatus(403).json("$.code")).isEqualTo("self-confirmation");
+		assertThat((String) samiStatus(id)).isEqualTo("PARTIALLY_RECEIVED");
+		signedIn("requester.tn@demo.local").post(path, "{}").expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("ACCEPTED");
+	}
+
+	@Test
+	void anExpiredQuoteCannotBeAwarded() {
+		long id = commerciallyValidated("Expired quote");
+		ApiClient ines = signedIn("buyer@demo.local");
+		long quoteId = ((Number) ines.get("/api/v1/sourcing/requests/" + id + "/rfq").json("$.quotes[0].id")).longValue();
+		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		String body = "{\"requestVersion\":" + version + ",\"quotationId\":" + quoteId + ",\"reason\":\"Best offer\"}";
+		jdbc.update("UPDATE quotation SET valid_until = ? WHERE id = ?", LocalDate.now(TUNIS).minusDays(2).toString(), quoteId);
+		assertThat((String) ines.post("/api/v1/ordering/requests/" + id + "/award", body).expectStatus(409).json("$.code"))
+			.isEqualTo("quote-expired");
+		jdbc.update("UPDATE quotation SET valid_until = ? WHERE id = ?", LocalDate.now(TUNIS).plusDays(5).toString(), quoteId);
+		ines.post("/api/v1/ordering/requests/" + id + "/award", body).expectStatus(200);
+	}
+
+	@Test
+	void aQuantityDifferentFromTheRequestNeedsARecordedReason() {
+		long id = commerciallyValidated("Quantity differs");
+		ApiClient ines = signedIn("buyer@demo.local");
+		long quoteId = ((Number) ines.get("/api/v1/sourcing/requests/" + id + "/rfq").json("$.quotes[0].id")).longValue();
+		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		jdbc.update("UPDATE quotation_line SET quantity = 2 WHERE quotation_id = ?", quoteId);
+		ines.post("/api/v1/ordering/requests/" + id + "/award",
+				"{\"requestVersion\":" + version + ",\"quotationId\":" + quoteId + ",\"reason\":\"Best offer\"}").expectStatus(422);
+		ines.post("/api/v1/ordering/requests/" + id + "/award", "{\"requestVersion\":" + version + ",\"quotationId\":" + quoteId
+				+ ",\"reason\":\"Best offer\",\"quantityReason\":\"Sold in packs of two\"}").expectStatus(200);
+		assertThat(jdbc.queryForObject("""
+				SELECT comment FROM audit_event WHERE entity_type = 'PURCHASE_REQUEST' AND entity_id = ?
+				AND action = 'AWARD_RECORDED'""", String.class, Long.toString(id))).contains("Sold in packs of two");
+	}
+
+	@Test
 	void anUnattestedInvoiceCanBeAttestedAndThenClosed() {
 		long id = accepted("Attest later");
 		ApiClient ines = signedIn("buyer@demo.local");

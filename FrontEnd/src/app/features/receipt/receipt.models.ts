@@ -26,6 +26,7 @@ export interface GoodsReceipt {
   status: string;
   note: string | null;
   version: number;
+  receivedByUserId?: number;
   lines: {
     id: number;
     description: string;

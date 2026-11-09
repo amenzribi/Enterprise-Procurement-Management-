@@ -100,6 +100,17 @@ describe('ReceiptActions', () => {
     expect(element().querySelector<HTMLInputElement>('#rcpt-received-11')!.value).toBe('2');
   });
 
+  it('asks for another person to confirm a receipt the user recorded', async () => {
+    await open('PARTIALLY_RECEIVED', dossier({ receipts: [{ ...confirmedReceipt(), status: 'RECORDED', receivedByUserId: ME.id }] as never }));
+    expect(element().textContent).toContain('receipt.actions.otherMustConfirm');
+    expect([...element().querySelectorAll('button')].some((b) => b.textContent?.includes('receipt.actions.confirm'))).toBe(false);
+  });
+
+  it('lets another person confirm the receipt', async () => {
+    await open('PARTIALLY_RECEIVED', dossier({ receipts: [{ ...confirmedReceipt(), status: 'RECORDED', receivedByUserId: 99 }] as never }));
+    expect([...element().querySelectorAll('button')].some((b) => b.textContent?.includes('receipt.actions.confirm'))).toBe(true);
+  });
+
   it('lets purchasing attest a recorded invoice', async () => {
     const invoice = { id: 1, invoiceNumber: 'I', amount: 35, currency: 'EUR', documentReference: null, matchAttested: false, paymentStatus: 'PENDING' };
     await open('INVOICED', dossier({ invoice }));

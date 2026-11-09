@@ -30,12 +30,21 @@ import { AwardView, PurchaseOrderView } from './ordering.models';
             <select id="award-quote" [value]="quotationId() ?? ''" (change)="quotationId.set(toId($any($event.target).value))">
               <option value="">{{ 'ordering.actions.chooseQuote' | translate }}</option>
               @for (q of submittedQuotes(); track q.id) {
-                <option [value]="q.id">{{ q.supplierName }} — {{ q.currency }} {{ q.merchandiseAmount }}</option>
+                <option [value]="q.id" [disabled]="q.expired">
+                  {{ q.supplierName }} — {{ q.currency }} {{ q.merchandiseAmount }}
+                  @if (q.expired) {
+                    ({{ 'ordering.actions.quoteExpired' | translate }})
+                  }
+                </option>
               }
             </select>
             <label class="label" for="award-reason">{{ 'ordering.actions.reason' | translate }} *</label>
             <textarea id="award-reason" rows="3" [value]="reason()" (input)="reason.set($any($event.target).value)"></textarea>
-            <button appButton type="submit" [disabled]="busy() || !quotationId() || reason().trim().length < 3">
+            @if (selectedQuantityDiffers()) {
+              <label class="label" for="award-quantity-reason">{{ 'ordering.actions.quantityReason' | translate }} *</label>
+              <textarea id="award-quantity-reason" rows="2" maxlength="500" [value]="quantityReason()" (input)="quantityReason.set($any($event.target).value)"></textarea>
+            }
+            <button appButton type="submit" [disabled]="busy() || !quotationId() || reason().trim().length < 3 || (selectedQuantityDiffers() && quantityReason().trim().length < 3)">
               {{ 'ordering.actions.award' | translate }}
             </button>
           </form>
@@ -105,9 +114,10 @@ export class OrderingActions {
 
   protected readonly award = signal<AwardView | null>(null);
   protected readonly po = signal<PurchaseOrderView | null>(null);
-  protected readonly submittedQuotes = signal<{ id: number; supplierName: string; currency: string; merchandiseAmount: number }[]>([]);
+  protected readonly submittedQuotes = signal<{ id: number; supplierName: string; currency: string; merchandiseAmount: number; expired: boolean; quantityDiffers: boolean }[]>([]);
   protected readonly quotationId = signal<number | null>(null);
   protected readonly reason = signal('');
+  protected readonly quantityReason = signal('');
   protected readonly paymentTerms = signal('Net 30');
   protected readonly incoterm = signal('DAP');
   protected readonly deliveryAddress = signal('Plant warehouse');
@@ -156,6 +166,10 @@ export class OrderingActions {
     return this.canAct() && (this.request().status === 'COMMERCIAL_VALIDATION' || this.request().status === 'MANAGEMENT_VALIDATION');
   }
 
+  protected selectedQuantityDiffers(): boolean {
+    return this.submittedQuotes().find((q) => q.id === this.quotationId())?.quantityDiffers ?? false;
+  }
+
   protected toId(value: string): number | null {
     const id = Number(value);
     return Number.isFinite(id) && id > 0 ? id : null;
@@ -170,7 +184,7 @@ export class OrderingActions {
     this.api
       .award(
         this.request().id,
-        { requestVersion: this.request().version, quotationId: this.quotationId()!, reason: this.reason().trim() },
+        { requestVersion: this.request().version, quotationId: this.quotationId()!, quantityReason: this.selectedQuantityDiffers() ? this.quantityReason().trim() : undefined, reason: this.reason().trim() },
         newIdempotencyKey(),
       )
       .subscribe({
@@ -305,6 +319,7 @@ export class OrderingActions {
   private loadQuotes(requestId: number): void {
     this.sourcingApi.getRfq(requestId).subscribe({
       next: (rfq: RfqDetail | null) => {
+        const today = new Date().toISOString().slice(0, 10);
         const quotes = (rfq?.quotes ?? [])
           .filter((q) => q.status === 'SUBMITTED')
           .map((q) => ({
@@ -312,10 +327,16 @@ export class OrderingActions {
             supplierName: q.supplierName,
             currency: q.currency,
             merchandiseAmount: Number(q.merchandiseAmount ?? 0),
+            expired: !!q.validUntil && q.validUntil < today,
+            quantityDiffers: q.lines.some((line) => {
+              const requested = rfq?.lines.find((l) => l.id === line.rfqLineId);
+              return !!requested && Number(requested.quantity) !== Number(line.quantity);
+            }),
           }));
         this.submittedQuotes.set(quotes);
-        if (quotes.length === 1) {
-          this.quotationId.set(quotes[0].id);
+        const eligible = quotes.filter((q) => !q.expired);
+        if (eligible.length === 1) {
+          this.quotationId.set(eligible[0].id);
         }
       },
       error: () => this.submittedQuotes.set([]),

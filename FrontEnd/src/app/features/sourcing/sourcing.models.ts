@@ -33,6 +33,7 @@ export interface Quote {
   freightAmount: number | string;
   dutyAmount: number | string;
   otherAmount: number | string;
+  validUntil?: string | null;
   lines: QuoteLine[];
 }
 

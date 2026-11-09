@@ -238,6 +238,7 @@ export class LogisticsActions {
     this.api.updateMilestone(shipment.id, milestoneId, { version: shipment.version, actualDate: today }).subscribe({
       next: (updated) => {
         this.busy.set(false);
+        this.reloadSeq++; // This response is newer than any reload still in flight.
         this.shipments.set(this.shipments().map((s) => (s.id === updated.id ? updated : s)));
         this.notifications.success('logistics.actions.milestoneDone');
         this.changed.emit();

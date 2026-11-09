@@ -37,7 +37,8 @@ class OrderingStore {
 	Optional<QuoteSnap> findSubmittedQuote(long quotationId) {
 		return jdbc.query("""
 				SELECT q.id, q.rfq_id, q.supplier_id, q.status, q.currency, q.merchandise_amount, q.freight_amount,
-				       q.duty_amount, q.other_amount, q.payment_terms, q.incoterm, s.legal_name, s.is_active, r.request_id
+				       q.duty_amount, q.other_amount, q.payment_terms, q.incoterm, s.legal_name, s.is_active, r.request_id,
+				       q.valid_until
 				FROM quotation q
 				JOIN supplier s ON s.id = q.supplier_id
 				JOIN rfq r ON r.id = q.rfq_id
@@ -47,7 +48,7 @@ class OrderingStore {
 	List<QuoteLineSnap> quoteLines(long quotationId) {
 		return jdbc.query("""
 				SELECT ql.rfq_line_id, ql.quantity, ql.unit_price, ql.line_amount, rl.line_no, rl.description, rl.unit,
-				       rl.request_line_id
+				       rl.request_line_id, rl.quantity AS requested_quantity
 				FROM quotation_line ql
 				JOIN rfq_line rl ON rl.id = ql.rfq_line_id
 				WHERE ql.quotation_id = ?
@@ -219,11 +220,11 @@ class OrderingStore {
 
 	record QuoteSnap(long id, long rfqId, long supplierId, String status, String currency, BigDecimal merchandise,
 			BigDecimal freight, BigDecimal duty, BigDecimal other, String paymentTerms, String incoterm, String supplierName,
-			boolean supplierActive, long requestId) {
+			boolean supplierActive, long requestId, LocalDate validUntil) {
 	}
 
 	record QuoteLineSnap(long rfqLineId, BigDecimal quantity, BigDecimal unitPrice, BigDecimal lineAmount, short lineNo,
-			String description, String unit, long requestLineId) {
+			String description, String unit, long requestLineId, BigDecimal requestedQuantity) {
 	}
 
 	record PoRow(long id, long awardId, long requestId, String number, String status, long buyingCompanyId,
@@ -259,12 +260,13 @@ class OrderingStore {
 			rs.getLong("rfq_id"), rs.getLong("supplier_id"), rs.getString("status"), rs.getString("currency"),
 			rs.getBigDecimal("merchandise_amount"), rs.getBigDecimal("freight_amount"), rs.getBigDecimal("duty_amount"),
 			rs.getBigDecimal("other_amount"), rs.getString("payment_terms"), rs.getString("incoterm"),
-			rs.getString("legal_name"), rs.getBoolean("is_active"), rs.getLong("request_id"));
+			rs.getString("legal_name"), rs.getBoolean("is_active"), rs.getLong("request_id"),
+			rs.getObject("valid_until", LocalDate.class));
 
 	private static final org.springframework.jdbc.core.RowMapper<QuoteLineSnap> QUOTE_LINE = (rs,
 			i) -> new QuoteLineSnap(rs.getLong("rfq_line_id"), rs.getBigDecimal("quantity"), rs.getBigDecimal("unit_price"),
 					rs.getBigDecimal("line_amount"), rs.getShort("line_no"), rs.getString("description"),
-					rs.getString("unit"), rs.getLong("request_line_id"));
+					rs.getString("unit"), rs.getLong("request_line_id"), rs.getBigDecimal("requested_quantity"));
 
 	private static final org.springframework.jdbc.core.RowMapper<PoRow> PO = (rs, i) -> new PoRow(rs.getLong("id"),
 			rs.getLong("award_id"), rs.getLong("request_id"), rs.getString("number"), rs.getString("status"),

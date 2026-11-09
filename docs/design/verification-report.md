@@ -6,6 +6,22 @@ Date: 2026-11-09. Self-verification by the developer session; **not independent 
 
 **Baseline:** `1b59c4e` (before stabilization), and `c67c733` for the first browser pass.
 
+## Update after D-03 and D-07 (2026-11-09)
+
+Tested state: commit `c3adb10` plus uncommitted changes, `git diff HEAD -- BackEnd FrontEnd` SHA-256 `9212AE27BBE93D05…17A33E`. Results below replace the matching rows in "Checks".
+
+| Check | Result |
+|---|---|
+| Lint, build | Passed |
+| Unit tests | 223/223 |
+| Backend `verify -Pdb-it` | 177/177 (run before the final one-line, frontend-only logistics fix) |
+| Playwright, full suite | 58/58 |
+| Closure journeys repeated | 8/8 |
+
+A full run before that one-line fix was 57/58: a logistics step could reappear because a saved milestone did not invalidate a reload in flight. Fixed. Earlier intermittent failures across these runs had the same family of causes; intermittent behaviour cannot be proven absent by passing runs.
+
+D-03 and D-07 below are now resolved: the person who recorded a receipt cannot confirm it (403 `self-confirmation`); an expired quote cannot be awarded (409 `quote-expired`); a quantity that differs from the request needs a reason, kept in the award's audit comment (422 without one).
+
 ## Readiness
 
 | Level | Verdict |
@@ -82,10 +98,8 @@ Still 6.30 kB over the 500 kB budget (warning, not error).
 
 | ID | Severity | Item |
 |---|---|---|
-| D-03 | Medium | A receiver can confirm their own receipt. Needs a product decision. |
 | D-05 | Medium | Dashboards and exports stop at 5,000 requests without saying so. |
 | D-06 | Medium | Submission bursts in one company can return a retryable 503. |
-| D-07 | Medium | Expired quotes can be awarded, and quote quantity can differ from the request. Needs a product decision. |
 | PERF-04 | Medium | The request-list count is the top remaining query. |
 | R-1 | Low | Buyers do not get the next-action band on My work; it covers approvals only. |
 | R-2 | Low | Request administration shows allowed actions as raw codes. |

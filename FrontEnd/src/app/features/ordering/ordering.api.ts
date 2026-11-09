@@ -16,7 +16,7 @@ export class OrderingApi {
 
   award(
     requestId: number,
-    body: { requestVersion: number; quotationId: number; reason: string },
+    body: { requestVersion: number; quotationId: number; reason: string; quantityReason?: string },
     key: string,
   ): Observable<AwardView> {
     return this.http.post<AwardView>(`${API}/requests/${requestId}/award`, body, idempotencyHeaders(key));

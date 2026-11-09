@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-record AwardBody(Integer requestVersion, Long quotationId, String reason) {
+record AwardBody(Integer requestVersion, Long quotationId, String reason, String quantityReason) {
 }
 
 record AwardView(long id, long requestId, long quotationId, long supplierId, String supplierName, String currency,

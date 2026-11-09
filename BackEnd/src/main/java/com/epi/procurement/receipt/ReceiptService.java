@@ -184,6 +184,11 @@ class ReceiptService {
 		ReceiptStore.ReceiptRow receipt = store.findReceipt(receiptId).orElseThrow(ApiProblemException::notFound);
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, receipt.requestId());
 		requireConfirmer(user, request);
+		if (receipt.receivedByUserId() == user.id()) {
+			// D-03: recording and accepting goods are two people's work.
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "self-confirmation",
+					"Another person must confirm a receipt you recorded.");
+		}
 		if (!"RECORDED".equals(receipt.status())) {
 			throw ApiProblemException.conflict("invalid-state", "This receipt is already confirmed.");
 		}
@@ -470,7 +475,7 @@ class ReceiptService {
 			.toList();
 		return new ReceiptView(receipt.id(), receipt.requestId(), receipt.purchaseOrderId(), receipt.shipmentId(),
 				receipt.number(), receipt.status(), receipt.receivedAt(), receipt.confirmedAt(), receipt.note(),
-				receipt.version(), lines, evidence);
+				receipt.version(), receipt.receivedByUserId(), lines, evidence);
 	}
 
 	private InvoiceView toInvoice(ReceiptStore.InvoiceRow invoice) {

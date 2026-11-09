@@ -298,7 +298,9 @@
     "unconfirmed-receipts": "Confirm every receipt first.",
     "already-paid": "This invoice is already marked as paid.",
     "not-invoiced": "Record the invoice first.",
-    "already-attested": "This invoice match is already attested."
+    "already-attested": "This invoice match is already attested.",
+    "self-confirmation": "Another person must confirm a receipt you recorded.",
+    "quote-expired": "This quotation has expired. Ask the supplier to refresh it."
   },
   "auth": {
     "signOut": "Sign out",
@@ -1291,7 +1293,9 @@
       "issued": "Purchase order issued",
       "confirmationNote": "Supplier confirmation note",
       "confirm": "Record supplier confirmation",
-      "confirmed": "Supplier confirmation recorded"
+      "confirmed": "Supplier confirmation recorded",
+      "quoteExpired": "expired",
+      "quantityReason": "Why does the quoted quantity differ from the request?"
     },
     "status": {
       "DRAFT": "Draft",
@@ -1408,7 +1412,8 @@
       "markPaid": "Mark as paid",
       "paidToast": "Invoice marked as paid.",
       "attestNow": "Attest invoice match",
-      "attestedToast": "Invoice match attested."
+      "attestedToast": "Invoice match attested.",
+      "otherMustConfirm": "You recorded this receipt, so another person must confirm it."
     },
     "status": {
       "RECORDED": "Recorded",

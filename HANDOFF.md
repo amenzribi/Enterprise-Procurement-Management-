@@ -5,6 +5,7 @@
 - DONE: stabilization and Ledger redesign, commits `96da606` and `c67c733`.
 - DONE: verification of both and a fix batch. Results in [docs/design/verification-report.md](docs/design/verification-report.md).
 - DONE: the fix batch, committed on `stabilization-and-ledger-redesign` as the commit after `c67c733` and pushed to `enterprise` `main`. Re-verify: `git log --oneline -3` and `git ls-remote enterprise main`.
+- DONE: D-03 and D-07 rules, committed after `c3adb10` and pushed to `enterprise` `main`; verified as below. Re-verify: `git log --oneline -3` and `git ls-remote enterprise main`.
 - NOT STARTED: independent QA and review; layout redesign of sourcing, ordering, logistics, admin and messaging.
 
 **Readiness:** internal demo, yes. Hand-over to independent QA, yes. Pilot or production, no.
@@ -18,6 +19,8 @@ Ledger (Direction A), static sign-in. Defined in [DESIGN.md](DESIGN.md). Tokens:
 - D-01: a purchasing manager may accept a shortfall, with a reason, once every receipt is confirmed. Why: a rejected unit otherwise stranded the request.
 - D-02: purchasing marks an invoice paid; closure does not require payment. Why: matches sprint-7 closure rules.
 - An invoice may be recorded without attestation and attested later. Why: S7-AC-06 makes it optional, while closure requires it.
+- D-03: the person who recorded a receipt cannot confirm it. Why: one person should not both record and accept goods. Cost: a site needs a second eligible person.
+- D-07: expired quotes cannot be awarded, and a quantity different from the request needs a recorded reason. Why: an award should not commit beyond what was approved without an explanation.
 - Quotes stay out of the approval pane. Why: they come after approval in the real workflow.
 
 ## Changes
@@ -41,9 +44,9 @@ Remotes: `enterprise` (private; its `main` is at `c67c733`) and `origin` (same b
 
 ## Verification
 
-On `c67c733` plus the working tree (2026-11-09), detail in the report:
+On `c3adb10` plus the working tree (2026-11-09), detail in the report:
 
-- Passed: lint; unit 221/221; backend `verify -Pdb-it` 174/174; Playwright 58/58; build (second attempt; the first crashed Node with no compile error).
+- Passed: lint; unit 223/223; build; Playwright 58/58; closure journeys repeated 8/8; backend `verify -Pdb-it` 177/177 (run before the last change, which was one frontend line).
 - UNVERIFIED: screen reader; real touch devices; runtime performance against the baseline; native FR and AR review; independent QA.
 - Two fixes have no automated test: the last-page redirect after a decision, and the quote total overflow check.
 
@@ -51,16 +54,15 @@ Reports and screenshots: `docs/design/verification-report.md`, `docs/design/veri
 
 ## Blockers
 
-- D-03 and D-07 need a product decision. Unblocked by: the owner's answer.
 - Pilot needs independent QA, penetration test, MFA and restore drill.
 
 ## Open
 
-D-03, D-05, D-06, D-07, PERF-04, and low items R-1 to R-6, all in the verification report.
+D-05, D-06, PERF-04, and low items R-1 to R-6, all in the verification report.
 
 ## Next action
 
-Get the owner's decision on D-03 (who confirms a receipt) and D-07 (expired quotes), then hand this commit to independent QA using `docs/design/verification-report.md`.
+Hand the head of `enterprise` `main` to independent QA, using `docs/design/verification-report.md` as the starting point.
 
 When committing, do not add `docs/tooling.md` (the owner's preflight) or `.anchor/` (a plugin's session file).
 

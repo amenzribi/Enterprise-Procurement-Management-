@@ -1,47 +1,79 @@
-# Handoff
+# Handoff: Ledger verification (2026-11-09)
 
-Last update: 2026-11-08, after the stabilization pass and the Ledger redesign.
+## Status
 
-## State
+- DONE: stabilization and Ledger redesign, commits `96da606` and `c67c733`.
+- DONE: verification of both and a fix batch. Results in [docs/design/verification-report.md](docs/design/verification-report.md).
+- DONE: the fix batch, committed on `stabilization-and-ledger-redesign` as the commit after `c67c733` and pushed to `enterprise` `main`. Re-verify: `git log --oneline -3` and `git ls-remote enterprise main`.
+- NOT STARTED: independent QA and review; layout redesign of sourcing, ordering, logistics, admin and messaging.
 
-- `main` at `1b59c4e`, with **all work uncommitted**. Nothing is pushed.
-- New migrations: V18 (list index) and V19 (shortfall acceptance). They have been applied only to `procurement_test`; `procurement_dev` will migrate on next start.
-- `docs/tooling.md` holds the user's uncommitted Desktop preflight. Leave it as it is.
-- New dependencies: `@fontsource-variable/geist` and `geist-mono` (OFL-1.1).
+**Readiness:** internal demo, yes. Hand-over to independent QA, yes. Pilot or production, no.
 
-## Documents
+## Selected direction
 
-- Findings and verdict: [docs/reviews/stabilization-review.md](docs/reviews/stabilization-review.md)
-- Design system: [DESIGN.md](DESIGN.md)
-- Design results and gaps: [docs/design/design-qa.md](docs/design/design-qa.md)
-- Prototype comparison: [docs/design/prototype-comparison.md](docs/design/prototype-comparison.md)
+Ledger (Direction A), static sign-in. Defined in [DESIGN.md](DESIGN.md). Tokens: `FrontEnd/src/styles/_tokens.scss`. Approved preview: `docs/design/prototypes/index.html`.
 
-## Verified on the final code
+## Decisions
 
-Frontend lint, 218/218 unit tests and build. Backend `verify -Pdb-it` 171/171.
-Playwright: last full run 38/40; the 2 failures were outdated tests, since fixed and rerun individually. A full run after those fixes was not repeated.
+- D-01: a purchasing manager may accept a shortfall, with a reason, once every receipt is confirmed. Why: a rejected unit otherwise stranded the request.
+- D-02: purchasing marks an invoice paid; closure does not require payment. Why: matches sprint-7 closure rules.
+- An invoice may be recorded without attestation and attested later. Why: S7-AC-06 makes it optional, while closure requires it.
+- Quotes stay out of the approval pane. Why: they come after approval in the real workflow.
 
-**Not done:** independent QA and review, penetration test, MFA, restore drill, production-like load.
+## Changes
 
-## Verdict
+Branch `stabilization-and-ledger-redesign`. Commits `96da606`, `c67c733`, on `1b59c4e`.
+Remotes: `enterprise` (private; its `main` is at `c67c733`) and `origin` (same branch at `c67c733`; its `main` lacks this work).
 
-No open Major finding. Pilot or production remains a no-go until the items above are done.
+**Changed routes (no route was added or removed):**
+
+| Route | Change |
+|---|---|
+| `/overview` | Next-approval band, compact lists |
+| `/approvals` | Queue beside the decision from 64 rem |
+| `/requests`, `/requests/:id` | Restyled; "Created" column fixed; rebuilt receipt panel |
+| `/purchasing` | Secondary filters folded |
+| `/sign-in` | Static restyle |
+
+**API additions under `/api/v1/receipts/requests/{id}`:** `shortfall-acceptance`, `invoice/paid`, `invoice/match-attested`. Request list adds `createdAt`. Dossier adds `shortfallAccepted` and `purchaseOrder` with `receivable` per line.
+
+**Migrations:** V18 and V19, applied only to `procurement_test`. `procurement_dev` migrates at next start.
+
+## Verification
+
+On `c67c733` plus the working tree (2026-11-09), detail in the report:
+
+- Passed: lint; unit 221/221; backend `verify -Pdb-it` 174/174; Playwright 58/58; build (second attempt; the first crashed Node with no compile error).
+- UNVERIFIED: screen reader; real touch devices; runtime performance against the baseline; native FR and AR review; independent QA.
+- Two fixes have no automated test: the last-page redirect after a decision, and the quote total overflow check.
+
+Reports and screenshots: `docs/design/verification-report.md`, `docs/design/verification/`, `docs/design/design-qa.md`, `docs/design/after/`, `docs/design/baseline/`, `docs/reviews/stabilization-review.md`.
+
+## Blockers
+
+- D-03 and D-07 need a product decision. Unblocked by: the owner's answer.
+- Pilot needs independent QA, penetration test, MFA and restore drill.
 
 ## Open
 
-| ID | Question |
-|---|---|
-| D-03 | May a receiver confirm their own receipt? |
-| D-05 | Dashboards and exports stop at 5,000 requests without saying so. |
-| D-06 | Bursts of submissions in one company can get a retryable 503. |
-| D-07 | May expired quotes be awarded, and may quote quantity differ from the request? |
+D-03, D-05, D-06, D-07, PERF-04, and low items R-1 to R-6, all in the verification report.
 
-Design: sourcing, ordering, logistics, admin, messaging, forms, dialogs and notifications have the new tokens but no layout redesign.
+## Next action
 
-## Working notes
+Get the owner's decision on D-03 (who confirms a receipt) and D-07 (expired quotes), then hand this commit to independent QA using `docs/design/verification-report.md`.
 
-- Do not run Maven in the VS Code workspace while the Java extension builds: it overwrites `target/classes` mid-run. Use a copy outside the workspace.
-- Validation errors in this API are 422; invalid query parameters are 400.
-- Demo company admin scope covers all demo users, so it cannot exercise company-scoped pagination.
-- The 20-step Playwright test overwrites `docs/qa/evidence/`. Restore it unless new evidence is intended.
-- The initial bundle is 6.46 kB over its 500 kB budget.
+When committing, do not add `docs/tooling.md` (the owner's preflight) or `.anchor/` (a plugin's session file).
+
+## Skills Review
+
+- ✅ `supermatt:code-review`: three axes found four P1s in the receipt form that 171 passing backend tests had missed. Host-only; no external reviewer configured.
+- ✅ `design-superpowers:design-review`: run at L1 by reading tokens and screenshots. Confirmed RTL, density and focus token conformance.
+- ⚠️ `design-skills:accessibility-audit`: automated and keyboard layers done; screen reader layer not run.
+- ✅ `superpowers:verification-before-completion`: repeated runs exposed two intermittent races one pass would have hidden.
+- ❌ Earlier self-assessment: the receipt form was reported complete after happy-path tests only. Partial and split deliveries were broken.
+
+**Environment findings**
+
+- Automated checks: no CI gate runs Playwright. Propose a workflow that runs it on pull requests.
+- Automated checks: the 20-step journey overwrites tracked evidence on every run. Propose writing to an ignored folder unless a flag is set.
+- Standards: raw hex and `rgb()` in component styles are caught only in review. Propose a stylelint rule.

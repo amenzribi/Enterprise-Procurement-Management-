@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { USERS, signIn } from './support';
+import { USERS, createAndSubmit, newUserPage, signIn, uniqueTitle } from './support';
 
 /**
  * Wide-screen inbox: the queue sits beside the decision. Covers what the record-page journeys do not: choosing a row
@@ -8,11 +8,17 @@ import { USERS, signIn } from './support';
 test.describe('approval inbox split pane', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('a row is chosen with the keyboard and a decision advances the queue', async ({ page }) => {
+  test('a row is chosen with the keyboard and a decision advances the queue', async ({ page, browser }) => {
+    test.setTimeout(120_000);
+    const sami = await newUserPage(browser);
+    await signIn(sami, USERS.requesterTn, 'en');
+    await createAndSubmit(sami, 'en', uniqueTitle('Split one'));
+    await createAndSubmit(sami, 'en', uniqueTitle('Split two'));
+    await sami.context().close();
     await signIn(page, USERS.managerTn, 'en', '/approvals');
     const rows = page.locator('.card');
     await expect(rows.first()).toBeVisible({ timeout: 20_000 });
-    test.skip((await rows.count()) < 2, 'needs two pending approvals');
+    await expect(rows.nth(1)).toBeVisible();
 
     const second = rows.nth(1);
     const secondTitle = (await second.locator('.card-title').innerText()).trim();

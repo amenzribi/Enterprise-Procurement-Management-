@@ -17,7 +17,7 @@ function dossier(changes: Partial<ReceiptDossier> = {}): ReceiptDossier {
     closure: { ready: false, missing: [], closed: false, rating: null },
     serviceAccepted: false,
     shortfallAccepted: false,
-    purchaseOrder: { currency: 'EUR', total: 35, lines: [{ id: 11, description: 'Seal', quantity: 4, unit: 'PCE', received: 1 }] },
+    purchaseOrder: { currency: 'EUR', total: 35, lines: [{ id: 11, description: 'Seal', quantity: 4, unit: 'PCE', received: 1, receivable: 3 }] },
     ...changes,
   };
 }
@@ -69,6 +69,43 @@ describe('ReceiptActions', () => {
 
     const body = http.expectOne('/api/v1/receipts/requests/42/goods-receipts').request.body;
     expect(body.lines[0]).toMatchObject({ purchaseOrderLineId: 11, quantityReceived: 3, quantityAccepted: 2, quantityRejected: 1 });
+  });
+
+  it('leaves out a line entered as 0 and keeps fractional remainders exact', async () => {
+    const lines = [
+      { id: 11, description: 'Seal', quantity: 0.3, unit: 'KG', received: 0.1, receivable: 0.2 },
+      { id: 12, description: 'Gasket', quantity: 2, unit: 'PCE', received: 0, receivable: 2 },
+    ];
+    await open('DELIVERED', dossier({ purchaseOrder: { currency: 'EUR', total: 35, lines } }));
+    expect(element().querySelector<HTMLInputElement>('#rcpt-received-11')!.value).toBe('0.2');
+    const gasket = element().querySelector<HTMLInputElement>('#rcpt-received-12')!;
+    gasket.value = '0';
+    gasket.dispatchEvent(new Event('input'));
+    element().querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    const body = http.expectOne('/api/v1/receipts/requests/42/goods-receipts').request.body;
+    expect(body.lines.map((l: { purchaseOrderLineId: number }) => l.purchaseOrderLineId)).toEqual([11]);
+  });
+
+  it('starts a second receipt from the new remaining quantity', async () => {
+    await open('DELIVERED', dossier());
+    const received = element().querySelector<HTMLInputElement>('#rcpt-received-11')!;
+    received.value = '1';
+    received.dispatchEvent(new Event('input'));
+    element().querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    http.expectOne('/api/v1/receipts/requests/42/goods-receipts').flush({});
+    const next = { currency: 'EUR', total: 35, lines: [{ id: 11, description: 'Seal', quantity: 4, unit: 'PCE', received: 2, receivable: 2 }] };
+    http.expectOne('/api/v1/receipts/requests/42').flush(dossier({ purchaseOrder: next }));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(element().querySelector<HTMLInputElement>('#rcpt-received-11')!.value).toBe('2');
+  });
+
+  it('lets purchasing attest a recorded invoice', async () => {
+    const invoice = { id: 1, invoiceNumber: 'I', amount: 35, currency: 'EUR', documentReference: null, matchAttested: false, paymentStatus: 'PENDING' };
+    await open('INVOICED', dossier({ invoice }));
+    const button = [...element().querySelectorAll('button')].find((b) => b.textContent?.includes('receipt.actions.attestNow'))!;
+    button.click();
+    expect(http.expectOne('/api/v1/receipts/requests/42/invoice/match-attested').request.body).toEqual({ requestVersion: 3 });
   });
 
   it('offers acceptance with shortfall only once every receipt is confirmed', async () => {

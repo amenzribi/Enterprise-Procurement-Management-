@@ -72,6 +72,11 @@ class ReceiptController {
 		return receipts.markInvoicePaid(currentUser.require(), requestId, body);
 	}
 
+	@PostMapping("/requests/{requestId}/invoice/match-attested")
+	ReceiptDossierView invoiceAttested(@PathVariable long requestId, @RequestBody InvoiceAttestBody body) {
+		return receipts.attestInvoiceMatch(currentUser.require(), requestId, body);
+	}
+
 	@PostMapping("/requests/{requestId}/close")
 	ResponseEntity<?> close(@PathVariable long requestId, @RequestBody(required = false) CloseBody body,
 			@RequestHeader(name = Idempotency.HEADER, required = false) String key) {

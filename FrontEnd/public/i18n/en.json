@@ -297,7 +297,8 @@
     "archived": "Restore the request from the archive before this action, or leave the archived history as-is.",
     "unconfirmed-receipts": "Confirm every receipt first.",
     "already-paid": "This invoice is already marked as paid.",
-    "not-invoiced": "Record the invoice first."
+    "not-invoiced": "Record the invoice first.",
+    "already-attested": "This invoice match is already attested."
   },
   "auth": {
     "signOut": "Sign out",
@@ -1405,7 +1406,9 @@
       "shortfallAccept": "Accept with shortfall",
       "shortfallAccepted": "Accepted with shortfall.",
       "markPaid": "Mark as paid",
-      "paidToast": "Invoice marked as paid."
+      "paidToast": "Invoice marked as paid.",
+      "attestNow": "Attest invoice match",
+      "attestedToast": "Invoice match attested."
     },
     "status": {
       "RECORDED": "Recorded",

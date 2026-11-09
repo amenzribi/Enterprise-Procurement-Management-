@@ -172,6 +172,7 @@ class SourcingIntegrationTests extends SqlServerTestSupport {
 		ines.post("/api/v1/sourcing/requests/" + id + "/validate-technical",
 				"{\"requestVersion\":" + version + ",\"comment\":\"Fits\"}").expectStatus(200);
 		anon.post("/api/v1/quote-links/submit", body).expectStatus(404);
+		anon.post("/api/v1/quote-links/summary", "{\"token\":" + JSON.writeValueAsString(token) + "}").expectStatus(404);
 	}
 
 	@Test

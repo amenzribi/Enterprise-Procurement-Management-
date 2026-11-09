@@ -157,6 +157,10 @@ class ReceiptStore {
 				invoiceId);
 	}
 
+	void attestInvoiceMatch(long invoiceId) {
+		jdbc.update("UPDATE supplier_invoice SET match_attested = 1, version = version + 1 WHERE id = ?", invoiceId);
+	}
+
 	boolean hasShortfallAcceptance(long requestId) {
 		Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM shortfall_acceptance WHERE request_id = ?", Integer.class,
 				requestId);

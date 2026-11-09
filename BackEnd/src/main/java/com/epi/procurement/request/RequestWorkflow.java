@@ -517,6 +517,14 @@ public class RequestWorkflow {
 				reason == null ? "finance" : reason));
 	}
 
+	/** Advances the request version after a change held elsewhere, so another open screen sees it as stale. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void touchForAudit(long id, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
+	}
+
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void closeRequest(long id, long actorUserId, Instant now, String reason) {
 		PurchaseRequest request = requests.getForSystemUpdate(id);

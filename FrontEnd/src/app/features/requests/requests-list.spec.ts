@@ -73,6 +73,7 @@ describe('RequestsListPage', () => {
 
     const headers = element().querySelectorAll('thead th').length;
     expect(headers).toBeGreaterThan(0);
+    expect(element().querySelectorAll('tbody tr').length).toBeGreaterThan(0);
     element()
       .querySelectorAll('tbody tr')
       .forEach((row) => expect(row.querySelectorAll('td').length).toBe(headers));

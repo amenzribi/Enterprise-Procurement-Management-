@@ -120,7 +120,7 @@ export function gapList(item: QueueItem): string {
           }
         </select>
       </div>
-      <details class="more" [open]="advancedCount() > 0">
+      <details class="more" [open]="advancedOpen()" (toggle)="advancedOpen.set($any($event.target).open)">
         <summary>
           {{ 'purchasing.inbox.moreFilters' | translate }}
           @if (advancedCount() > 0) {
@@ -321,7 +321,10 @@ export class PurchasingInboxPage {
 
   private readonly reload$ = new Subject<void>();
 
+  protected readonly advancedOpen = signal(false);
+
   constructor() {
+    this.advancedOpen.set(this.advancedCount() > 0);
     const destroyRef = inject(DestroyRef);
     this.api.filterOptions().pipe(takeUntilDestroyed(destroyRef)).subscribe({
       next: (options) => this.options.set(options),
@@ -362,7 +365,7 @@ export class PurchasingInboxPage {
     this.count.refresh();
   }
 
-  /** Filters folded under "More filters"; the panel stays open while any is applied. */
+  /** Filters folded under "More filters"; open on arrival when one is applied, then left as the user sets it. */
   protected advancedCount(): number {
     const q = this.query();
     return [q.purchaseMode, q.buyingCompanyId, q.countryCode, q.categoryId, q.buyerUserId, q.requesterUserId, q.complete, q.requiredFrom, q.requiredTo, q.amountMin, q.amountMax].filter(

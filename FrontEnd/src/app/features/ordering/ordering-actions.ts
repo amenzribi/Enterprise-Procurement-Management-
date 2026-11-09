@@ -21,7 +21,7 @@ import { AwardView, PurchaseOrderView } from './ordering.models';
       <section class="panel decide" aria-labelledby="ordering-title">
         <h2 class="panel-title" id="ordering-title">{{ 'ordering.actions.title' | translate }}</h2>
         @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
+          <p class="error" role="alert">{{ 'errors.' + error() | translate }}</p>
         }
 
         @if (!award() && canAward()) {
@@ -122,6 +122,10 @@ export class OrderingActions {
       const status = this.request().status;
       const id = this.request().id;
       untracked(() => {
+        if (this.awaitingRequest) {
+          this.awaitingRequest = false;
+          this.busy.set(false);
+        }
         const show =
           status === 'COMMERCIAL_VALIDATION' ||
           status === 'MANAGEMENT_VALIDATION' ||
@@ -171,7 +175,9 @@ export class OrderingActions {
       )
       .subscribe({
         next: (award) => {
-          this.busy.set(false);
+          // Stay busy until the parent delivers the new request version: the next action must send it.
+          this.awaitingRequest = true;
+          this.reloadSeq++;
           this.award.set(award);
           this.notifications.success('ordering.actions.awarded');
           this.changed.emit();
@@ -201,6 +207,7 @@ export class OrderingActions {
       .subscribe({
         next: (po) => {
           this.busy.set(false);
+          this.reloadSeq++;
           this.po.set(po);
           this.notifications.success('ordering.actions.poCreated');
           this.changed.emit();
@@ -222,6 +229,7 @@ export class OrderingActions {
     this.api.issue(po.id, po.version, newIdempotencyKey()).subscribe({
       next: (updated) => {
         this.busy.set(false);
+        this.reloadSeq++;
         this.po.set(updated);
         this.notifications.success('ordering.actions.issued');
         this.changed.emit();
@@ -243,6 +251,7 @@ export class OrderingActions {
     this.api.confirm(po.id, po.version, this.confirmationNote().trim(), newIdempotencyKey()).subscribe({
       next: (updated) => {
         this.busy.set(false);
+        this.reloadSeq++;
         this.po.set(updated);
         this.notifications.success('ordering.actions.confirmed');
         this.changed.emit();
@@ -254,16 +263,36 @@ export class OrderingActions {
     });
   }
 
+  private awaitingRequest = false;
+
+  /** Identifies the newest reload, so a slower, older response cannot overwrite it. */
+  private reloadSeq = 0;
+
   private reload(requestId: number, status: string): void {
+    const seq = ++this.reloadSeq;
     this.api.getAward(requestId).subscribe({
       next: (award) => {
+        if (seq !== this.reloadSeq) {
+          return;
+        }
         this.award.set(award);
         this.api.getPo(requestId).subscribe({
-          next: (po) => this.po.set(po),
-          error: () => this.po.set(null),
+          next: (po) => {
+            if (seq === this.reloadSeq) {
+              this.po.set(po);
+            }
+          },
+          error: () => {
+            if (seq === this.reloadSeq) {
+              this.po.set(null);
+            }
+          },
         });
       },
       error: () => {
+        if (seq !== this.reloadSeq) {
+          return;
+        }
         this.award.set(null);
         this.po.set(null);
         if (status === 'COMMERCIAL_VALIDATION' || status === 'MANAGEMENT_VALIDATION') {

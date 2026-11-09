@@ -83,7 +83,7 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
               <label class="label" for="rcpt-photo">{{ 'receipt.actions.photoRef' | translate }}</label>
               <input id="rcpt-photo" [value]="photoRef()" (input)="photoRef.set($any($event.target).value)" />
               <p class="muted small">{{ 'receipt.actions.photoHint' | translate }}</p>
-              <button appButton type="submit" [disabled]="busy()">{{ 'receipt.actions.record' | translate }}</button>
+              <button appButton type="submit" [disabled]="busy() || receiptLines().length === 0">{{ 'receipt.actions.record' | translate }}</button>
             </form>
           }
 
@@ -105,6 +105,9 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
                 · {{ 'receipt.actions.matchAttested' | translate }}
               }
             </p>
+            @if (!inv.matchAttested && canInvoice()) {
+              <button appButton variant="secondary" type="button" [disabled]="busy()" (click)="attest()">{{ 'receipt.actions.attestNow' | translate }}</button>
+            }
             @if (inv.paymentStatus === 'PENDING' && canInvoice()) {
               <button appButton variant="secondary" type="button" [disabled]="busy()" (click)="markPaid()">{{ 'receipt.actions.markPaid' | translate }}</button>
             }
@@ -112,7 +115,7 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
             <form class="form" (submit)="$event.preventDefault(); saveInvoice()" novalidate>
               <label class="label" for="inv-no">{{ 'receipt.actions.invoiceNumber' | translate }}</label>
               <input id="inv-no" [value]="invoiceNo()" (input)="invoiceNo.set($any($event.target).value)" />
-              <label class="label" for="inv-amt">{{ 'receipt.actions.invoiceAmount' | translate }}</label>
+              <label class="label" for="inv-amt">{{ 'receipt.actions.invoiceAmount' | translate }} ({{ d.purchaseOrder?.currency ?? request().currency }})</label>
               <input id="inv-amt" type="number" step="0.01" [value]="invoiceAmount()" (input)="invoiceAmount.set($any($event.target).value)" />
               <label class="label" for="inv-doc">{{ 'receipt.actions.docRef' | translate }}</label>
               <input id="inv-doc" [value]="docRef()" (input)="docRef.set($any($event.target).value)" />
@@ -250,7 +253,12 @@ export class ReceiptActions {
   }
 
   protected openLines() {
-    return (this.dossier()?.purchaseOrder?.lines ?? []).filter((line) => Number(line.received) < Number(line.quantity));
+    return (this.dossier()?.purchaseOrder?.lines ?? []).filter((line) => Number(line.receivable) > 0);
+  }
+
+  /** A line that did not arrive is left out of the receipt: entering 0 means "not in this delivery". */
+  protected receiptLines() {
+    return this.openLines().filter((line) => Number(this.draft(line.id).received) > 0);
   }
 
   protected draft(lineId: number): ReceiptLineDraft {
@@ -294,7 +302,7 @@ export class ReceiptActions {
           requestVersion: this.request().version,
           note: this.note().trim() || undefined,
           evidence,
-          lines: this.openLines().map((line) => ({
+          lines: this.receiptLines().map((line) => ({
             purchaseOrderLineId: line.id,
             quantityReceived: Number(this.draft(line.id).received),
             quantityAccepted: Number(this.draft(line.id).accepted),
@@ -309,6 +317,7 @@ export class ReceiptActions {
         next: () => {
           this.busy.set(false);
           this.notifications.success('receipt.actions.recorded');
+          this.drafts.set({});
           this.changed.emit();
           this.reload(this.request().id);
         },
@@ -379,6 +388,22 @@ export class ReceiptActions {
     });
   }
 
+  attest(): void {
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.attestMatch(this.request().id, { requestVersion: this.request().version }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notifications.success('receipt.actions.attestedToast');
+        this.changed.emit();
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.error.set(toApiProblem(error).code);
+      },
+    });
+  }
+
   markPaid(): void {
     this.busy.set(true);
     this.error.set(null);
@@ -424,7 +449,7 @@ export class ReceiptActions {
   private prefill(d: ReceiptDossier): void {
     const next: Record<number, ReceiptLineDraft> = {};
     for (const line of d.purchaseOrder?.lines ?? []) {
-      const remaining = String(Number(line.quantity) - Number(line.received));
+      const remaining = String(Number(line.receivable));
       next[line.id] = this.drafts()[line.id] ?? { received: remaining, accepted: remaining, rejected: '0', condition: 'OK' };
     }
     this.drafts.set(next);
@@ -433,13 +458,23 @@ export class ReceiptActions {
     }
   }
 
+  /** Identifies the newest reload, so a slower, older response cannot overwrite it. */
+  private reloadSeq = 0;
+
   private reload(requestId: number): void {
+    const seq = ++this.reloadSeq;
     this.api.dossier(requestId).subscribe({
       next: (d) => {
-        this.dossier.set(d);
-        this.prefill(d);
+        if (seq === this.reloadSeq) {
+          this.dossier.set(d);
+          this.prefill(d);
+        }
       },
-      error: () => this.dossier.set(null),
+      error: () => {
+        if (seq === this.reloadSeq) {
+          this.dossier.set(null);
+        }
+      },
     });
   }
 }

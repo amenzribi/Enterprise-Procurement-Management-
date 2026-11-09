@@ -283,6 +283,24 @@ class ReceiptService {
 		return buildDossier(after);
 	}
 
+	/** Attests the invoice match after the invoice was recorded without it; closure requires the attestation. */
+	@Transactional
+	ReceiptDossierView attestInvoiceMatch(CurrentUser user, long requestId, InvoiceAttestBody body) {
+		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
+		requireBuyer(user, request);
+		requireRequestVersion(body == null ? null : body.requestVersion(), request);
+		ReceiptStore.InvoiceRow invoice = store.findInvoice(requestId)
+			.orElseThrow(() -> ApiProblemException.conflict("not-invoiced", "Record the invoice first."));
+		if (invoice.matchAttested()) {
+			throw ApiProblemException.conflict("already-attested", "This invoice match is already attested.");
+		}
+		store.attestInvoiceMatch(invoice.id());
+		requests.touchForAudit(requestId, user.id(), clock.instant());
+		RequestSnapshot after = requests.currentLocked(requestId);
+		audit(user, after, "INVOICE_MATCH_ATTESTED", after.status(), null, "{\"invoiceId\":" + invoice.id() + "}");
+		return buildDossier(after);
+	}
+
 	/** Records payment of a pending invoice (D-02). Closure does not depend on it, so it may follow closure. */
 	@Transactional
 	ReceiptDossierView markInvoicePaid(CurrentUser user, long requestId, InvoicePaidBody body) {
@@ -394,8 +412,13 @@ class ReceiptService {
 			.map(po -> new PurchaseOrderSummary(po.currency(), po.totalAmount(),
 					store.poLines(po.id())
 						.stream()
-						.map(l -> new PurchaseOrderLineSummary(l.id(), l.description(), l.quantity(), l.unit(),
-								store.receivedQuantity(l.id())))
+						.map(l -> {
+							BigDecimal received = store.receivedQuantity(l.id());
+							BigDecimal cap = store.shippedQuantity(l.id());
+							BigDecimal limit = cap.signum() > 0 ? cap : l.quantity();
+							return new PurchaseOrderLineSummary(l.id(), l.description(), l.quantity(), l.unit(), received,
+									limit.subtract(received).max(BigDecimal.ZERO));
+						})
 						.toList()))
 			.orElse(null);
 	}

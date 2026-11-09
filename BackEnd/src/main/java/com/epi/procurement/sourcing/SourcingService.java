@@ -160,6 +160,10 @@ class SourcingService {
 	PublicSummary publicSummary(String token) {
 		TokenContext ctx = requireValidToken(token);
 		SourcingStore.RfqRow rfq = store.findRfq(ctx.supplier().rfqId()).orElseThrow(ApiProblemException::notFound);
+		RequestSnapshot request = requests.find(rfq.requestId()).orElseThrow(ApiProblemException::notFound);
+		if (!acceptsSupplierQuotes(rfq, request.status())) {
+			throw ApiProblemException.notFound();
+		}
 		boolean submitted = store.findQuoteByRfqSupplier(ctx.supplier().id()).isPresent();
 		List<RfqLineView> lines = store.lines(rfq.id())
 			.stream()
@@ -179,8 +183,7 @@ class SourcingService {
 		// Same lock as the buyer path: a double submit must not race on the one-quote-per-supplier constraint.
 		RequestSnapshot locked = requests.lockForApproval(requestId);
 		SourcingStore.RfqRow rfq = store.findRfq(ctx.supplier().rfqId()).orElseThrow(ApiProblemException::notFound);
-		if (!"OPEN".equals(rfq.status())
-				|| (!"SOURCING".equals(locked.status()) && !"QUOTES_RECEIVED".equals(locked.status()))) {
+		if (!acceptsSupplierQuotes(rfq, locked.status())) {
 			// Neutral 404 for anonymous callers (S4SL-08) — do not reveal RFQ state.
 			throw ApiProblemException.notFound();
 		}
@@ -310,6 +313,9 @@ class SourcingService {
 		BigDecimal freight = charge(body.freightAmount(), minorUnits, "freightAmount");
 		BigDecimal duty = charge(body.dutyAmount(), minorUnits, "dutyAmount");
 		BigDecimal other = charge(body.otherAmount(), minorUnits, "otherAmount");
+		if (merchandise.add(freight).add(duty).add(other).compareTo(MAX_AMOUNT) >= 0) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("lines", "invalid-price")));
+		}
 		Long existing = store.findQuoteByRfqSupplier(supplier.id()).map(SourcingStore.QuoteRow::id).orElse(null);
 		long quoteId = store.upsertQuote(existing, rfq.id(), supplier.id(), supplier.supplierId(), currency,
 				body.validUntil(), body.leadTimeDays(), trim(body.paymentTerms()), trim(body.incoterm()),
@@ -450,6 +456,10 @@ class SourcingService {
 		catch (NoSuchAlgorithmException ex) {
 			throw new IllegalStateException(ex);
 		}
+	}
+
+	private static boolean acceptsSupplierQuotes(SourcingStore.RfqRow rfq, String requestStatus) {
+		return "OPEN".equals(rfq.status()) && ("SOURCING".equals(requestStatus) || "QUOTES_RECEIVED".equals(requestStatus));
 	}
 
 	/** An optional charge: never negative (it would lower the landed cost), rounded to the currency's minor units. */

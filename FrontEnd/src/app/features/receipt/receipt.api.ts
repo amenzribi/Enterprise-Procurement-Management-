@@ -30,6 +30,10 @@ export class ReceiptApi {
     return this.http.post<ReceiptDossier>(`${API}/requests/${requestId}/shortfall-acceptance`, body);
   }
 
+  attestMatch(requestId: number, body: { requestVersion: number }): Observable<ReceiptDossier> {
+    return this.http.post<ReceiptDossier>(`${API}/requests/${requestId}/invoice/match-attested`, body);
+  }
+
   markPaid(requestId: number, body: { requestVersion: number }): Observable<ReceiptDossier> {
     return this.http.post<ReceiptDossier>(`${API}/requests/${requestId}/invoice/paid`, body);
   }

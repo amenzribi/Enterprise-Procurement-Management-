@@ -23,6 +23,8 @@ Functional reference: Solution Guide v3.0 (`docs/specification/…_Solution_Guid
 
 Use `mvnw.cmd`, not `./mvnw` from Git Bash (certificate revocation check fails).
 
+Run Maven from a copy outside the VS Code workspace: the Java extension rewrites `target/classes` during test runs and causes false failures. The Playwright 20-step journey overwrites `docs/qa/evidence/`; restore it with `git checkout -- docs/qa/evidence` unless new evidence is intended.
+
 ## Conventions
 
 - Modules = top-level packages under `com.epi.procurement`; create a module only when it has code; the Modulith verification test must pass.

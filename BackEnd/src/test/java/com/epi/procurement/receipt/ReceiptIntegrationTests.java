@@ -291,6 +291,49 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		assertThat((List<?>) first.json("$.items")).hasSize(1);
 		assertThat((Object) first.json("$.items[0].poId")).isNotEqualTo(second.json("$.items[0].poId"));
 		signedIn("requester.tn@demo.local").get("/api/v1/logistics/inbox").expectStatus(403);
+
+		// A purchase order of another buying company leaves this buyer's inbox.
+		long moved = ((Number) first.json("$.items[0].poId")).longValue();
+		long otherCompany = jdbc.queryForObject("""
+				SELECT TOP 1 id FROM company WHERE code = 'DEMO-FR-PLT'""", Long.class);
+		jdbc.update("UPDATE purchase_order SET buying_company_id = ? WHERE id = ?", otherCompany, moved);
+		ApiClient.Response after = ines.get("/api/v1/logistics/inbox?page=0&size=100").expectStatus(200);
+		assertThat(((Number) after.json("$.totalItems")).longValue()).isEqualTo(expected - 1);
+		assertThat((List<Number>) after.json("$.items[*].poId")).extracting(Number::longValue).doesNotContain(moved);
+	}
+
+	@Test
+	void anUnattestedInvoiceCanBeAttestedAndThenClosed() {
+		long id = accepted("Attest later");
+		ApiClient ines = signedIn("buyer@demo.local");
+		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion", version,
+				"invoiceNumber", "INV-L", "amount", 35, "currency", "EUR", "matchAttested", false))).expectStatus(200);
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		version = ((Number) sami.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version + "}").expectStatus(409);
+
+		signedIn("requester.fr@demo.local").post("/api/v1/receipts/requests/" + id + "/invoice/match-attested",
+				"{\"requestVersion\":" + version + "}").expectStatus(404);
+		sami.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
+			.expectStatus(403);
+		ines.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
+			.expectStatus(200);
+		version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		ines.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
+			.expectStatus(409);
+		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version + "}").expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("CLOSED");
+	}
+
+	@Test
+	void dossierLimitsReceivableQuantityToWhatWasShipped() {
+		long id = delivered("Receivable cap");
+		long poLine = poLineId(id);
+		jdbc.update("UPDATE purchase_order_line SET quantity = 4 WHERE id = ?", poLine);
+		ApiClient.Response dossier = signedIn("buyer@demo.local").get("/api/v1/receipts/requests/" + id).expectStatus(200);
+		assertThat(((Number) dossier.json("$.purchaseOrder.lines[0].quantity")).doubleValue()).isEqualTo(4d);
+		assertThat(((Number) dossier.json("$.purchaseOrder.lines[0].receivable")).doubleValue()).isEqualTo(1d);
 	}
 
 	private long poLineId(long id) {

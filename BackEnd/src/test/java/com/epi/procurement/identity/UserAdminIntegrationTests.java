@@ -123,6 +123,24 @@ class UserAdminIntegrationTests extends SqlServerTestSupport {
 	}
 
 	@Test
+	void companyAdminCannotRemoveARoleFromAGlobalAdmin() {
+		long adminCompany = jdbc.queryForObject("""
+				SELECT TOP 1 company_id FROM user_role WHERE role = 'ADMIN' AND company_id IS NOT NULL
+				AND user_id = (SELECT id FROM user_account WHERE email = 'admin@demo.local')""", Long.class);
+		ApiClient global = signedIn("global.admin@demo.local");
+		long globalId = ((Number) global.get("/api/v1/me").expectStatus(200).json("$.id")).longValue();
+		global.post("/api/v1/admin/accounts/" + globalId + "/roles", """
+				{"role":"BUYER","companyId":%d,"departmentId":null}
+				""".formatted(adminCompany)).expectStatus(200);
+		long grantId = jdbc.queryForObject("SELECT id FROM user_role WHERE user_id = ? AND role = 'BUYER' AND company_id = ?",
+				Long.class, globalId, adminCompany);
+		signedIn("admin@demo.local").post("/api/v1/admin/accounts/" + globalId + "/roles/" + grantId + "/remove", "{}").expectStatus(403);
+		// Changing a role ends that account's sessions, so the clean-up signs in again.
+		signedIn("global.admin@demo.local").post("/api/v1/admin/accounts/" + globalId + "/roles/" + grantId + "/remove", "{}")
+			.expectStatus(200);
+	}
+
+	@Test
 	void secondGlobalAdminCanBeDeactivatedButNotBelowOne() {
 		ApiClient admin = signedIn("global.admin@demo.local");
 		long companyId = ((Number) admin.get("/api/v1/admin/organization/companies").expectStatus(200).json("$[0].id"))

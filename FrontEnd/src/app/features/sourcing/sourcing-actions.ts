@@ -204,6 +204,7 @@ export class SourcingActions {
     this.api.createRfq(this.request().id, { kind: this.kind(), supplierIds: [this.supplierId()!] }, newIdempotencyKey()).subscribe({
       next: (rfq) => {
         this.busy.set(false);
+        this.reloadSeq++; // This response is newer than any load still in flight.
         this.rfq.set(rfq);
         this.notifications.success('sourcing.actions.created');
         this.changed.emit();
@@ -303,20 +304,38 @@ export class SourcingActions {
     });
   }
 
+  /** Identifies the newest load, so a slower, older response cannot overwrite it. */
+  private reloadSeq = 0;
+
   private loadRfq(requestId: number): void {
+    const seq = ++this.reloadSeq;
     this.api.getRfq(requestId).subscribe({
       next: (rfq) => {
+        if (seq !== this.reloadSeq) {
+          return;
+        }
         this.rfq.set(rfq);
         if (!rfq) {
           this.comparison.set(null);
           return;
         }
         this.api.comparison(rfq.id).subscribe({
-          next: (cmp) => this.comparison.set(cmp),
-          error: () => this.comparison.set(null),
+          next: (cmp) => {
+            if (seq === this.reloadSeq) {
+              this.comparison.set(cmp);
+            }
+          },
+          error: () => {
+            if (seq === this.reloadSeq) {
+              this.comparison.set(null);
+            }
+          },
         });
       },
       error: () => {
+        if (seq !== this.reloadSeq) {
+          return;
+        }
         this.rfq.set(null);
         this.comparison.set(null);
       },

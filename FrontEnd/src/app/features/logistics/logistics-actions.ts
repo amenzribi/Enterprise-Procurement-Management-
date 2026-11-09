@@ -274,20 +274,36 @@ export class LogisticsActions {
       });
   }
 
+  /** Identifies the newest reload, so a slower, older response cannot overwrite it. */
+  private reloadSeq = 0;
+
   private reload(requestId: number): void {
+    const seq = ++this.reloadSeq;
     this.orderingApi.getPo(requestId).subscribe({
       next: (po) => {
-        this.poConfirmed.set(po.status === 'CONFIRMED');
-        this.poNumber.set(po.number ?? null);
+        if (seq === this.reloadSeq) {
+          this.poConfirmed.set(po.status === 'CONFIRMED');
+          this.poNumber.set(po.number ?? null);
+        }
       },
       error: () => {
-        this.poConfirmed.set(false);
-        this.poNumber.set(null);
+        if (seq === this.reloadSeq) {
+          this.poConfirmed.set(false);
+          this.poNumber.set(null);
+        }
       },
     });
     this.api.list(requestId).subscribe({
-      next: (list) => this.shipments.set(list),
-      error: () => this.shipments.set([]),
+      next: (list) => {
+        if (seq === this.reloadSeq) {
+          this.shipments.set(list);
+        }
+      },
+      error: () => {
+        if (seq === this.reloadSeq) {
+          this.shipments.set([]);
+        }
+      },
     });
   }
 }

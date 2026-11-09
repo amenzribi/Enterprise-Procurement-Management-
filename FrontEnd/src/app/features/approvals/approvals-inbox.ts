@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -188,7 +188,7 @@ export function inboxQueryFromParams(params: ParamMap): InboxQuery {
           @if (split() && selected(); as item) {
             <section class="pane" [attr.aria-label]="'approvals.decide.title' | translate">
               <p class="card-number tabular"><bdi>{{ item.number ?? '—' }}</bdi></p>
-              <h2 class="pane-title">{{ item.title }}</h2>
+              <h2 class="pane-title" tabindex="-1">{{ item.title }}</h2>
               <dl class="facts">
                 <div>
                   <dt>{{ 'approvals.inbox.facts.amount' | translate }}</dt>
@@ -275,6 +275,10 @@ export class ApprovalsInboxPage {
   protected readonly paneState = signal<PageState>('loading');
   protected readonly leaving = signal<number | null>(null);
   private paneKey: number | null = null;
+  /** Reloading after a decision keeps the queue on screen, so focus and scroll position have somewhere to stay. */
+  private keepContent = false;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -287,7 +291,9 @@ export class ApprovalsInboxPage {
     this.reload$
       .pipe(
         switchMap(() => {
-          this.state.set('loading');
+          if (!this.keepContent) {
+            this.state.set('loading');
+          }
           return this.api.inbox(this.query()).pipe(
             map((page): LoadResult => ({ kind: 'ready', page })),
             catchError((error: unknown) => of<LoadResult>({ kind: 'error', problem: toApiProblem(error) })),
@@ -296,9 +302,20 @@ export class ApprovalsInboxPage {
         takeUntilDestroyed(destroyRef),
       )
       .subscribe((result) => {
+        const afterDecision = this.keepContent;
+        this.keepContent = false;
         if (result.kind === 'ready') {
+          const lastPage = Math.max(0, Math.ceil(result.page.totalItems / PAGE_SIZE) - 1);
+          if (result.page.items.length === 0 && this.query().page > lastPage) {
+            // The decision emptied the last page: show the page before it, not a false "nothing to do".
+            this.navigate({ page: lastPage || null });
+            return;
+          }
           this.page.set(result.page);
           this.state.set('ready');
+          if (afterDecision) {
+            this.moveFocusToNext();
+          }
         } else if (result.problem.status !== 401) {
           this.error.set(result.problem.code);
           this.state.set('error');
@@ -355,19 +372,34 @@ export class ApprovalsInboxPage {
     this.chosenId.set(item.taskId);
   }
 
+  /** The control that had focus left with the decided row: continue on the next item, or the page if none remain. */
+  private moveFocusToNext(): void {
+    afterNextRender(
+      {
+        read: () => {
+          const title = this.host.nativeElement.querySelector<HTMLElement>('.pane-title');
+          (title ?? document.getElementById('main'))?.focus();
+        },
+      },
+      { injector: this.injector },
+    );
+  }
+
   protected loadPane(item: InboxItem): void {
     this.paneLoad$.next(item);
   }
 
   /** The decision is already saved: the row leaves, then the queue reloads and the next item takes the pane. */
   protected onDecided(item: InboxItem): void {
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     this.leaving.set(item.taskId);
     setTimeout(() => {
       this.leaving.set(null);
       this.chosenId.set(null);
       this.paneKey = null;
+      this.keepContent = true;
       this.load();
-    }, DECISION_EXIT_MS);
+    }, reducedMotion ? 0 : DECISION_EXIT_MS);
   }
 
   protected navigate(changes: Record<string, string | number | null>): void {

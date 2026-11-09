@@ -10,7 +10,7 @@ export interface ReceiptDossier {
 export interface PurchaseOrderSummary {
   currency: string;
   total: number;
-  lines: { id: number; description: string; quantity: number; unit: string; received: number }[];
+  lines: { id: number; description: string; quantity: number; unit: string; received: number; receivable: number }[];
 }
 
 export interface ReceiptLineDraft {

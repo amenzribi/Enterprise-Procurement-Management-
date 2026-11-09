@@ -297,7 +297,8 @@
     "archived": "Restaurez d’abord la demande de l’archive, ou laissez l’historique archivé tel quel.",
     "unconfirmed-receipts": "Confirmez d’abord toutes les réceptions.",
     "already-paid": "Cette facture est déjà marquée comme payée.",
-    "not-invoiced": "Enregistrez d’abord la facture."
+    "not-invoiced": "Enregistrez d’abord la facture.",
+    "already-attested": "La concordance de cette facture est déjà attestée."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -1405,7 +1406,9 @@
       "shortfallAccept": "Accepter avec écart",
       "shortfallAccepted": "Accepté avec écart.",
       "markPaid": "Marquer comme payée",
-      "paidToast": "Facture marquée comme payée."
+      "paidToast": "Facture marquée comme payée.",
+      "attestNow": "Attester la concordance de la facture",
+      "attestedToast": "Concordance de la facture attestée."
     },
     "status": {
       "RECORDED": "Enregistrée",

@@ -57,11 +57,15 @@ record ReceiptDossierView(List<ReceiptView> receipts, InvoiceView invoice, Closu
 record PurchaseOrderSummary(String currency, BigDecimal total, List<PurchaseOrderLineSummary> lines) {
 }
 
-record PurchaseOrderLineSummary(long id, String description, BigDecimal quantity, String unit, BigDecimal received) {
+record PurchaseOrderLineSummary(long id, String description, BigDecimal quantity, String unit, BigDecimal received,
+		BigDecimal receivable) {
 }
 
 record ShortfallBody(Integer requestVersion, String reason) {
 }
 
 record InvoicePaidBody(Integer requestVersion) {
+}
+
+record InvoiceAttestBody(Integer requestVersion) {
 }

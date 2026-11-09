@@ -80,6 +80,8 @@ Decided by the product owner on the developer's recommendation, 2026-11-08. Fina
 
 The rows for D-01, D-02 and D-04 below record the findings as first reported.
 
+**Correction, 2026-11-09:** the receipt form described above as resolving D-01 was incomplete. It failed on lines that did not arrive, partial receipts and split shipments, and an unattested invoice could not be closed. Fixed and retested; see [verification-report.md](../design/verification-report.md).
+
 ## Open findings
 
 | ID | Severity | Location | Evidence | Impact | Proposed fix | Verification needed |

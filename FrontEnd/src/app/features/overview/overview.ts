@@ -210,8 +210,7 @@ type LoadState = 'loading' | 'ready' | 'error';
     }
     .next-label {
       color: var(--color-text-muted);
-      font-family: var(--font-mono);
-      font-size: var(--text-xs);
+      font-size: var(--text-sm);
     }
     .next-title {
       font-size: var(--text-lg);

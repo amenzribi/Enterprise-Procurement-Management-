@@ -39,6 +39,8 @@ import { ShipmentView } from './logistics.models';
           <p class="muted">{{ 'logistics.actions.noPermission' | translate }}</p>
         } @else if (canAct() && !poConfirmed()) {
           <p class="muted" role="status">{{ 'logistics.actions.needConfirmedPo' | translate }}</p>
+        } @else if (!hasGoods()) {
+          <p class="muted" role="status">{{ 'logistics.actions.onlyServices' | translate }}</p>
         } @else if (canCreate()) {
           <p class="muted small">{{ 'logistics.actions.partialNote' | translate }}</p>
           <form class="form" (submit)="$event.preventDefault(); create()" novalidate>
@@ -184,6 +186,10 @@ export class LogisticsActions {
     const me = this.auth.me();
     const r = this.request();
     return !!me && (me.id === r.requester?.id || me.id === r.enteredBy?.id);
+  }
+
+  protected hasGoods(): boolean {
+    return (this.request().lines ?? []).some((line) => line.lineKind !== 'SERVICE') || (this.request().lines ?? []).length === 0;
   }
 
   protected canCreate(): boolean {

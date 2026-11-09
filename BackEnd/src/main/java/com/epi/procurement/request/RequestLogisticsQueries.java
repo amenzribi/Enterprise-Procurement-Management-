@@ -4,12 +4,15 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +30,15 @@ public class RequestLogisticsQueries {
 
 	public RequestLogisticsQueries(DataSource dataSource) {
 		this.jdbc = new JdbcTemplate(dataSource);
+	}
+
+	/** Whether each line of a request is GOODS or SERVICE, by request line id. */
+	@Transactional(readOnly = true)
+	public Map<Long, String> lineKinds(long requestId) {
+		Map<Long, String> kinds = new HashMap<>();
+		jdbc.query("SELECT id, line_kind FROM purchase_request_line WHERE request_id = ?",
+				(RowCallbackHandler) rs -> kinds.put(rs.getLong("id"), rs.getString("line_kind")), requestId);
+		return kinds;
 	}
 
 	public record ConfirmedPoInboxRow(long poId, String poNumber, String poStatus, Instant poCreatedAt,

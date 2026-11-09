@@ -41,7 +41,7 @@ import { Icon } from '../../shared/ui/icon';
 import { PageHeader } from '../../shared/ui/page-header';
 import { Skeleton } from '../../shared/ui/skeleton';
 import { formatMoney, lineTotalMinor, minorToDecimalString, normaliseDecimal } from './money';
-import { CompanyOption, FormOptions, PRIORITIES, PURCHASE_TYPES, PurchaseRequest, RequestPayload, optionLabel } from './request.models';
+import { CompanyOption, FormOptions, LineKind, PRIORITIES, PURCHASE_TYPES, PurchaseRequest, RequestPayload, optionLabel } from './request.models';
 import {
   DEFAULT_MAX_LINES,
   ErrorInfo,
@@ -64,6 +64,7 @@ type LineForm = FormGroup<{
   estimatedUnitPrice: FormControl<string>;
   requiredDate: FormControl<string>;
   deliveryLocation: FormControl<string>;
+  lineKind: FormControl<LineKind>;
 }>;
 
 export type LineValue = LineForm['value'];
@@ -496,6 +497,7 @@ export class RequestFormPage implements HasUnsavedChanges {
       estimatedUnitPrice: [value?.estimatedUnitPrice ?? '', [decimalValidator('price'), this.onSubmit(requiredValue)]],
       requiredDate: [value?.requiredDate ?? '', this.onSubmit(notPastDate)],
       deliveryLocation: [value?.deliveryLocation ?? '', Validators.maxLength(200)],
+      lineKind: this.fb.control<LineKind>(value?.lineKind ?? 'GOODS'),
     });
   }
 
@@ -535,6 +537,7 @@ export class RequestFormPage implements HasUnsavedChanges {
             line.estimatedUnitPrice === null || line.estimatedUnitPrice === undefined ? '' : String(line.estimatedUnitPrice),
           requiredDate: text(line.requiredDate),
           deliveryLocation: text(line.deliveryLocation),
+          lineKind: line.lineKind ?? 'GOODS',
         })) as Required<LineValue>[],
       });
     } else {
@@ -723,6 +726,7 @@ export class RequestFormPage implements HasUnsavedChanges {
         estimatedUnitPrice: decimal(line.estimatedUnitPrice),
         requiredDate: line.requiredDate || null,
         deliveryLocation: text(line.deliveryLocation),
+        lineKind: line.lineKind,
       })),
     };
   }

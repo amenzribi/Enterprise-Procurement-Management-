@@ -82,6 +82,7 @@ class OrderingService {
 		if (!"COMMERCIAL_VALIDATION".equals(request.status()) && !"MANAGEMENT_VALIDATION".equals(request.status())) {
 			throw ApiProblemException.conflict("invalid-state", "The request is not ready for award.");
 		}
+		requireClassificationDecided(request);
 		if (store.findAwardByRequest(requestId).isPresent()) {
 			throw ApiProblemException.conflict("award-exists", "An award already exists for this request.");
 		}
@@ -149,6 +150,7 @@ class OrderingService {
 		if (!"AWARDED".equals(request.status())) {
 			throw ApiProblemException.conflict("invalid-state", "The request must be awarded before creating a PO.");
 		}
+		requireClassificationDecided(request);
 		if (store.findPoByRequest(requestId).isPresent()) {
 			throw ApiProblemException.conflict("po-exists", "A purchase order already exists for this request.");
 		}
@@ -295,6 +297,12 @@ class OrderingService {
 				store.supplierName(po.supplierId()), po.currency(), po.merchandise(), po.freight(), po.duty(), po.other(),
 				po.total(), po.paymentTerms(), po.incoterm(), po.requiredDate(), po.deliveryAddress(), po.createdAt(),
 				po.issuedAt(), po.confirmedAt(), po.confirmationNote(), po.version(), lines, milestones);
+	}
+
+	private static void requireClassificationDecided(RequestSnapshot request) {
+		if (request.classificationPending()) {
+			throw ApiProblemException.conflict("classification-unconfirmed", "Purchasing must confirm the service lines first.");
+		}
 	}
 
 	private void requireAwardActor(CurrentUser user, RequestSnapshot request) {

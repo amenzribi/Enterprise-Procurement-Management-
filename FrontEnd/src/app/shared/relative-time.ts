@@ -22,6 +22,16 @@ export function elapsedText(fromIso: string, now: number, locale: string): strin
   return format.format(0, 'minute');
 }
 
+/** Calendar days from one instant to another in local time, so "tomorrow" always means the next date. */
+function calendarDays(from: number, to: number): number {
+  const midnight = (time: number) => {
+    const date = new Date(time);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  };
+  // Rounded because a daylight-saving day is not 24 hours long.
+  return Math.round((midnight(to) - midnight(from)) / 86_400_000);
+}
+
 /** Time remaining until a due date ("in 3 hours"), or elapsed when already past. */
 export function untilText(toIso: string, now: number, locale: string): string {
   const to = Date.parse(toIso);
@@ -33,7 +43,7 @@ export function untilText(toIso: string, now: number, locale: string): string {
   const absolute = Math.abs(seconds);
   const sign = Math.sign(seconds) || 1;
   if (absolute >= 86400) {
-    return format.format(sign * Math.floor(absolute / 86400), 'day');
+    return format.format(calendarDays(now, to), 'day');
   }
   if (absolute >= 3600) {
     return format.format(sign * Math.floor(absolute / 3600), 'hour');

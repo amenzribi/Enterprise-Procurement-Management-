@@ -275,7 +275,7 @@
     "duplicate-supplier": "A supplier with this code or tax id already exists.",
     "not-eligible": "This person cannot receive the assignment.",
     "po-not-confirmed": "Confirm the purchase order before creating a shipment.",
-    "quantity-exceeded": "Shipped quantity would exceed the purchase-order line.",
+    "quantity-exceeded": "This quantity is more than what remains.",
     "closure-not-ready": "Closure conditions are not met yet.",
     "already-invoiced": "A final invoice is already recorded.",
     "already-accepted": "Service acceptance is already recorded.",
@@ -300,7 +300,15 @@
     "not-invoiced": "Record the invoice first.",
     "already-attested": "This invoice match is already attested.",
     "self-confirmation": "Another person must confirm a receipt you recorded.",
-    "quote-expired": "This quotation has expired. Ask the supplier to refresh it."
+    "quote-expired": "This quotation has expired. Ask the supplier to refresh it.",
+    "line-not-shipped": "This line has not been shipped and delivered yet.",
+    "service-line": "A service line is accepted, not shipped or received.",
+    "no-service-lines": "This order has no service lines to accept.",
+    "service-not-accepted": "Accept the service lines first.",
+    "no-goods-lines": "This order has no goods to ship.",
+    "classification-unconfirmed": "Purchasing must confirm the service lines before award.",
+    "own-classification": "Another person must decide the classification of your own request.",
+    "already-confirmed": "These service lines are already confirmed."
   },
   "auth": {
     "signOut": "Sign out",
@@ -518,7 +526,8 @@
         "general": "Line {{line}}"
       },
       "maintenanceOrderRef": "Maintenance order",
-      "beneficiarySite": "Beneficiary site"
+      "beneficiarySite": "Beneficiary site",
+      "lineKind": "Line type"
     },
     "priority": {
       "LOW": "Low",
@@ -582,7 +591,8 @@
       "too-many-lines": "At most {{max}} lines per request",
       "requester-not-allowed": "You cannot enter a request for this person",
       "company-not-allowed": "You cannot create requests for this company",
-      "not-editable": "This value is set by the system"
+      "not-editable": "This value is set by the system",
+      "line-kind-locked": "The type of an approved line cannot be changed."
     },
     "detail": {
       "title": "Purchase request",
@@ -681,6 +691,10 @@
       "RECEIVED": "Received",
       "CLOSED": "Closed",
       "CANCELLED": "Cancelled"
+    },
+    "lineKind": {
+      "GOODS": "Goods",
+      "SERVICE": "Service"
     }
   },
   "tracker": {
@@ -798,7 +812,8 @@
         "requester": "Requester",
         "waiting": "Waiting",
         "due": "Due"
-      }
+      },
+      "serviceLines": "Includes {{count}} service line(s). Services are accepted without a shipment or goods receipt. Return this request if any are physical goods."
     },
     "decide": {
       "title": "Your decision",
@@ -1135,6 +1150,13 @@
       "ACCEPTED": "Accepted",
       "RETURNED": "Returned",
       "SUPERSEDED": "Superseded"
+    },
+    "classification": {
+      "title": "Confirm service lines",
+      "hint": "The requester declared these lines as services. Services skip shipment and goods receipt, so confirm each one or mark it as physical goods.",
+      "asGoods": "These are physical goods",
+      "confirm": "Record classification",
+      "done": "Classification recorded"
     }
   },
   "suppliers": {
@@ -1320,7 +1342,8 @@
       "needConfirmedPo": "Confirm the purchase order before creating a shipment.",
       "notEligible": "This request is not in a shipping status, or a shipment already covers the remaining quantity.",
       "noPermission": "You can view progress but cannot create or advance shipments.",
-      "partialNote": "Partial shipments are supported when remaining PO line quantities allow it. Concurrent updates use optimistic locking."
+      "partialNote": "Partial shipments are supported when remaining PO line quantities allow it. Concurrent updates use optimistic locking.",
+      "onlyServices": "This order has only service lines, so there is nothing to ship."
     },
     "kind": {
       "LOCAL": "Local",
@@ -1413,7 +1436,15 @@
       "paidToast": "Invoice marked as paid.",
       "attestNow": "Attest invoice match",
       "attestedToast": "Invoice match attested.",
-      "otherMustConfirm": "You recorded this receipt, so another person must confirm it."
+      "otherMustConfirm": "You recorded this receipt, so another person must confirm it.",
+      "shipment": "Shipment",
+      "acceptedExceedsReceived": "Accepted plus rejected cannot be more than received.",
+      "receivedExceedsRemaining": "Only {{remaining}} remain on this shipment.",
+      "serviceTitle": "Service acceptance",
+      "serviceHint": "Confirm that the service lines on this order were performed. Goods lines still need their receipts.",
+      "serviceComment": "Comment",
+      "serviceAccept": "Accept services",
+      "serviceAcceptedToast": "Services accepted"
     },
     "status": {
       "RECORDED": "Recorded",
@@ -1434,7 +1465,13 @@
       "acceptance": "acceptance",
       "invoice": "invoice",
       "match-attested": "invoice match attestation",
-      "outstanding-quantity": "outstanding quantity"
+      "outstanding-quantity": "outstanding quantity",
+      "service-acceptance": "service acceptance",
+      "goods-receipt": "goods receipt"
+    },
+    "nonConformity": {
+      "OPEN": "Open issue",
+      "RESOLVED": "Resolved"
     }
   },
   "dashboards": {

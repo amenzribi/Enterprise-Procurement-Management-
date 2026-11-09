@@ -1,0 +1,54 @@
+{"id":"R1.1","what":"First split shipment delivered sets DELIVERED","expected":"\"DELIVERED\"","actual":"\"DELIVERED\"","pass":true}
+{"id":"R1.2","what":"Receivable after shipment of A=6 only (B not shipped)","expected":"[6,0]","actual":"[6,4]","pass":false}
+{"id":"R1.3","what":"Receiving unshipped line B while another shipment exists is refused","expected":"409","actual":"200","pass":false}
+{"id":"R1.4","what":"Receipt 1 A=6","expected":"200","actual":"200","pass":true}
+{"id":"R1.5","what":"Status after partial receipt","expected":"\"PARTIALLY_RECEIVED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":true}
+{"id":"R1.6","what":"Over-receipt beyond shipped quantity","expected":"409","actual":"409","pass":true}
+{"id":"R1.7","what":"Status unchanged by second delivered shipment","expected":"\"PARTIALLY_RECEIVED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":true}
+{"id":"R1.8","what":"Cumulative receivable after second shipment","expected":"[4,4]","actual":"[4,3]","pass":false}
+{"id":"R1.9","what":"Receipt 2 completes both lines","expected":"200","actual":"409","pass":false}
+{"id":"R1.10","what":"Nothing left to receive","expected":"[0,0]","actual":"[4,2]","pass":false}
+{"id":"R1.11","what":"Recorder cannot confirm own receipt","expected":"403","actual":"403","pass":true}
+{"id":"R1.12","what":"Requester confirms receipt 1","expected":"200","actual":"200","pass":true}
+{"id":"R1.13","what":"After 1 of 2 confirmations","expected":"\"PARTIALLY_RECEIVED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":true}
+{"id":"R1.14","what":"Requester confirms receipt 2","expected":"200","actual":"400","pass":false}
+{"id":"R1.15","what":"Fully accepted after all confirmed","expected":"\"ACCEPTED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":false}
+{"id":"R2.1","what":"API: explicit zero line in a receipt (doc: UI omits it, API rejects)","expected":"422","actual":"422","pass":true}
+{"id":"R2.2","what":"Rejected receipt left nothing behind","expected":"0","actual":"0","pass":true}
+{"id":"R2.3","what":"Problem detail, no stack trace","expected":"false","actual":"false","pass":true}
+{"id":"R2.4","what":"Confirmed receipt with rejected unit","expected":"\"NON_CONFORMING\"","actual":"\"NON_CONFORMING\"","pass":true}
+{"id":"R2.5","what":"A later clean confirmation must not hide the earlier rejected unit (spec S7-AC-04)","expected":"\"NON_CONFORMING\"","actual":"\"PARTIALLY_RECEIVED\"","pass":false}
+{"id":"R2.6","what":"One person can accept undelivered goods via service acceptance, skipping D-03 second person (should be refused)","expected":"\"refused (4xx)\"","actual":"\"accepted 200, status ACCEPTED\"","pass":false}
+{"id":"Z.1","what":"Anonymous reading a record","expected":"401","actual":"401","pass":true}
+{"id":"Z.2","what":"Other-company requester reads record","expected":"404","actual":"404","pass":true}
+{"id":"Z.3","what":"Other-company manager reads receipts","expected":"404","actual":"404","pass":true}
+{"id":"Z.4","what":"Other-company user creates shipment","expected":"404","actual":"404","pass":true}
+{"id":"Z.5","what":"Requester creates shipment","expected":"403","actual":"403","pass":true}
+{"id":"Z.6","what":"Receiver creates shipment","expected":"403","actual":"404","pass":false}
+{"id":"Z.7","what":"Buyer cannot record receipt","expected":"403","actual":"403","pass":true}
+{"id":"Z.8","what":"Other-company user cannot record receipt","expected":"404","actual":"404","pass":true}
+{"id":"U1.1","what":"Zero-line receipt recorded only line A","expected":"[1,5]","actual":"[1,5]","pass":true}
+{"id":"U1.2","what":"Line B stays open in full","expected":"[0,3]","actual":"[0,3]","pass":true}
+{"id":"U1.3","what":"Editing only \"received\" to 1 of 3 records a partial receipt (or the form keeps accepted in step)","expected":"2","actual":"1","pass":false}
+{"id":"U1.4","what":"Message shown after that attempt","expected":"\"none\"","actual":"[\"Some information is missing or incorrect.\"]","pass":false}
+{"id":"U1.5","what":"Earlier error cleared after a successful retry","expected":"\"none\"","actual":"\"none\"","pass":true}
+{"id":"U1.6","what":"Three receipts, nothing left","expected":"[3,[0,0]]","actual":"[3,[0,0]]","pass":true}
+{"id":"U1.7","what":"Recorder gets no confirm button","expected":"0","actual":"0","pass":true}
+{"id":"U1.8","what":"All confirmed via UI","expected":"\"ACCEPTED\"","actual":"\"ACCEPTED\"","pass":true}
+{"id":"U2.1","what":"Blank amount shows a validation message and records nothing","expected":"true","actual":"true","pass":true}
+{"id":"U2.2","what":"Attestation unchecked by default","expected":"false","actual":"false","pass":true}
+{"id":"U2.3","what":"Error is cleared after successful save","expected":"\"none\"","actual":"[\"Some information is missing or incorrect.\"]","pass":false}
+{"id":"U2.4","what":"Closure names the missing attestation","expected":"true","actual":"true","pass":true}
+{"id":"U2.5","what":"Close is not offered while closure is not ready (DESIGN: never imply a path that does not work)","expected":"false","actual":"true","pass":false}
+{"id":"U2.6","what":"Result of pressing Close too early is a translated message","expected":"true","actual":"[\"Closure conditions are not met yet.\"]","pass":true}
+{"id":"U2.7","what":"Attested and paid","expected":"\"PAID\"","actual":"\"PAID\"","pass":true}
+{"id":"U2.8","what":"Invoice flags persisted","expected":"[true,\"PAID\"]","actual":"[true,\"PAID\"]","pass":true}
+{"id":"U2.9","what":"Closes after recovery","expected":"\"CLOSED\"","actual":"\"CLOSED\"","pass":true}
+{"id":"U3.1","what":"Document is right to left","expected":"\"rtl\"","actual":"\"rtl\"","pass":true}
+{"id":"U3.2","what":"No sideways scroll at 375 px","expected":"true","actual":"true","pass":true}
+{"id":"U3.3","what":"No raw translation keys in Arabic panel","expected":"false","actual":"false","pass":true}
+{"id":"U3.4","what":"Tab order through receipt form","expected":"[\"rcpt-accepted-451\",\"rcpt-rejected-451\",\"rcpt-condition-451\",\"rcpt-note\",\"rcpt-photo\"]","actual":"[\"rcpt-accepted-451\",\"rcpt-rejected-451\",\"rcpt-condition-451\",\"rcpt-note\",\"rcpt-photo\"]","pass":true}
+{"id":"U3.5","what":"Focused record button shows a focus ring","expected":"true","actual":"true","pass":true}
+{"id":"U3.6","what":"Enter on focused record button submits the receipt","expected":"\"PARTIALLY_RECEIVED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":true}
+{"id":"U3.7","what":"Focus is not lost to <body> after the form disappears","expected":"true","actual":"\"BODY\"","pass":false}
+{"id":"U3.8","what":"French panel has no raw keys","expected":"false","actual":"false","pass":true}

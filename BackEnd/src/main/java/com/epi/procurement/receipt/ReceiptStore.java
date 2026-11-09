@@ -36,11 +36,30 @@ class ReceiptStore {
 				WHERE purchase_order_id = ? ORDER BY line_no""", PO_LINE, poId);
 	}
 
-	BigDecimal shippedQuantity(long poLineId) {
+	/**
+	 * Shipment lines of a purchase-order line that have arrived, oldest first. A shipment is delivered when its DELIVERED
+	 * milestone has an actual date: the same signal that moves the request to DELIVERED.
+	 */
+	List<ShipmentLineSnap> deliveredShipmentLines(long poLineId) {
+		return jdbc.query("""
+				SELECT sl.id, sl.shipment_id, s.number, sl.quantity,
+				       COALESCE((SELECT SUM(grl.quantity_received) FROM goods_receipt_line grl
+				                 JOIN goods_receipt gr ON gr.id = grl.goods_receipt_id
+				                 WHERE grl.shipment_line_id = sl.id AND gr.status <> 'CANCELLED'), 0) AS received
+				FROM shipment_line sl JOIN shipment s ON s.id = sl.shipment_id
+				WHERE sl.purchase_order_line_id = ? AND s.status <> 'CANCELLED'
+				  AND EXISTS (SELECT 1 FROM shipment_milestone m
+				              WHERE m.shipment_id = s.id AND m.code = 'DELIVERED' AND m.actual_date IS NOT NULL)
+				ORDER BY s.id, sl.id""", SHIPMENT_LINE, poLineId);
+	}
+
+	/** Quantity on receipts recorded before receipts were tied to a shipment line. */
+	BigDecimal unlinkedReceivedQuantity(long poLineId) {
 		BigDecimal q = jdbc.queryForObject("""
-				SELECT COALESCE(SUM(sl.quantity), 0) FROM shipment_line sl
-				JOIN shipment s ON s.id = sl.shipment_id
-				WHERE sl.purchase_order_line_id = ? AND s.status <> 'CANCELLED'""", BigDecimal.class, poLineId);
+				SELECT COALESCE(SUM(grl.quantity_received), 0) FROM goods_receipt_line grl
+				JOIN goods_receipt gr ON gr.id = grl.goods_receipt_id
+				WHERE grl.purchase_order_line_id = ? AND grl.shipment_line_id IS NULL AND gr.status <> 'CANCELLED'""",
+				BigDecimal.class, poLineId);
 		return q == null ? BigDecimal.ZERO : q;
 	}
 
@@ -192,7 +211,11 @@ class ReceiptStore {
 
 	private static final RowMapper<PoLineSnap> PO_LINE = (rs, i) -> new PoLineSnap(rs.getLong("id"),
 			rs.getLong("request_line_id"), rs.getShort("line_no"), rs.getString("description"),
-			rs.getBigDecimal("quantity"), rs.getString("unit"));
+			rs.getBigDecimal("quantity"), rs.getString("unit"), null);
+
+	private static final RowMapper<ShipmentLineSnap> SHIPMENT_LINE = (rs, i) -> new ShipmentLineSnap(rs.getLong("id"),
+			rs.getLong("shipment_id"), rs.getString("number"), rs.getBigDecimal("quantity"),
+			rs.getBigDecimal("received"));
 
 	private static final RowMapper<ReceiptRow> RECEIPT = (rs, i) -> new ReceiptRow(rs.getLong("id"),
 			rs.getLong("request_id"), rs.getLong("purchase_order_id"),
@@ -224,7 +247,19 @@ class ReceiptStore {
 			BigDecimal totalAmount) {
 	}
 
-	record PoLineSnap(long id, long requestLineId, short lineNo, String description, BigDecimal quantity, String unit) {
+	record PoLineSnap(long id, long requestLineId, short lineNo, String description, BigDecimal quantity, String unit,
+			String kind) {
+
+		PoLineSnap withKind(String lineKind) {
+			return new PoLineSnap(id, requestLineId, lineNo, description, quantity, unit, lineKind);
+		}
+
+		boolean service() {
+			return "SERVICE".equals(kind);
+		}
+	}
+
+	record ShipmentLineSnap(long id, long shipmentId, String shipmentNumber, BigDecimal quantity, BigDecimal received) {
 	}
 
 	record ReceiptRow(long id, long requestId, long purchaseOrderId, Long shipmentId, String number, String status,

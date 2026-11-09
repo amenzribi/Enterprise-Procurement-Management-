@@ -46,6 +46,15 @@ class PurchaseRequestLine {
 	@Column(name = "item_reference", length = 60)
 	private String itemReference;
 
+	@Column(name = "line_kind", nullable = false, length = 10)
+	private String lineKind = "GOODS";
+
+	@Column(name = "service_confirmed_by_user_id")
+	private Long serviceConfirmedByUserId;
+
+	@Column(name = "service_confirmed_at")
+	private java.time.Instant serviceConfirmedAt;
+
 	@Column(precision = 19, scale = 4)
 	private BigDecimal quantity;
 
@@ -105,6 +114,31 @@ class PurchaseRequestLine {
 
 	void setItemReference(String itemReference) {
 		this.itemReference = itemReference;
+	}
+
+	String getLineKind() {
+		return lineKind;
+	}
+
+	void setLineKind(String lineKind) {
+		if (!lineKind.equals(this.lineKind)) {
+			clearServiceConfirmation();
+		}
+		this.lineKind = lineKind;
+	}
+
+	boolean isServiceConfirmed() {
+		return serviceConfirmedAt != null;
+	}
+
+	void confirmService(long userId, java.time.Instant at) {
+		this.serviceConfirmedByUserId = userId;
+		this.serviceConfirmedAt = at;
+	}
+
+	void clearServiceConfirmation() {
+		this.serviceConfirmedByUserId = null;
+		this.serviceConfirmedAt = null;
 	}
 
 	BigDecimal getQuantity() {

@@ -380,13 +380,25 @@ class RequestService {
 		for (int i = 0; i < p.lines().size(); i++) {
 			RequestPayload.LinePayload source = p.lines().get(i);
 			PurchaseRequestLine line = source.id() == null ? null : existing.get(source.id());
+			// A request back from purchasing skips a new approval round, so what was approved as goods stays goods (QA-001).
+			if (request.getStatus() == RequestStatus.PURCHASING_RETURNED && source.lineKind() != null
+					&& !source.lineKind().equals(line == null ? "GOODS" : line.getLineKind())) {
+				validate(List.of(FieldViolation.of("lines[" + i + "].lineKind", "line-kind-locked")));
+			}
 			if (line == null) {
 				line = new PurchaseRequestLine(request, (short) nextLineNo++);
 				lines.add(line);
 			}
 			kept.add(line);
+			// Purchasing confirmed this description as a service; a different one needs a new decision.
+			if (!java.util.Objects.equals(line.getDescription(), clean(source.description()))) {
+				line.clearServiceConfirmation();
+			}
 			line.setDescription(clean(source.description()));
 			line.setItemReference(clean(source.itemReference()));
+			if (source.lineKind() != null) {
+				line.setLineKind(source.lineKind());
+			}
 			line.setQuantity(source.quantity());
 			line.setUnitCode(clean(source.unit()));
 			line.setEstimatedUnitPrice(source.estimatedUnitPrice());

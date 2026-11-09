@@ -103,9 +103,12 @@ export function takeTokenFromFragment(document: Document): string | null {
                 <h2 class="lines-title">{{ 'requests.form.sections.lines' | translate }}</h2>
                 <ul class="lines">
                   @for (line of s.lines; track $index) {
-                    <li><bdi class="tabular qty">{{ line.quantity }} {{ line.unit ?? '' }}</bdi> — <bdi>{{ line.description }}</bdi></li>
+                    <li><bdi class="tabular qty">{{ line.quantity }} {{ line.unit ?? '' }}</bdi> — <bdi>{{ line.description }}</bdi>@if (line.lineKind === 'SERVICE') { <span> · {{ 'requests.lineKind.SERVICE' | translate }}</span> }</li>
                   }
                 </ul>
+                @if (s.serviceLineCount) {
+                  <p class="service-flag" role="note">{{ 'approvals.inbox.serviceLines' | translate: { count: s.serviceLineCount } }}</p>
+                }
                 @if ((s.lineCount ?? 0) > s.lines!.length) {
                   <p class="muted small">{{ 'oneTap.moreLines' | translate: { count: s.lineCount! - s.lines!.length } }}</p>
                 }

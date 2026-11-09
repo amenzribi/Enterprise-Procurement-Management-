@@ -42,10 +42,11 @@ record RequestPayload(Integer version, String title, Long categoryId, String pri
 
 	/**
 	 * One line. {@code id} identifies an existing line of the request (null for a new line); {@code unit} is a
-	 * unit-of-measure code from the form options.
+	 * unit-of-measure code from the form options; {@code lineKind} is GOODS or SERVICE (null keeps the line's kind, and
+	 * a new line defaults to GOODS).
 	 */
 	record LinePayload(Long id, String description, String itemReference, BigDecimal quantity, String unit,
-			BigDecimal estimatedUnitPrice, LocalDate requiredDate, String deliveryLocation) {
+			BigDecimal estimatedUnitPrice, LocalDate requiredDate, String deliveryLocation, String lineKind) {
 	}
 
 	/**

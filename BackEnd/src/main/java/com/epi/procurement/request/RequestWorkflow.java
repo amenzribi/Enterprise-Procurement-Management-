@@ -473,6 +473,9 @@ public class RequestWorkflow {
 		}
 		PurchaseRequest request = requests.getForSystemUpdate(id);
 		RequestStatus from = request.getStatus();
+		if (from == to) {
+			return;
+		}
 		if (from.rank() >= to.rank() && from != RequestStatus.NON_CONFORMING
 				&& !(from == RequestStatus.PARTIALLY_RECEIVED && to == RequestStatus.NON_CONFORMING)) {
 			if (from == to) {
@@ -515,6 +518,41 @@ public class RequestWorkflow {
 		requests.saveAndFlush(request);
 		transitions.save(new RequestTransition(id, from, to, request.getCurrentOwnerUserId(), actorUserId, now,
 				reason == null ? "finance" : reason));
+	}
+
+	/**
+	 * Purchasing's decision on the service lines (D-10): those listed become goods and follow shipment and receipt; every
+	 * other service line is confirmed. Authorisation happens in the caller.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void decideLineClassification(long id, Collection<Long> toGoods, long actorUserId, Instant now) {
+		PurchaseRequest request = requests.getForSystemUpdate(id);
+		RequestStatus status = request.getStatus();
+		if (status == RequestStatus.PURCHASING_RETURNED || status.rank() < RequestStatus.IN_PURCHASING_REVIEW.rank()
+				|| status.rank() >= RequestStatus.AWARDED.rank()) {
+			throw ApiProblemException.conflict("invalid-state", "Classification is decided after approval and before award.");
+		}
+		List<PurchaseRequestLine> services = request.getLines().stream().filter(l -> "SERVICE".equals(l.getLineKind())).toList();
+		if (services.isEmpty()) {
+			throw ApiProblemException.conflict("no-service-lines", "This request has no service lines to confirm.");
+		}
+		if (services.stream().allMatch(PurchaseRequestLine::isServiceConfirmed)) {
+			throw ApiProblemException.conflict("already-confirmed", "These service lines are already confirmed.");
+		}
+		if (!services.stream().map(PurchaseRequestLine::getId).toList().containsAll(toGoods)) {
+			throw new com.epi.procurement.platform.web.ValidationFailedException(
+					List.of(com.epi.procurement.platform.web.FieldViolation.of("reclassifyAsGoods", "invalid-value")));
+		}
+		for (PurchaseRequestLine line : services) {
+			if (toGoods.contains(line.getId())) {
+				line.setLineKind("GOODS");
+			}
+			else {
+				line.confirmService(actorUserId, now);
+			}
+		}
+		request.touch(actorUserId, now);
+		requests.saveAndFlush(request);
 	}
 
 	/** Advances the request version after a change held elsewhere, so another open screen sees it as stale. */
@@ -599,7 +637,7 @@ public class RequestWorkflow {
 				r.getLines()
 					.stream()
 					.map(l -> new RequestSnapshot.LineSnapshot(l.getId(), l.getLineNo(), l.getDescription(),
-							l.getQuantity(), l.getUnitCode()))
+							l.getQuantity(), l.getUnitCode(), l.getLineKind(), l.isServiceConfirmed()))
 					.toList());
 	}
 

@@ -144,15 +144,22 @@ class LogisticsService {
 			throw ApiProblemException.conflict("po-not-confirmed", "Confirm the purchase order before shipping.");
 		}
 		String kind = resolveKind(body, request.purchaseType());
-		List<LogisticsStore.PoLineSnap> poLines = store.poLines(po.id());
+		Map<Long, String> lineKinds = requestLogistics.lineKinds(requestId);
+		List<LogisticsStore.PoLineSnap> poLines = store.poLines(po.id())
+			.stream()
+			.map(l -> l.withKind(lineKinds.get(l.requestLineId())))
+			.toList();
 		Map<Long, LogisticsStore.PoLineSnap> byId = new LinkedHashMap<>();
 		for (LogisticsStore.PoLineSnap line : poLines) {
 			byId.put(line.id(), line);
 		}
 		List<ShipmentLineBody> requested = body == null || body.lines() == null || body.lines().isEmpty()
-				? poLines.stream().map(l -> new ShipmentLineBody(l.id(), l.quantity())).toList()
+				? poLines.stream().filter(l -> !l.service()).map(l -> new ShipmentLineBody(l.id(), l.quantity())).toList()
 				: body.lines();
 		if (requested.isEmpty()) {
+			if (body == null || body.lines() == null || body.lines().isEmpty()) {
+				throw ApiProblemException.conflict("no-goods-lines", "This order has no goods to ship.");
+			}
 			throw new ValidationFailedException(List.of(FieldViolation.of("lines", "required")));
 		}
 		Instant now = clock.instant();
@@ -168,6 +175,9 @@ class LogisticsService {
 			LogisticsStore.PoLineSnap poLine = byId.get(lineBody.purchaseOrderLineId());
 			if (poLine == null) {
 				throw new ValidationFailedException(List.of(FieldViolation.of("lines", "unknown-po-line")));
+			}
+			if (poLine.service()) {
+				throw ApiProblemException.conflict("service-line", "A service line is accepted, not shipped or received.");
 			}
 			BigDecimal qty = lineBody.quantity() == null ? poLine.quantity() : lineBody.quantity();
 			if (qty == null || qty.signum() <= 0) {

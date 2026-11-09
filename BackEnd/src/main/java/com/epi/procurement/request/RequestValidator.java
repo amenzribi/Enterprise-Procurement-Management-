@@ -132,6 +132,9 @@ class RequestValidator {
 			if (line.unit() != null && !reference.unitExists(line.unit())) {
 				errors.add(FieldViolation.of(path + "unit", "invalid-value"));
 			}
+			if (line.lineKind() != null && !"GOODS".equals(line.lineKind()) && !"SERVICE".equals(line.lineKind())) {
+				errors.add(FieldViolation.of(path + "lineKind", "invalid-value"));
+			}
 		}
 		return errors;
 	}

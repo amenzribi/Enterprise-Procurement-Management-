@@ -76,6 +76,10 @@ export class PurchasingApi {
     return this.http.post<QueueItem>(`${API}/requests/${requestId}/accept`, body, idempotencyHeaders(key));
   }
 
+  decideLineClassification(requestId: number, body: { version: number; reclassifyAsGoods: number[] }): Observable<QueueItem> {
+    return this.http.post<QueueItem>(`${API}/requests/${requestId}/line-classification`, body);
+  }
+
   returnAssignment(requestId: number, body: PurchasingAction, key: string): Observable<QueueItem> {
     return this.http.post<QueueItem>(`${API}/requests/${requestId}/return-assignment`, body, idempotencyHeaders(key));
   }

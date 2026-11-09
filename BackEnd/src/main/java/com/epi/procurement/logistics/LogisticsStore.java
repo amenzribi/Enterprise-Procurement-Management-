@@ -129,7 +129,16 @@ class LogisticsStore {
 	record PoSnap(long id, long requestId, String status, long buyingCompanyId, String number) {
 	}
 
-	record PoLineSnap(long id, long requestLineId, short lineNo, String description, BigDecimal quantity, String unit) {
+	record PoLineSnap(long id, long requestLineId, short lineNo, String description, BigDecimal quantity, String unit,
+			String kind) {
+
+		PoLineSnap withKind(String lineKind) {
+			return new PoLineSnap(id, requestLineId, lineNo, description, quantity, unit, lineKind);
+		}
+
+		boolean service() {
+			return "SERVICE".equals(kind);
+		}
 	}
 
 	record ShipmentRow(long id, long groupId, long requestId, long purchaseOrderId, String number, String kind,
@@ -154,7 +163,7 @@ class LogisticsStore {
 
 	private static final RowMapper<PoLineSnap> PO_LINE = (rs, i) -> new PoLineSnap(rs.getLong("id"),
 			rs.getLong("request_line_id"), rs.getShort("line_no"), rs.getString("description"),
-			rs.getBigDecimal("quantity"), rs.getString("unit"));
+			rs.getBigDecimal("quantity"), rs.getString("unit"), null);
 
 	private static final RowMapper<ShipmentRow> SHIPMENT = (rs, i) -> new ShipmentRow(rs.getLong("id"),
 			rs.getLong("group_id"), rs.getLong("request_id"), rs.getLong("purchase_order_id"), rs.getString("number"),

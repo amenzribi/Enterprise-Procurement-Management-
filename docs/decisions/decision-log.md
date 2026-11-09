@@ -16,6 +16,9 @@ Architecture decisions. Significant ones have their own ADR file; smaller ones a
 | ADR-010 | 2026-10-25 | Adopt Java 25 LTS | Rejected (client kept Java 21) |
 | ADR-011 | 2026-10-31 | Supplier messaging + SUPPLIER_CONTACT identity — [ADR-011-supplier-messaging.md](ADR-011-supplier-messaging.md) | Accepted |
 | ADR-012 | 2026-10-31 | AI assistant hosting options; provider-neutral port; demo/disabled default — [ADR-012-ai-assistant-hosting.md](ADR-012-ai-assistant-hosting.md) | Accepted (provider pending) |
+| D-08 | 2026-11-09 | Request lines are GOODS or SERVICE. Service acceptance covers only service lines, all together; goods need a shipment, a confirmed receipt and full acceptance or a shortfall decision. Evaluated per line. | Accepted |
+| D-10 | 2026-11-09 | The requester proposes a Service line. Approvers see it on every approval surface, and purchasing, not the author, confirms it or marks it as goods before award. A line approved as goods stays goods after a purchasing return. | Accepted |
+| D-09 | 2026-11-09 | A receipt line is tied to one delivered shipment line (DELIVERED milestone has an actual date) and limited to what remains on it. Older receipts are unchanged — [reconciliation](receipt-history-reconciliation.md) | Accepted |
 
 ## ADR-002 Modular monolith with Spring Modulith
 

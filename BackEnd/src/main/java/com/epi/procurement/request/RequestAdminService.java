@@ -489,7 +489,7 @@ class RequestAdminService {
 			lines = body.lines()
 				.stream()
 				.map(l -> new RequestPayload.LinePayload(l.id(), l.description(), l.itemReference(), l.quantity(),
-						l.unit(), l.estimatedUnitPrice(), l.requiredDate(), l.deliveryLocation()))
+						l.unit(), l.estimatedUnitPrice(), l.requiredDate(), l.deliveryLocation(), null))
 				.toList();
 		}
 		else {
@@ -498,7 +498,7 @@ class RequestAdminService {
 				.sorted(Comparator.comparingInt(PurchaseRequestLine::getLineNo))
 				.map(l -> new RequestPayload.LinePayload(l.getId(), l.getDescription(), l.getItemReference(),
 						l.getQuantity(), l.getUnitCode(), l.getEstimatedUnitPrice(), l.getRequiredDate(),
-						l.getDeliveryLocation()))
+						l.getDeliveryLocation(), l.getLineKind()))
 				.toList();
 		}
 		String title = body.title() != null ? body.title() : request.getTitle();

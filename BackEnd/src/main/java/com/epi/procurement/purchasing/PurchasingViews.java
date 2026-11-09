@@ -24,6 +24,9 @@ record Assignment(long id, long buyerUserId, String buyerName, long assignedByUs
 		String status, String reason, Instant assignedAt, Instant decidedAt) {
 }
 
+record ClassificationBody(Integer version, java.util.List<Long> reclassifyAsGoods, String comment) {
+}
+
 record ActionBody(Integer version, Long buyerUserId, String purchaseMode, String reason, String question) {
 }
 

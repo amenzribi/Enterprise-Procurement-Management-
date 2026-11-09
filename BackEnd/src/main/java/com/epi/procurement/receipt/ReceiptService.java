@@ -31,6 +31,7 @@ import com.epi.procurement.organization.OrganizationDirectory;
 import com.epi.procurement.platform.web.ApiProblemException;
 import com.epi.procurement.platform.web.FieldViolation;
 import com.epi.procurement.platform.web.ValidationFailedException;
+import com.epi.procurement.request.RequestLogisticsQueries;
 import com.epi.procurement.request.RequestSnapshot;
 import com.epi.procurement.request.RequestStatus;
 import com.epi.procurement.request.RequestWorkflow;
@@ -63,10 +64,13 @@ class ReceiptService {
 
 	private final Clock clock;
 
+	private final RequestLogisticsQueries lineKinds;
+
 	ReceiptService(ReceiptStore store, ReceiptNumbering numbering, RequestWorkflow requests,
-			OrganizationDirectory organization, ExchangeRates rates, AuditLog auditLog, Notifications notifications,
-			ObjectProvider<Clock> clock) {
+			RequestLogisticsQueries lineKinds, OrganizationDirectory organization, ExchangeRates rates, AuditLog auditLog,
+			Notifications notifications, ObjectProvider<Clock> clock) {
 		this.store = store;
+		this.lineKinds = lineKinds;
 		this.numbering = numbering;
 		this.requests = requests;
 		this.organization = organization;
@@ -98,18 +102,14 @@ class ReceiptService {
 			throw ApiProblemException.notFound();
 		}
 		Map<Long, ReceiptStore.PoLineSnap> byId = new LinkedHashMap<>();
-		for (ReceiptStore.PoLineSnap line : store.poLines(po.id())) {
+		for (ReceiptStore.PoLineSnap line : linesOf(po)) {
 			byId.put(line.id(), line);
 		}
 		List<ReceiptLineBody> lines = body == null || body.lines() == null || body.lines().isEmpty()
-				? byId.values()
-					.stream()
-					.map(l -> new ReceiptLineBody(l.id(), null, l.quantity(), l.quantity(), BigDecimal.ZERO,
-							BigDecimal.ZERO, "OK", null))
-					.toList()
+				? everythingDelivered(byId.values())
 				: body.lines();
 		if (lines.isEmpty()) {
-			throw new ValidationFailedException(List.of(FieldViolation.of("lines", "required")));
+			throw ApiProblemException.conflict("quantity-exceeded", "Nothing delivered remains to be received.");
 		}
 		Instant now = clock.instant();
 		OrganizationDirectory.CompanyRef requesting = organization.findCompany(request.requestingCompanyId())
@@ -119,12 +119,13 @@ class ReceiptService {
 		long receiptId = store.insertReceipt(request.groupId(), requestId, po.id(), shipmentId, number, "RECORDED", now,
 				user.id(), trim(body == null ? null : body.note()));
 		short lineNo = 1;
-		boolean anyBad = false;
-		boolean partial = false;
 		for (ReceiptLineBody lineBody : lines) {
 			ReceiptStore.PoLineSnap poLine = byId.get(lineBody.purchaseOrderLineId());
 			if (poLine == null) {
 				throw new ValidationFailedException(List.of(FieldViolation.of("lines", "unknown-po-line")));
+			}
+			if (poLine.service()) {
+				throw ApiProblemException.conflict("service-line", "A service line is accepted, not received.");
 			}
 			BigDecimal received = nz(lineBody.quantityReceived());
 			BigDecimal accepted = nz(lineBody.quantityAccepted());
@@ -138,22 +139,12 @@ class ReceiptService {
 				throw new ValidationFailedException(List.of(FieldViolation.of("lines", "invalid-quantity")));
 			}
 			String condition = resolveCondition(lineBody.condition());
-			if (!"OK".equals(condition)) {
-				anyBad = true;
-			}
-			BigDecimal cap = store.shippedQuantity(poLine.id());
-			if (cap.signum() <= 0) {
-				cap = poLine.quantity();
-			}
-			BigDecimal already = store.receivedQuantity(poLine.id());
-			if (already.add(received).compareTo(cap) > 0) {
+			EligibleLine target = shipmentLineFor(poLine, lineBody.shipmentLineId(), shipmentId);
+			if (received.compareTo(target.remaining()) > 0) {
 				throw ApiProblemException.conflict("quantity-exceeded",
-						"Received quantity would exceed shipped (or ordered) quantity.");
+						"Received quantity would exceed what remains on this delivered shipment line.");
 			}
-			if (accepted.compareTo(poLine.quantity()) < 0) {
-				partial = true;
-			}
-			store.insertLine(receiptId, poLine.id(), lineBody.shipmentLineId(), poLine.requestLineId(), lineNo++,
+			store.insertLine(receiptId, poLine.id(), target.line().id(), poLine.requestLineId(), lineNo++,
 					poLine.description(), received, accepted, rejected, damaged, condition, trim(lineBody.note()));
 		}
 		if (body != null && body.evidence() != null) {
@@ -169,8 +160,8 @@ class ReceiptService {
 						now);
 			}
 		}
-		RequestStatus next = anyBad ? RequestStatus.NON_CONFORMING
-				: partial ? RequestStatus.PARTIALLY_RECEIVED : RequestStatus.PARTIALLY_RECEIVED;
+		RequestStatus next = hasOpenNonConformity(requestId, po) ? RequestStatus.NON_CONFORMING
+				: RequestStatus.PARTIALLY_RECEIVED;
 		requests.enterReceiptStatus(requestId, next, user.id(), now, "goods-receipt-recorded");
 		RequestSnapshot after = requests.currentLocked(requestId);
 		audit(user, after, "RECEIPT_RECORDED", after.status(), null,
@@ -202,24 +193,9 @@ class ReceiptService {
 			throw ApiProblemException.conflict("invalid-state", "This receipt is already confirmed.");
 		}
 		ReceiptStore.PoSnap po = store.findPo(request.id()).orElseThrow(ApiProblemException::notFound);
-		boolean full = true;
-		boolean anyBad = false;
-		for (ReceiptStore.PoLineSnap poLine : store.poLines(po.id())) {
-			BigDecimal accepted = store.acceptedQuantity(poLine.id());
-			// include this receipt's accepted (now confirmed)
-			accepted = store.acceptedQuantity(poLine.id());
-			if (accepted.compareTo(poLine.quantity()) < 0) {
-				full = false;
-			}
-		}
-		for (ReceiptStore.LineRow line : store.lines(receiptId)) {
-			if (!"OK".equals(line.condition()) || line.quantityRejected().signum() > 0
-					|| line.quantityDamaged().signum() > 0) {
-				anyBad = true;
-			}
-		}
-		RequestStatus next = full && !anyBad ? RequestStatus.ACCEPTED
-				: anyBad ? RequestStatus.NON_CONFORMING : RequestStatus.PARTIALLY_RECEIVED;
+		// Every receipt counts, so a clean confirmation cannot hide an earlier problem that is still open (QA-004).
+		RequestStatus next = hasOpenNonConformity(request.id(), po) ? RequestStatus.NON_CONFORMING
+				: everyLineAccepted(request.id(), po) ? RequestStatus.ACCEPTED : RequestStatus.PARTIALLY_RECEIVED;
 		requests.enterReceiptStatus(request.id(), next, user.id(), now, "goods-receipt-confirmed");
 		RequestSnapshot after = requests.currentLocked(request.id());
 		audit(user, after, "RECEIPT_CONFIRMED", after.status(), null, "{\"receiptId\":" + receiptId + "}");
@@ -232,13 +208,13 @@ class ReceiptService {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
 		requireConfirmer(user, request);
 		requireRequestVersion(body == null ? null : body.requestVersion(), request);
+		ReceiptStore.PoSnap po = store.findPo(requestId).orElseThrow(ApiProblemException::notFound);
+		if (linesOf(po).stream().noneMatch(ReceiptStore.PoLineSnap::service)) {
+			throw ApiProblemException.conflict("no-service-lines", "Only lines classified as services can be accepted this way.");
+		}
 		if (store.hasServiceAcceptance(requestId)) {
 			throw ApiProblemException.conflict("already-accepted", "Service acceptance is already recorded.");
 		}
-		if (!store.receiptsForRequest(requestId).isEmpty()) {
-			throw ApiProblemException.conflict("invalid-state", "Goods receipts already exist; confirm those instead.");
-		}
-		ReceiptStore.PoSnap po = store.findPo(requestId).orElseThrow(ApiProblemException::notFound);
 		if (!"CONFIRMED".equals(po.status())) {
 			throw ApiProblemException.conflict("po-not-confirmed", "Confirm the purchase order first.");
 		}
@@ -248,7 +224,13 @@ class ReceiptService {
 		Instant now = clock.instant();
 		boolean ok = body.performanceOk() == null || body.performanceOk();
 		store.insertServiceAcceptance(requestId, user.id(), now, ok, body.comment().strip());
-		requests.enterReceiptStatus(requestId, RequestStatus.ACCEPTED, user.id(), now, "service-acceptance");
+		// On a mixed order the goods lines still need their receipts before the request as a whole is accepted.
+		if (everyLineAccepted(requestId, po)) {
+			requests.enterReceiptStatus(requestId, RequestStatus.ACCEPTED, user.id(), now, "service-acceptance");
+		}
+		else {
+			requests.touchForAudit(requestId, user.id(), now);
+		}
 		RequestSnapshot after = requests.currentLocked(requestId);
 		audit(user, after, "SERVICE_ACCEPTED", after.status(), body.comment().strip(), null);
 		notifyAuthors(after, "SERVICE_ACCEPTED", user);
@@ -274,6 +256,11 @@ class ReceiptService {
 		List<ReceiptStore.ReceiptRow> receipts = store.receiptsForRequest(requestId);
 		if (receipts.isEmpty() || receipts.stream().anyMatch(r -> "RECORDED".equals(r.status()))) {
 			throw ApiProblemException.conflict("unconfirmed-receipts", "Confirm every receipt before accepting a shortfall.");
+		}
+		ReceiptStore.PoSnap shortfallPo = store.findPo(requestId).orElseThrow(ApiProblemException::notFound);
+		if (linesOf(shortfallPo).stream().anyMatch(ReceiptStore.PoLineSnap::service)
+				&& !store.hasServiceAcceptance(requestId)) {
+			throw ApiProblemException.conflict("service-not-accepted", "Accept the service lines before accepting a shortfall.");
 		}
 		if (!StringUtils.hasText(body.reason()) || body.reason().strip().length() < 3) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("reason", "required")));
@@ -401,6 +388,115 @@ class ReceiptService {
 		return buildDossier(after);
 	}
 
+	private List<ReceiptStore.PoLineSnap> linesOf(ReceiptStore.PoSnap po) {
+		Map<Long, String> kinds = lineKinds.lineKinds(po.requestId());
+		return store.poLines(po.id()).stream().map(l -> l.withKind(kinds.get(l.requestLineId()))).toList();
+	}
+
+	/** One receipt line per delivered shipment line that still has something to receive. */
+	private List<ReceiptLineBody> everythingDelivered(java.util.Collection<ReceiptStore.PoLineSnap> poLines) {
+		List<ReceiptLineBody> result = new ArrayList<>();
+		for (ReceiptStore.PoLineSnap poLine : poLines) {
+			if (poLine.service()) {
+				continue;
+			}
+			for (EligibleLine eligible : eligibleLines(poLine.id())) {
+				if (eligible.remaining().signum() > 0) {
+					result.add(new ReceiptLineBody(poLine.id(), eligible.line().id(), eligible.remaining(), eligible.remaining(),
+							BigDecimal.ZERO, BigDecimal.ZERO, "OK", null));
+				}
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Delivered shipment lines of a purchase-order line with what remains on each. Receipts from before lines were tied
+	 * to a shipment have no shipment line: they use up the oldest shipment lines first, and their rows are left as they
+	 * are.
+	 */
+	private List<EligibleLine> eligibleLines(long poLineId) {
+		BigDecimal unlinked = store.unlinkedReceivedQuantity(poLineId);
+		List<EligibleLine> result = new ArrayList<>();
+		for (ReceiptStore.ShipmentLineSnap line : store.deliveredShipmentLines(poLineId)) {
+			BigDecimal open = line.quantity().subtract(line.received()).max(BigDecimal.ZERO);
+			BigDecimal absorbed = unlinked.min(open);
+			unlinked = unlinked.subtract(absorbed);
+			result.add(new EligibleLine(line, line.received().add(absorbed), open.subtract(absorbed)));
+		}
+		return result;
+	}
+
+	private EligibleLine shipmentLineFor(ReceiptStore.PoLineSnap poLine, Long shipmentLineId, Long shipmentId) {
+		List<EligibleLine> eligible = eligibleLines(poLine.id()).stream()
+			.filter(e -> shipmentId == null || e.line().shipmentId() == shipmentId)
+			.toList();
+		if (eligible.isEmpty()) {
+			throw ApiProblemException.conflict("line-not-shipped", "This line has not been shipped and delivered.");
+		}
+		if (shipmentLineId != null) {
+			return eligible.stream()
+				.filter(e -> e.line().id() == shipmentLineId)
+				.findFirst()
+				.orElseThrow(() -> ApiProblemException.conflict("line-not-shipped",
+						"This shipment line is not a delivered line of this order."));
+		}
+		List<EligibleLine> open = eligible.stream().filter(e -> e.remaining().signum() > 0).toList();
+		if (open.isEmpty()) {
+			throw ApiProblemException.conflict("quantity-exceeded", "Nothing remains on the delivered shipments of this line.");
+		}
+		if (open.size() > 1) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("lines", "shipment-line-required")));
+		}
+		return open.get(0);
+	}
+
+	/** Goods lines need their full accepted quantity; service lines need the service acceptance. */
+	private boolean everyLineAccepted(long requestId, ReceiptStore.PoSnap po) {
+		boolean serviceAccepted = store.hasServiceAcceptance(requestId);
+		for (ReceiptStore.PoLineSnap line : linesOf(po)) {
+			boolean done = line.service() ? serviceAccepted
+					: store.acceptedQuantity(line.id()).compareTo(line.quantity()) >= 0;
+			if (!done) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean hasOpenNonConformity(long requestId, ReceiptStore.PoSnap po) {
+		NonConformityContext context = nonConformityContext(requestId, po);
+		return store.receiptsForRequest(requestId)
+			.stream()
+			.filter(r -> !"CANCELLED".equals(r.status()))
+			.flatMap(r -> store.lines(r.id()).stream())
+			.anyMatch(line -> "OPEN".equals(context.stateOf(line)));
+	}
+
+	private NonConformityContext nonConformityContext(long requestId, ReceiptStore.PoSnap po) {
+		Map<Long, Boolean> fullyAccepted = new LinkedHashMap<>();
+		for (ReceiptStore.PoLineSnap line : linesOf(po)) {
+			fullyAccepted.put(line.id(), store.acceptedQuantity(line.id()).compareTo(line.quantity()) >= 0);
+		}
+		return new NonConformityContext(store.hasShortfallAcceptance(requestId), fullyAccepted);
+	}
+
+	/** Whether what was wrong with a receipt line is still open, or was settled by full acceptance or a shortfall decision. */
+	private record NonConformityContext(boolean shortfallAccepted, Map<Long, Boolean> fullyAccepted) {
+
+		String stateOf(ReceiptStore.LineRow line) {
+			boolean problem = !"OK".equals(line.condition()) || line.quantityRejected().signum() > 0
+					|| line.quantityDamaged().signum() > 0;
+			if (!problem) {
+				return null;
+			}
+			return shortfallAccepted || Boolean.TRUE.equals(fullyAccepted.get(line.poLineId())) ? "RESOLVED" : "OPEN";
+		}
+	}
+
+	private record EligibleLine(ReceiptStore.ShipmentLineSnap line, BigDecimal received, BigDecimal remaining) {
+	}
+
 	private ReceiptDossierView buildDossier(RequestSnapshot request) {
 		List<ReceiptView> receipts = store.receiptsForRequest(request.id()).stream().map(this::toReceiptView).toList();
 		InvoiceView invoice = store.findInvoice(request.id()).map(this::toInvoice).orElse(null);
@@ -415,14 +511,19 @@ class ReceiptService {
 	private PurchaseOrderSummary purchaseOrderSummary(long requestId) {
 		return store.findPo(requestId)
 			.map(po -> new PurchaseOrderSummary(po.currency(), po.totalAmount(),
-					store.poLines(po.id())
+					linesOf(po)
 						.stream()
 						.map(l -> {
-							BigDecimal received = store.receivedQuantity(l.id());
-							BigDecimal cap = store.shippedQuantity(l.id());
-							BigDecimal limit = cap.signum() > 0 ? cap : l.quantity();
-							return new PurchaseOrderLineSummary(l.id(), l.description(), l.quantity(), l.unit(), received,
-									limit.subtract(received).max(BigDecimal.ZERO));
+							List<ShipmentLineSummary> shipmentLines = l.service() ? List.of()
+									: eligibleLines(l.id()).stream()
+										.map(e -> new ShipmentLineSummary(e.line().id(), e.line().shipmentId(),
+												e.line().shipmentNumber(), e.line().quantity(), e.received(), e.remaining()))
+										.toList();
+							BigDecimal receivable = shipmentLines.stream()
+								.map(ShipmentLineSummary::receivable)
+								.reduce(BigDecimal.ZERO, BigDecimal::add);
+							return new PurchaseOrderLineSummary(l.id(), l.description(), l.quantity(), l.unit(),
+									store.receivedQuantity(l.id()), receivable, l.kind(), shipmentLines);
 						})
 						.toList()))
 			.orElse(null);
@@ -440,34 +541,48 @@ class ReceiptService {
 		else if (!store.findInvoice(request.id()).orElseThrow().matchAttested()) {
 			missing.add("match-attested");
 		}
-		if (!store.hasServiceAcceptance(request.id()) && !store.hasShortfallAcceptance(request.id())) {
-			ReceiptStore.PoSnap po = store.findPo(request.id()).orElse(null);
-			if (po != null) {
-				for (ReceiptStore.PoLineSnap line : store.poLines(po.id())) {
-					if (store.acceptedQuantity(line.id()).compareTo(line.quantity()) < 0
-							&& !StringUtils.hasText(waiverNote)) {
-						missing.add("outstanding-quantity");
-						break;
-					}
-				}
-			}
+		ReceiptStore.PoSnap po = store.findPo(request.id()).orElse(null);
+		if (po != null) {
+			missing.addAll(lineRequirementsMissing(request.id(), po, StringUtils.hasText(waiverNote)));
 		}
-		boolean ready = missing.isEmpty() || (missing.equals(List.of("outstanding-quantity"))
-				&& StringUtils.hasText(waiverNote));
-		if (StringUtils.hasText(waiverNote) && missing.contains("outstanding-quantity")) {
-			missing = missing.stream().filter(m -> !"outstanding-quantity".equals(m)).toList();
-			ready = missing.isEmpty();
-		}
+		boolean ready = missing.isEmpty();
 		Integer rating = store.findScore(request.id()).map(ReceiptStore.ScoreRow::rating).orElse(null);
 		return new ClosureView(ready, List.copyOf(missing), "CLOSED".equals(request.status()), rating);
 	}
 
+	/**
+	 * What each line still needs before closure. A waiver or shortfall decision can cover a quantity that fell short, but
+	 * goods always need at least one confirmed receipt: no note or service acceptance replaces it.
+	 */
+	private List<String> lineRequirementsMissing(long requestId, ReceiptStore.PoSnap po, boolean waived) {
+		List<ReceiptStore.PoLineSnap> lines = linesOf(po);
+		List<String> missing = new ArrayList<>();
+		if (lines.stream().anyMatch(ReceiptStore.PoLineSnap::service) && !store.hasServiceAcceptance(requestId)) {
+			missing.add("service-acceptance");
+		}
+		List<ReceiptStore.PoLineSnap> goods = lines.stream().filter(l -> !l.service()).toList();
+		if (goods.isEmpty()) {
+			return missing;
+		}
+		if (store.receiptsForRequest(requestId).stream().noneMatch(r -> "CONFIRMED".equals(r.status()))) {
+			missing.add("goods-receipt");
+			return missing;
+		}
+		boolean shortfallCovered = waived || store.hasShortfallAcceptance(requestId);
+		if (!shortfallCovered && goods.stream().anyMatch(l -> store.acceptedQuantity(l.id()).compareTo(l.quantity()) < 0)) {
+			missing.add("outstanding-quantity");
+		}
+		return missing;
+	}
+
 	private ReceiptView toReceiptView(ReceiptStore.ReceiptRow receipt) {
+		ReceiptStore.PoSnap po = store.findPo(receipt.requestId()).orElseThrow();
+		NonConformityContext context = nonConformityContext(receipt.requestId(), po);
 		List<ReceiptLineView> lines = store.lines(receipt.id())
 			.stream()
 			.map(l -> new ReceiptLineView(l.id(), l.poLineId(), l.shipmentLineId(), l.requestLineId(), l.lineNo(),
 					l.description(), l.quantityReceived(), l.quantityAccepted(), l.quantityRejected(),
-					l.quantityDamaged(), l.condition(), l.note()))
+					l.quantityDamaged(), l.condition(), l.note(), context.stateOf(l)))
 			.toList();
 		List<EvidenceView> evidence = store.evidence(receipt.id())
 			.stream()

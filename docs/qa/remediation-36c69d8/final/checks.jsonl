@@ -1,0 +1,46 @@
+{"id":"Z.1","what":"Anonymous reading a record","expected":"401","actual":"401","pass":true}
+{"id":"Z.2","what":"Other-company requester reads record","expected":"404","actual":"404","pass":true}
+{"id":"Z.3","what":"Other-company manager reads receipts","expected":"404","actual":"404","pass":true}
+{"id":"Z.4","what":"Other-company user creates shipment","expected":"404","actual":"404","pass":true}
+{"id":"Z.5","what":"Requester creates shipment","expected":"403","actual":"403","pass":true}
+{"id":"Z.6","what":"Receiver refused shipment creation (403 or 404)","expected":"\"refused\"","actual":"404","pass":true}
+{"id":"Z.7","what":"Buyer cannot record receipt","expected":"403","actual":"403","pass":true}
+{"id":"Z.8","what":"Other-company user cannot record receipt","expected":"404","actual":"404","pass":true}
+{"id":"Z.9","what":"Admin (company-scoped) cannot record receipt","expected":"403","actual":"404","pass":false}
+{"id":"Z.10","what":"CEO cannot record receipt","expected":"403","actual":"403","pass":true}
+{"id":"Z.11","what":"Same-company manager cannot record receipt","expected":"403","actual":"403","pass":true}
+{"id":"Z.12","what":"Buyer cannot confirm receipt","expected":"403","actual":"403","pass":true}
+{"id":"Z.13","what":"Other-company user cannot confirm receipt","expected":"404","actual":"404","pass":true}
+{"id":"Z.14","what":"Global admin cannot confirm receipt","expected":"403","actual":"404","pass":false}
+{"id":"Z.15","what":"Requester cannot record invoice","expected":"403","actual":"403","pass":true}
+{"id":"Z.16","what":"Receiver cannot record invoice","expected":"403","actual":"403","pass":true}
+{"id":"Z.17","what":"Budget approver cannot record invoice","expected":"403","actual":"404","pass":false}
+{"id":"Z.18","what":"Buyer records invoice","expected":"200","actual":"200","pass":true}
+{"id":"Z.19","what":"Requester cannot attest","expected":"403","actual":"403","pass":true}
+{"id":"Z.20","what":"Requester cannot mark paid","expected":"403","actual":"403","pass":true}
+{"id":"Z.21","what":"Other-company user cannot mark paid","expected":"404","actual":"404","pass":true}
+{"id":"Z.22","what":"Close refused while unattested","expected":"409","actual":"409","pass":true}
+{"id":"Z.23","what":"Receiver cannot close","expected":"403","actual":"403","pass":true}
+{"id":"Z.24","what":"Buyer (not manager) cannot close","expected":"403","actual":"403","pass":true}
+{"id":"Z.25","what":"Buyer attests","expected":"200","actual":"200","pass":true}
+{"id":"Z.26","what":"Second attestation is a conflict","expected":"409","actual":"409","pass":true}
+{"id":"Z.27","what":"Purchasing manager closes","expected":"200","actual":"200","pass":true}
+{"id":"Z.28","what":"Payment recorded after closure (D-02) keeps CLOSED","expected":"[200,\"CLOSED\"]","actual":"[200,\"CLOSED\"]","pass":true}
+{"id":"Z.29","what":"Requester cannot approve own request","expected":"403","actual":"403","pass":true}
+{"id":"Z.30","what":"Other-company manager cannot approve (not found)","expected":"404","actual":"404","pass":true}
+{"id":"Z.31","what":"Same-company peer requester cannot read a colleague's request unless configured","expected":"404","actual":"404","pass":true}
+{"id":"Z.32a","what":"A second department exists in demo TN company","expected":"true","actual":"true","pass":true}
+{"id":"Z.32","what":"Department-scoped manager cannot see request of another department","expected":"404","actual":"404","pass":true}
+{"id":"Z.33","what":"Non-purchasing user refused purchasing queue","expected":"403","actual":"403","pass":true}
+{"id":"Z.34","what":"Requester refused admin users API","expected":"403","actual":"403","pass":true}
+{"id":"R1c.1","what":"Receipt 1 for first split shipment","expected":"200","actual":"200","pass":true}
+{"id":"R1c.2","what":"Over-receipt beyond shipped quantity refused","expected":"409","actual":"409","pass":true}
+{"id":"R1c.3","what":"Status stays partial after second shipment delivered","expected":"\"PARTIALLY_RECEIVED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":true}
+{"id":"R1c.4","what":"Receivable is cumulative across shipments","expected":"[4,4]","actual":"[4,4]","pass":true}
+{"id":"R1c.5","what":"Receipts 2 and 3 recorded","expected":"[200,200]","actual":"[200,200]","pass":true}
+{"id":"R1c.6","what":"Nothing left to receive","expected":"[0,0]","actual":"[0,0]","pass":true}
+{"id":"R1c.7","what":"Over-receipt after completion refused","expected":"409","actual":"409","pass":true}
+{"id":"R1c.8","what":"Recorder cannot confirm","expected":"403","actual":"403","pass":true}
+{"id":"R1c.9","what":"Not accepted while a receipt is unconfirmed","expected":"\"PARTIALLY_RECEIVED\"","actual":"\"PARTIALLY_RECEIVED\"","pass":true}
+{"id":"R1c.10","what":"Accepted when all receipts confirmed, in any order","expected":"\"ACCEPTED\"","actual":"\"ACCEPTED\"","pass":true}
+{"id":"R1c.11","what":"Cumulative received per line","expected":"[10,4]","actual":"[10,4]","pass":true}

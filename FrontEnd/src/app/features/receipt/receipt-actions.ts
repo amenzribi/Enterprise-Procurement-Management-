@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { toApiProblem } from '../../core/api/api-problem';
 import { newIdempotencyKey } from '../../core/api/idempotency';
@@ -8,18 +8,26 @@ import { NotificationService } from '../../core/notifications/notification.servi
 import { Button } from '../../shared/ui/button';
 import { PurchaseRequest } from '../requests/request.models';
 import { ReceiptApi } from './receipt.api';
-import { GoodsReceipt, ReceiptDossier, ReceiptLineDraft } from './receipt.models';
+import { GoodsReceipt, ReceiptDossier, ReceiptLineDraft, ShipmentLineReceipt } from './receipt.models';
+
+type OpenLine = ShipmentLineReceipt & { purchaseOrderLineId: number; description: string; unit: string };
 
 const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as const;
+
+/** Stages before delivery where only service acceptance applies. */
+const BEFORE_DELIVERY = ['ORDERED', 'CONTRACT_SIGNED', 'ORDER_CONFIRMED', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'AT_PORT', 'IN_CUSTOMS', 'IN_WAREHOUSE'];
+
+/** Quantities in ten-thousandths (the API's scale), so that 0.3 - 0.1 stays exact. */
+const scaled = (value: string): number => Math.round(Number(value || 0) * 10_000);
 
 @Component({
   selector: 'app-receipt-actions',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [Button, TranslatePipe],
   template: `
-    @if (visible()) {
+    @if (visible() && (!beforeDelivery() || serviceOpen())) {
       <section class="panel decide" aria-labelledby="receipt-title">
-        <h2 class="panel-title" id="receipt-title">{{ 'receipt.actions.title' | translate }}</h2>
+        <h2 class="panel-title" id="receipt-title" tabindex="-1">{{ 'receipt.actions.title' | translate }}</h2>
         @if (error()) {
           <p class="error" role="alert">{{ 'errors.' + error() | translate }}</p>
         }
@@ -38,6 +46,9 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
                     {{ 'receipt.actions.accepted' | translate }} {{ line.quantityAccepted }},
                     {{ 'receipt.actions.rejected' | translate }} {{ line.quantityRejected }},
                     {{ 'receipt.condition.' + line.condition | translate }}
+                    @if (line.nonConformity; as state) {
+                      <span class="issue" [class.issue-open]="state === 'OPEN'">· {{ 'receipt.nonConformity.' + state | translate }}</span>
+                    }
                   </li>
                 }
               </ul>
@@ -51,19 +62,31 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
             </article>
           }
 
+          @if (serviceOpen()) {
+            <form class="form" (submit)="$event.preventDefault(); acceptService()" novalidate>
+              <p class="strong">{{ 'receipt.actions.serviceTitle' | translate }}</p>
+              <p class="muted small">{{ 'receipt.actions.serviceHint' | translate }}</p>
+              <label class="label" for="service-comment">{{ 'receipt.actions.serviceComment' | translate }} *</label>
+              <input id="service-comment" [value]="serviceComment()" (input)="serviceComment.set($any($event.target).value)" />
+              <button appButton type="submit" [disabled]="busy() || serviceComment().trim().length < 3">{{ 'receipt.actions.serviceAccept' | translate }}</button>
+            </form>
+          }
+
           @if (canReceive() && openLines().length > 0 && isDeliveredStage()) {
             <form class="form" (submit)="$event.preventDefault(); create()" novalidate>
               @for (line of openLines(); track line.id) {
                 <fieldset class="line">
-                  <legend>{{ line.description }} <span class="muted small tabular">{{ line.received }} / {{ line.quantity }} {{ line.unit }}</span></legend>
+                  <legend>{{ line.description }} <span class="muted small tabular">{{ 'receipt.actions.shipment' | translate }} <bdi>{{ line.shipmentNumber }}</bdi> · {{ line.received }} / {{ line.quantity }} {{ line.unit }}</span></legend>
                   <div class="line-fields">
                     <div>
                       <label class="label" [for]="'rcpt-received-' + line.id">{{ 'receipt.actions.received' | translate }}</label>
-                      <input [id]="'rcpt-received-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).received" (input)="setDraft(line.id, 'received', $any($event.target).value)" />
+                      <input [id]="'rcpt-received-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).received" (input)="setDraft(line.id, 'received', $any($event.target).value)"
+                        [attr.aria-invalid]="!!lineError(line)" [attr.aria-describedby]="lineError(line) ? 'rcpt-error-' + line.id : null" />
                     </div>
                     <div>
                       <label class="label" [for]="'rcpt-accepted-' + line.id">{{ 'receipt.actions.accepted' | translate }}</label>
-                      <input [id]="'rcpt-accepted-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).accepted" (input)="setDraft(line.id, 'accepted', $any($event.target).value)" />
+                      <input [id]="'rcpt-accepted-' + line.id" type="number" min="0" step="any" [value]="draft(line.id).accepted" (input)="setDraft(line.id, 'accepted', $any($event.target).value)"
+                        [attr.aria-invalid]="!!lineError(line)" [attr.aria-describedby]="lineError(line) ? 'rcpt-error-' + line.id : null" />
                     </div>
                     <div>
                       <label class="label" [for]="'rcpt-rejected-' + line.id">{{ 'receipt.actions.rejected' | translate }}</label>
@@ -78,6 +101,9 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
                       </select>
                     </div>
                   </div>
+                  @if (lineError(line); as code) {
+                    <p class="error small" [id]="'rcpt-error-' + line.id" role="alert">{{ 'receipt.actions.' + code | translate: { remaining: line.receivable } }}</p>
+                  }
                 </fieldset>
               }
               <label class="label" for="rcpt-note">{{ 'receipt.actions.note' | translate }}</label>
@@ -85,7 +111,7 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
               <label class="label" for="rcpt-photo">{{ 'receipt.actions.photoRef' | translate }}</label>
               <input id="rcpt-photo" [value]="photoRef()" (input)="photoRef.set($any($event.target).value)" />
               <p class="muted small">{{ 'receipt.actions.photoHint' | translate }}</p>
-              <button appButton type="submit" [disabled]="busy() || receiptLines().length === 0">{{ 'receipt.actions.record' | translate }}</button>
+              <button appButton type="submit" [disabled]="busy() || receiptLines().length === 0 || hasLineErrors()">{{ 'receipt.actions.record' | translate }}</button>
             </form>
           }
 
@@ -133,10 +159,10 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
 
           @if (d.closure.closed) {
             <p class="muted">{{ 'receipt.actions.closed' | translate }}</p>
-          } @else if (canClose()) {
+          } @else if (canClose() && !beforeDelivery()) {
             <form class="form" (submit)="$event.preventDefault(); close()" novalidate>
               @if (!d.closure.ready) {
-                <p class="muted small">{{ 'receipt.actions.closureMissing' | translate }}:
+                <p class="muted small" id="closure-why">{{ 'receipt.actions.closureMissing' | translate }}:
                   @for (code of d.closure.missing; track code; let last = $last) {
                     {{ 'receipt.closureMissingItem.' + code | translate }}@if (!last) {, }
                   }
@@ -148,7 +174,7 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
                 <label class="label" for="waiver">{{ 'receipt.actions.waiver' | translate }}</label>
                 <input id="waiver" [value]="waiver()" (input)="waiver.set($any($event.target).value)" />
               }
-              <button appButton type="submit" [disabled]="busy()">{{ 'receipt.actions.close' | translate }}</button>
+              <button appButton type="submit" [disabled]="busy() || !canSubmitClose(d)" [attr.aria-describedby]="d.closure.ready ? null : 'closure-why'">{{ 'receipt.actions.close' | translate }}</button>
             </form>
           }
         }
@@ -172,6 +198,9 @@ const RECEIPT_CONDITIONS = ['OK', 'DAMAGED', 'MISSING', 'NON_CONFORMING'] as con
     .error { color: var(--color-danger); }
     .block { margin-block-end: var(--space-3); }
     .strong { font-weight: var(--weight-medium); }
+    .issue { color: var(--color-success); }
+    .issue-open { color: var(--color-danger); font-weight: var(--weight-medium); }
+    .panel-title:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
     .tabular { font-variant-numeric: tabular-nums; }
     .line { margin: 0; padding: 0 0 var(--space-3); border: 0; border-block-end: 1px solid var(--color-line); }
     .line legend { padding: 0; font-weight: var(--weight-medium); }
@@ -187,7 +216,11 @@ export class ReceiptActions {
   private readonly api = inject(ReceiptApi);
   private readonly auth = inject(AuthService);
   private readonly notifications = inject(NotificationService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  private focusAfterReload = false;
 
+  protected readonly serviceComment = signal('');
   protected readonly dossier = signal<ReceiptDossier | null>(null);
   protected readonly note = signal('');
   protected readonly conditions = RECEIPT_CONDITIONS;
@@ -210,6 +243,7 @@ export class ReceiptActions {
       const id = this.request().id;
       untracked(() => {
         const show =
+          BEFORE_DELIVERY.includes(status) ||
           status === 'DELIVERED' ||
           status === 'PARTIALLY_RECEIVED' ||
           status === 'NON_CONFORMING' ||
@@ -258,12 +292,17 @@ export class ReceiptActions {
     return hasPermission(this.auth.me(), 'PURCHASING_MANAGE');
   }
 
-  protected openLines() {
-    return (this.dossier()?.purchaseOrder?.lines ?? []).filter((line) => Number(line.receivable) > 0);
+  /** Delivered shipment lines with something left to receive: one form row each. */
+  protected openLines(): OpenLine[] {
+    return (this.dossier()?.purchaseOrder?.lines ?? []).flatMap((line) =>
+      (line.shipmentLines ?? [])
+        .filter((shipmentLine) => Number(shipmentLine.receivable) > 0)
+        .map((shipmentLine) => ({ ...shipmentLine, purchaseOrderLineId: line.id, description: line.description, unit: line.unit })),
+    );
   }
 
   /** A line that did not arrive is left out of the receipt: entering 0 means "not in this delivery". */
-  protected receiptLines() {
+  protected receiptLines(): OpenLine[] {
     return this.openLines().filter((line) => Number(this.draft(line.id).received) > 0);
   }
 
@@ -272,12 +311,56 @@ export class ReceiptActions {
   }
 
   protected setDraft(lineId: number, field: keyof ReceiptLineDraft, value: string): void {
-    this.drafts.update((all) => ({ ...all, [lineId]: { ...this.draft(lineId), [field]: value } }));
+    this.drafts.update((all) => {
+      const next: ReceiptLineDraft = { ...this.draft(lineId), [field]: value };
+      if (field === 'accepted') {
+        next.acceptedEdited = true;
+      } else if (!next.acceptedEdited && (field === 'received' || field === 'rejected')) {
+        next.accepted = String(Math.max(0, scaled(next.received) - scaled(next.rejected)) / 10_000);
+      }
+      return { ...all, [lineId]: next };
+    });
+  }
+
+  /** Translation key of what is wrong with a line about to be received, or null. */
+  protected lineError(line: OpenLine): string | null {
+    const draft = this.draft(line.id);
+    const received = scaled(draft.received);
+    if (received <= 0) {
+      return null;
+    }
+    if (received > scaled(String(line.receivable))) {
+      return 'receivedExceedsRemaining';
+    }
+    return scaled(draft.accepted) + scaled(draft.rejected) > received ? 'acceptedExceedsReceived' : null;
+  }
+
+  protected hasLineErrors(): boolean {
+    return this.receiptLines().some((line) => this.lineError(line) !== null);
+  }
+
+  /** A service line on this order is still waiting for the requester or receiver to accept it. */
+  protected serviceOpen(): boolean {
+    const d = this.dossier();
+    return !!d && !d.serviceAccepted && this.canConfirm() && (d.purchaseOrder?.lines ?? []).some((line) => line.kind === 'SERVICE');
+  }
+
+  protected beforeDelivery(): boolean {
+    return BEFORE_DELIVERY.includes(this.request().status);
+  }
+
+  /** Closure conditions are met, or the only gap is a quantity this manager is waiving with a note. */
+  protected canSubmitClose(d: ReceiptDossier): boolean {
+    if (d.closure.ready) {
+      return true;
+    }
+    return this.canManage() && d.closure.missing.length === 1 && d.closure.missing[0] === 'outstanding-quantity' && this.waiver().trim().length > 0;
   }
 
   protected canAcceptShortfall(d: ReceiptDossier): boolean {
     const status = this.request().status;
     return (
+      !this.serviceOpen() &&
       this.canManage() &&
       (status === 'NON_CONFORMING' || status === 'PARTIALLY_RECEIVED') &&
       d.receipts.length > 0 &&
@@ -295,7 +378,27 @@ export class ReceiptActions {
     return s === 'ACCEPTED' || s === 'INVOICED' || s === 'PAYMENT_PENDING' || s === 'PAID';
   }
 
+  acceptService(): void {
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.acceptService(this.request().id, { requestVersion: this.request().version, comment: this.serviceComment().trim() }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.serviceComment.set('');
+        this.notifications.success('receipt.actions.serviceAcceptedToast');
+        this.changed.emit();
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.error.set(toApiProblem(error).code);
+      },
+    });
+  }
+
   create(): void {
+    if (this.hasLineErrors()) {
+      return;
+    }
     this.busy.set(true);
     this.error.set(null);
     const evidence = this.photoRef().trim()
@@ -309,7 +412,8 @@ export class ReceiptActions {
           note: this.note().trim() || undefined,
           evidence,
           lines: this.receiptLines().map((line) => ({
-            purchaseOrderLineId: line.id,
+            purchaseOrderLineId: line.purchaseOrderLineId,
+            shipmentLineId: line.id,
             quantityReceived: Number(this.draft(line.id).received),
             quantityAccepted: Number(this.draft(line.id).accepted),
             quantityRejected: Number(this.draft(line.id).rejected),
@@ -324,6 +428,7 @@ export class ReceiptActions {
           this.busy.set(false);
           this.notifications.success('receipt.actions.recorded');
           this.drafts.set({});
+          this.focusAfterReload = true;
           this.changed.emit();
           this.reload(this.request().id);
         },
@@ -336,6 +441,7 @@ export class ReceiptActions {
 
   confirm(receiptId: number, version: number): void {
     this.busy.set(true);
+    this.error.set(null);
     this.api.confirm(receiptId, { version }).subscribe({
       next: () => {
         this.busy.set(false);
@@ -351,6 +457,7 @@ export class ReceiptActions {
 
   saveInvoice(): void {
     this.busy.set(true);
+    this.error.set(null);
     this.api
       .invoice(
         this.request().id,
@@ -428,6 +535,7 @@ export class ReceiptActions {
 
   close(): void {
     this.busy.set(true);
+    this.error.set(null);
     this.api
       .close(
         this.request().id,
@@ -454,7 +562,7 @@ export class ReceiptActions {
   /** Starts each open line at its full remaining quantity and the invoice at the purchase-order total. */
   private prefill(d: ReceiptDossier): void {
     const next: Record<number, ReceiptLineDraft> = {};
-    for (const line of d.purchaseOrder?.lines ?? []) {
+    for (const line of (d.purchaseOrder?.lines ?? []).flatMap((l) => l.shipmentLines ?? [])) {
       const remaining = String(Number(line.receivable));
       next[line.id] = this.drafts()[line.id] ?? { received: remaining, accepted: remaining, rejected: '0', condition: 'OK' };
     }
@@ -462,6 +570,21 @@ export class ReceiptActions {
     if (!this.invoiceAmount() && d.purchaseOrder) {
       this.invoiceAmount.set(String(d.purchaseOrder.total));
     }
+  }
+
+  /** The form may have just gone away: continue at the next line to receive, or else at the panel heading. */
+  private moveFocusAfterRecording(): void {
+    if (!this.focusAfterReload) {
+      return;
+    }
+    this.focusAfterReload = false;
+    afterNextRender(
+      () => {
+        const root = this.host.nativeElement;
+        (root.querySelector<HTMLElement>('input[id^="rcpt-received-"]') ?? root.querySelector<HTMLElement>('#receipt-title'))?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   /** Identifies the newest reload, so a slower, older response cannot overwrite it. */
@@ -474,6 +597,7 @@ export class ReceiptActions {
         if (seq === this.reloadSeq) {
           this.dossier.set(d);
           this.prefill(d);
+          this.moveFocusAfterRecording();
         }
       },
       error: () => {

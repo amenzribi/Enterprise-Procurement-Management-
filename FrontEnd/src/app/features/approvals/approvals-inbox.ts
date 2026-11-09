@@ -142,6 +142,9 @@ export function inboxQueryFromParams(params: ParamMap): InboxQuery {
                       · {{ item.stageName }}
                     }
                   </p>
+                  @if (item.serviceLineCount) {
+                    <p class="card-meta service-flag" role="note">{{ 'approvals.inbox.serviceLines' | translate: { count: item.serviceLineCount } }}</p>
+                  }
                   <div class="badges">
                     @if (item.questionOpen) {
                       <app-status-badge tone="warning">{{ 'approvals.inbox.informationRequested' | translate }}</app-status-badge>
@@ -207,6 +210,9 @@ export function inboxQueryFromParams(params: ParamMap): InboxQuery {
                   <dd [class.is-overdue]="isOverdue(item)">{{ item.dueAt ? until(item.dueAt) : '—' }}</dd>
                 </div>
               </dl>
+              @if (item.serviceLineCount) {
+                <p class="service-flag" role="note">{{ 'approvals.inbox.serviceLines' | translate: { count: item.serviceLineCount } }}</p>
+              }
               @if (paneState() === 'loading') {
                 <app-skeleton height="6rem" />
               } @else if (paneState() === 'error') {

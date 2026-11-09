@@ -380,6 +380,439 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		assertThat(((Number) dossier.json("$.purchaseOrder.lines[0].receivable")).doubleValue()).isEqualTo(1d);
 	}
 
+	@Test
+	void anApprovedGoodsLineCannotBeReclassifiedAfterAPurchasingReturn() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = approve(submit(sami, request("Reclassify after approval")));
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/completeness-return",
+				JSON.writeValueAsString(Map.of("version", version(mehdi, id), "reason", "Add the datasheet"))).expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("PURCHASING_RETURNED");
+		long lineId = jdbc.queryForObject("SELECT id FROM purchase_request_line WHERE request_id = ?", Long.class, id);
+		Map<String, Object> body = request("Reclassify after approval");
+		Map<String, Object> approved = new LinkedHashMap<>(Map.of("id", lineId, "description", "Seal", "quantity", 1, "unit", "PCE",
+				"estimatedUnitPrice", 20));
+
+		body.put("version", version(sami, id));
+		approved.put("lineKind", "SERVICE");
+		body.put("lines", List.of(approved));
+		ApiClient.Response refused = sami.put("/api/v1/requests/" + id, json(body)).expectStatus(422);
+		assertThat((String) refused.json("$.errors[0].code")).isEqualTo("line-kind-locked");
+
+		approved.put("lineKind", "GOODS");
+		body.put("lines", List.of(approved, line("Added as service", "SERVICE", 1)));
+		sami.put("/api/v1/requests/" + id, json(body)).expectStatus(422);
+
+		body.put("lines", List.of(line("Replacement of the approved line", "SERVICE", 1)));
+		sami.put("/api/v1/requests/" + id, json(body)).expectStatus(422);
+		assertThat(jdbc.queryForObject("SELECT line_kind FROM purchase_request_line WHERE id = ?", String.class, lineId)).isEqualTo("GOODS");
+
+		body.put("lines", List.of(approved));
+		sami.put("/api/v1/requests/" + id, json(body)).expectStatus(200);
+	}
+
+	private long serviceRequestAssigned(String title, String description) {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		Map<String, Object> draft = request(title);
+		draft.put("lines", List.of(line(description, "SERVICE", 2)));
+		return accept(assign(approve(submit(sami, draft))));
+	}
+
+	@Test
+	void approversAreToldAboutServiceLines() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		Map<String, Object> draft = request("Flagged for approver");
+		draft.put("lines", List.of(line("Declared as a service", "SERVICE", 1), line("Seal", "GOODS", 1)));
+		long id = submit(sami, draft);
+		List<Map<String, Object>> items = signedIn("manager.tn@demo.local").get("/api/v1/approvals/inbox?size=100").expectStatus(200).json("$.items");
+		Map<String, Object> item = items.stream().filter(i -> ((Number) i.get("requestId")).longValue() == id).findFirst().orElseThrow();
+		assertThat(((Number) item.get("serviceLineCount")).intValue()).isEqualTo(1);
+	}
+
+	@Test
+	void anOrderCannotBeAwardedUntilPurchasingDecidesTheServiceLines() {
+		long id = serviceRequestAssigned("Undecided service", "SKF bearings declared as a service");
+		ApiClient ines = signedIn("buyer@demo.local");
+		ApiClient.Response refused = awardable(id, ines);
+		assertThat(refused.status()).isEqualTo(409);
+		assertThat((String) refused.json("$.code")).isEqualTo("classification-unconfirmed");
+		assertThat((String) samiStatus(id)).isNotEqualTo("AWARDED");
+
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		classify(sami, id, List.of()).expectStatus(403);
+		signedIn("requester.fr@demo.local").post("/api/v1/purchasing/requests/" + id + "/line-classification",
+				json(Map.of("version", version(sami, id), "reclassifyAsGoods", List.of()))).expectStatus(404);
+		classify(ines, id, List.of()).expectStatus(200);
+		classify(ines, id, List.of()).expectStatus(409);
+		assertThat(jdbc.queryForObject("""
+				SELECT COUNT(*) FROM audit_event WHERE entity_type = 'PURCHASE_REQUEST' AND entity_id = ?
+				AND action = 'LINE_CLASSIFICATION_DECIDED'""", Integer.class, Long.toString(id))).isEqualTo(1);
+		awardable(id, ines).expectStatus(200);
+	}
+
+	/** Takes an accepted buyer's request to the point of award and tries it, without classifying. */
+	private ApiClient.Response awardable(long id, ApiClient ines) {
+		if (!"COMMERCIAL_VALIDATION".equals(samiStatus(id))) {
+			long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+			ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+					"{\"kind\":\"QUICK\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+			ines.post("/api/v1/sourcing/rfqs/" + rfq.json("$.id") + "/quotes", json(Map.of("rfqSupplierId", rfq.json("$.suppliers[0].id"), "currency", "EUR",
+					"freightAmount", 0, "dutyAmount", 0, "otherAmount", 0, "lines",
+					List.of(Map.of("rfqLineId", rfq.json("$.lines[0].id"), "quantity", 2, "unitPrice", 5))))).expectStatus(200);
+			ines.post("/api/v1/sourcing/requests/" + id + "/validate-technical", "{\"requestVersion\":" + version(ines, id) + ",\"comment\":\"Fits\"}").expectStatus(200);
+			ines.post("/api/v1/sourcing/requests/" + id + "/validate-commercial", "{\"requestVersion\":" + version(ines, id) + ",\"comment\":\"Price OK\"}").expectStatus(200);
+		}
+		long quoteId = ((Number) ines.get("/api/v1/sourcing/requests/" + id + "/rfq").json("$.quotes[0].id")).longValue();
+		return ines.post("/api/v1/ordering/requests/" + id + "/award",
+				"{\"requestVersion\":" + version(ines, id) + ",\"quotationId\":" + quoteId + ",\"reason\":\"QA award\"}");
+	}
+
+	@Test
+	void purchasingCanSendAMisclassifiedLineThroughReceiptAsGoods() {
+		long id = serviceRequestAssigned("Misclassified", "Physical bearings");
+		ApiClient ines = signedIn("buyer@demo.local");
+		long line = jdbc.queryForObject("SELECT id FROM purchase_request_line WHERE request_id = ?", Long.class, id);
+		classify(ines, id, List.of(999_999_999L)).expectStatus(422);
+		classify(ines, id, List.of(line)).expectStatus(200);
+		assertThat(jdbc.queryForObject("SELECT line_kind FROM purchase_request_line WHERE id = ?", String.class, line)).isEqualTo("GOODS");
+		completeOrder(id);
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		ApiClient.Response refused = sami.post("/api/v1/receipts/requests/" + id + "/service-acceptance",
+				json(Map.of("requestVersion", version(sami, id), "comment", "Self accept")));
+		assertThat(refused.status()).isEqualTo(409);
+		assertThat((String) refused.json("$.code")).isEqualTo("no-service-lines");
+	}
+
+	@Test
+	void theRequesterCannotDecideTheirOwnClassificationEvenWithAPurchasingRole() {
+		long id = serviceRequestAssigned("Own classification", "Fitting");
+		jdbc.update("UPDATE purchase_request SET requester_user_id = ? WHERE id = ?", userId("buyer@demo.local"), id);
+		ApiClient.Response refused = classify(signedIn("buyer@demo.local"), id, List.of()).expectStatus(403);
+		assertThat((String) refused.json("$.code")).isEqualTo("own-classification");
+	}
+
+	@Test
+	void changingAConfirmedServiceDescriptionNeedsANewDecision() {
+		long id = serviceRequestAssigned("Description change", "Pump overhaul");
+		ApiClient ines = signedIn("buyer@demo.local");
+		classify(ines, id, List.of()).expectStatus(200);
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/completeness-return",
+				JSON.writeValueAsString(Map.of("version", version(mehdi, id), "reason", "Clarify"))).expectStatus(200);
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long lineId = jdbc.queryForObject("SELECT id FROM purchase_request_line WHERE request_id = ?", Long.class, id);
+		Map<String, Object> body = request("Description change");
+		body.put("version", version(sami, id));
+		body.put("lines", List.of(Map.of("id", lineId, "description", "Physical bearings instead", "quantity", 2, "unit", "PCE", "estimatedUnitPrice", 20)));
+		sami.put("/api/v1/requests/" + id, json(body)).expectStatus(200);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM purchase_request_line WHERE id = ? AND service_confirmed_at IS NULL", Integer.class, lineId)).isEqualTo(1);
+	}
+
+	@Test
+	void anAmbiguousReceiptLineNamesTheMissingShipmentLine() {
+		long id = confirmedPo("Ambiguous shipment", List.of(line("Bearing", "GOODS", 5)));
+		long poLine = poLineId(id, 0);
+		deliver(ship(id, List.of(Map.of("purchaseOrderLineId", poLine, "quantity", 3))));
+		deliver(ship(id, List.of(Map.of("purchaseOrderLineId", poLine, "quantity", 2))));
+		ApiClient.Response response = receive(signedIn("receiver.tn@demo.local"), id, receiptLine(poLine, 1, 1, 0, "OK")).expectStatus(422);
+		assertThat((String) response.json("$.code")).isEqualTo("validation-failed");
+		assertThat((String) response.json("$.errors[0].field")).isEqualTo("lines");
+		assertThat((String) response.json("$.errors[0].code")).isEqualTo("shipment-line-required");
+	}
+
+	@Test
+	void omittingTheShipmentLineWorksWhenOnlyOneCanApply() {
+		long id = confirmedPo("Inferred shipment", List.of(line("Bearing", "GOODS", 2)));
+		deliver(ship(id, null));
+		ApiClient.Response receipt = receive(signedIn("receiver.tn@demo.local"), id, receiptLine(poLineId(id, 0), 2, 2, 0, "OK")).expectStatus(200);
+		assertThat(((Number) receipt.json("$.lines[0].shipmentLineId")).longValue()).isPositive();
+	}
+
+	@Test
+	void goodsCannotBeAcceptedAsAServiceOrClosedWithoutAReceipt() {
+		long id = confirmedPo("Goods as service");
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		sami.post("/api/v1/receipts/requests/" + id + "/service-acceptance",
+				JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Self accept")))
+			.expectStatus(409);
+		assertThat((String) samiStatus(id)).isEqualTo("ORDERED");
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM service_acceptance WHERE request_id = ?", Integer.class, id))
+			.isZero();
+		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version(sami, id) + "}")
+			.expectStatus(409);
+	}
+
+	@Test
+	void anOldServiceAcceptanceOnGoodsDoesNotAllowClosure() {
+		long id = delivered("Legacy service acceptance");
+		jdbc.update("""
+				INSERT INTO service_acceptance (id, request_id, accepted_by_user_id, accepted_at, performance_ok, comment)
+				VALUES (NEXT VALUE FOR seq_service_acceptance, ?, ?, SYSUTCDATETIME(), 1, 'Legacy')""", id,
+				userId("requester.tn@demo.local"));
+		jdbc.update("UPDATE purchase_request SET status = 'INVOICED' WHERE id = ?", id);
+		jdbc.update("""
+				INSERT INTO supplier_invoice (id, request_id, purchase_order_id, invoice_number, amount, currency,
+				    match_attested, payment_status, recorded_by_user_id, recorded_at, version)
+				SELECT NEXT VALUE FOR seq_supplier_invoice, request_id, id, 'INV-L', 35, 'EUR', 1, 'PENDING', ?, SYSUTCDATETIME(), 0
+				FROM purchase_order WHERE request_id = ?""", userId("buyer@demo.local"), id);
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/receipts/requests/" + id + "/close",
+				JSON.writeValueAsString(Map.of("requestVersion", version(mehdi, id), "waiverNote", "Waive it")))
+			.expectStatus(409);
+		List<String> missing = mehdi.get("/api/v1/receipts/requests/" + id).json("$.closure.missing");
+		assertThat(missing).containsExactly("goods-receipt");
+	}
+
+	@Test
+	void aServiceOrderIsAcceptedWithoutShipmentThenInvoicedAndClosed() {
+		long id = confirmedPo("Service only", List.of(line("Pump overhaul", "SERVICE", 1)));
+		ApiClient ines = signedIn("buyer@demo.local");
+		ines.post("/api/v1/logistics/requests/" + id + "/shipments",
+				"{\"requestVersion\":" + version(ines, id) + ",\"kind\":\"LOCAL\"}").expectStatus(409);
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		signedIn("requester.fr@demo.local").post("/api/v1/receipts/requests/" + id + "/service-acceptance",
+				JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Other company")))
+			.expectStatus(404);
+		String body = JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Work completed"));
+		sami.post("/api/v1/receipts/requests/" + id + "/service-acceptance", body).expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("ACCEPTED");
+		sami.post("/api/v1/receipts/requests/" + id + "/service-acceptance",
+				JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Again")))
+			.expectStatus(409);
+		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion",
+				version(ines, id), "invoiceNumber", "INV-SVC", "amount", 25, "currency", "EUR", "matchAttested", true)))
+			.expectStatus(200);
+		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version(sami, id) + "}")
+			.expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("CLOSED");
+	}
+
+	@Test
+	void aMixedOrderAppliesTheRulesToEachLine() {
+		long id = confirmedPo("Mixed", List.of(line("Seal", "GOODS", 2), line("Fitting", "SERVICE", 1)));
+		long goods = poLineId(id, 0);
+		long service = poLineId(id, 1);
+		ApiClient ines = signedIn("buyer@demo.local");
+		ines.post("/api/v1/logistics/requests/" + id + "/shipments",
+				JSON.writeValueAsString(Map.of("requestVersion", version(ines, id), "kind", "LOCAL", "lines",
+						List.of(Map.of("purchaseOrderLineId", service, "quantity", 1)))))
+			.expectStatus(409);
+		deliver(ship(id, null));
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		receive(omar, id, receiptLine(service, 1, 1, 0, "OK")).expectStatus(409);
+		ApiClient.Response receipt = receive(omar, id, receiptLine(goods, 2, 2, 0, "OK")).expectStatus(200);
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		sami.post("/api/v1/receipts/goods-receipts/" + receipt.json("$.id") + "/confirm", "{}").expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("PARTIALLY_RECEIVED");
+		List<String> missing = sami.get("/api/v1/receipts/requests/" + id).json("$.closure.missing");
+		assertThat(missing).contains("service-acceptance");
+		sami.post("/api/v1/receipts/requests/" + id + "/service-acceptance",
+				JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Fitted"))).expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("ACCEPTED");
+	}
+
+	@Test
+	void anUnshippedLineOnAPartlyShippedOrderCannotBeReceived() {
+		long id = confirmedPo("Partly shipped", List.of(line("Shipped", "GOODS", 4), line("Unshipped", "GOODS", 3)));
+		long a = poLineId(id, 0);
+		long b = poLineId(id, 1);
+		deliver(ship(id, List.of(Map.of("purchaseOrderLineId", a, "quantity", 2))));
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		receive(omar, id, receiptLine(b, 1, 1, 0, "OK")).expectStatus(409);
+		ApiClient.Response dossier = omar.get("/api/v1/receipts/requests/" + id).expectStatus(200);
+		assertThat(((Number) dossier.json("$.purchaseOrder.lines[0].receivable")).doubleValue()).isEqualTo(2d);
+		assertThat(((Number) dossier.json("$.purchaseOrder.lines[1].receivable")).doubleValue()).isZero();
+
+		ApiClient.Response inTransit = ship(id, List.of(Map.of("purchaseOrderLineId", b, "quantity", 3)));
+		receive(omar, id, receiptLine(b, 1, 1, 0, "OK")).expectStatus(409);
+		deliver(inTransit);
+		receive(omar, id, receiptLine(b, 3, 3, 0, "OK")).expectStatus(200);
+	}
+
+	@Test
+	void repeatedReceiptsAreLimitedToEachShipmentLine() {
+		long id = confirmedPo("Repeated receipts", List.of(line("Bearing", "GOODS", 5)));
+		long poLine = poLineId(id, 0);
+		deliver(ship(id, List.of(Map.of("purchaseOrderLineId", poLine, "quantity", 3))));
+		deliver(ship(id, List.of(Map.of("purchaseOrderLineId", poLine, "quantity", 2))));
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		long first = shipmentLineId(omar, id, 0);
+		long second = shipmentLineId(omar, id, 1);
+
+		receive(omar, id, receiptLine(poLine, 1, 1, 0, "OK")).expectStatus(422);
+		receive(omar, id, receiptLine(poLine, null, 0, 0, 0, "OK")).expectStatus(422);
+		receive(omar, id, receiptLine(poLine, first, 4, 4, 0, "OK")).expectStatus(409);
+		long otherRequest = delivered("Foreign shipment line");
+		long foreign = shipmentLineId(omar, otherRequest, 0);
+		receive(omar, id, receiptLine(poLine, foreign, 1, 1, 0, "OK")).expectStatus(409);
+
+		receive(omar, id, receiptLine(poLine, first, 1, 1, 0, "OK")).expectStatus(200);
+		receive(omar, id, receiptLine(poLine, first, 2, 2, 0, "OK")).expectStatus(200);
+		receive(omar, id, receiptLine(poLine, first, 1, 1, 0, "OK")).expectStatus(409);
+		ApiClient.Response dossier = omar.get("/api/v1/receipts/requests/" + id).expectStatus(200);
+		assertThat(((Number) dossier.json("$.purchaseOrder.lines[0].shipmentLines[0].receivable")).doubleValue()).isZero();
+		assertThat(((Number) dossier.json("$.purchaseOrder.lines[0].shipmentLines[1].receivable")).doubleValue()).isEqualTo(2d);
+		receive(omar, id, receiptLine(poLine, 2, 2, 0, "OK")).expectStatus(200);
+		assertThat(jdbc.queryForObject("""
+				SELECT COUNT(*) FROM goods_receipt_line grl JOIN goods_receipt gr ON gr.id = grl.goods_receipt_id
+				WHERE gr.request_id = ? AND grl.shipment_line_id = ?""", Integer.class, id, second)).isEqualTo(1);
+		assertThat(jdbc.queryForObject("""
+				SELECT SUM(grl.quantity_received) FROM goods_receipt_line grl JOIN goods_receipt gr ON gr.id = grl.goods_receipt_id
+				WHERE gr.request_id = ?""", java.math.BigDecimal.class, id)).isEqualByComparingTo("5");
+	}
+
+	@Test
+	void receiptsWithoutAShipmentLineStillCountAndAreLeftUnchanged() {
+		long id = delivered("Legacy receipt");
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		receive(omar, id, receiptLine(poLineId(id), 1, 1, 0, "OK")).expectStatus(200);
+		jdbc.update("""
+				UPDATE grl SET shipment_line_id = NULL FROM goods_receipt_line grl
+				JOIN goods_receipt gr ON gr.id = grl.goods_receipt_id WHERE gr.request_id = ?""", id);
+		receive(omar, id, receiptLine(poLineId(id), 1, 1, 0, "OK")).expectStatus(409);
+		assertThat(jdbc.queryForObject("""
+				SELECT COUNT(*) FROM goods_receipt_line grl JOIN goods_receipt gr ON gr.id = grl.goods_receipt_id
+				WHERE gr.request_id = ? AND grl.shipment_line_id IS NULL""", Integer.class, id)).isEqualTo(1);
+	}
+
+	@Test
+	void anEarlierProblemStaysOpenAfterACleanConfirmationUntilItIsSettled() {
+		long id = confirmedPo("Open problem", List.of(line("Valve", "GOODS", 3)));
+		long poLine = poLineId(id, 0);
+		deliver(ship(id, null));
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		ApiClient.Response bad = receive(omar, id, receiptLine(poLine, 1, 0, 1, "NON_CONFORMING")).expectStatus(200);
+		ApiClient.Response good = receive(omar, id, receiptLine(poLine, 2, 2, 0, "OK")).expectStatus(200);
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		sami.post("/api/v1/receipts/goods-receipts/" + bad.json("$.id") + "/confirm", "{}").expectStatus(200);
+		sami.post("/api/v1/receipts/goods-receipts/" + good.json("$.id") + "/confirm", "{}").expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("NON_CONFORMING");
+		assertThat(nonConformities(sami, id)).contains("OPEN");
+
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/receipts/requests/" + id + "/shortfall-acceptance", JSON.writeValueAsString(
+				Map.of("requestVersion", version(mehdi, id), "reason", "Credit note agreed"))).expectStatus(200);
+		assertThat((String) samiStatus(id)).isEqualTo("ACCEPTED");
+		assertThat(nonConformities(sami, id)).contains("RESOLVED").doesNotContain("OPEN");
+	}
+
+	private List<String> nonConformities(ApiClient client, long id) {
+		List<List<String>> perReceipt = client.get("/api/v1/receipts/requests/" + id).json("$.receipts[*].lines[*].nonConformity");
+		return flat(perReceipt);
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static List<String> flat(List values) {
+		List<String> result = new ArrayList<>();
+		for (Object value : values) {
+			if (value instanceof List nested) {
+				result.addAll(flat(nested));
+			}
+			else if (value != null) {
+				result.add((String) value);
+			}
+		}
+		return result;
+	}
+
+	private static int version(ApiClient client, long id) {
+		return ((Number) client.get("/api/v1/requests/" + id).json("$.version")).intValue();
+	}
+
+	private ApiClient.Response ship(long id, List<Map<String, Object>> lines) {
+		ApiClient ines = signedIn("buyer@demo.local");
+		Map<String, Object> body = new LinkedHashMap<>(Map.of("requestVersion", version(ines, id), "kind", "LOCAL"));
+		if (lines != null) {
+			body.put("lines", lines);
+		}
+		return ines.post("/api/v1/logistics/requests/" + id + "/shipments", json(body)).expectStatus(200);
+	}
+
+	private void deliver(ApiClient.Response shipment) {
+		List<Map<String, Object>> milestones = shipment.json("$.milestones");
+		Object milestone = milestones.stream().filter(m -> "DELIVERED".equals(m.get("code"))).findFirst().orElseThrow().get("id");
+		signedIn("buyer@demo.local").put("/api/v1/logistics/shipments/" + shipment.json("$.id") + "/milestones/" + milestone,
+				"{\"actualDate\":\"" + LocalDate.now(TUNIS) + "\"}").expectStatus(200);
+	}
+
+	private static ApiClient.Response receive(ApiClient client, long id, Map<String, Object> line) {
+		return client.post("/api/v1/receipts/requests/" + id + "/goods-receipts",
+				json(Map.of("requestVersion", version(client, id), "lines", List.of(line))));
+	}
+
+	private static Map<String, Object> receiptLine(long poLine, Number received, Number accepted, Number rejected, String condition) {
+		return receiptLine(poLine, null, received, accepted, rejected, condition);
+	}
+
+	private static Map<String, Object> receiptLine(long poLine, Long shipmentLine, Number received, Number accepted,
+			Number rejected, String condition) {
+		Map<String, Object> line = new LinkedHashMap<>(Map.of("purchaseOrderLineId", poLine, "quantityReceived", received,
+				"quantityAccepted", accepted, "quantityRejected", rejected, "quantityDamaged", 0, "condition", condition));
+		if (shipmentLine != null) {
+			line.put("shipmentLineId", shipmentLine);
+		}
+		return line;
+	}
+
+	private static long shipmentLineId(ApiClient client, long id, int index) {
+		return ((Number) client.get("/api/v1/receipts/requests/" + id)
+			.json("$.purchaseOrder.lines[0].shipmentLines[" + index + "].id")).longValue();
+	}
+
+	private long poLineId(long id, int index) {
+		return jdbc.queryForList("""
+				SELECT pol.id FROM purchase_order_line pol JOIN purchase_order po ON po.id = pol.purchase_order_id
+				WHERE po.request_id = ? ORDER BY pol.line_no""", Long.class, id).get(index);
+	}
+
+	private static Map<String, Object> line(String description, String kind, int quantity) {
+		return Map.of("description", description, "quantity", quantity, "unit", "PCE", "estimatedUnitPrice", 20, "lineKind", kind);
+	}
+
+	private long confirmedPo(String title, List<Map<String, Object>> lines) {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		Map<String, Object> draft = request(title);
+		draft.put("lines", lines);
+		long id = accept(assign(approve(submit(sami, draft))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		if (lines.stream().anyMatch(l -> "SERVICE".equals(l.get("lineKind")))) {
+			classify(ines, id, List.of()).expectStatus(200);
+		}
+		return completeOrder(id);
+	}
+
+	private static ApiClient.Response classify(ApiClient client, long id, List<Long> asGoods) {
+		return client.post("/api/v1/purchasing/requests/" + id + "/line-classification",
+				json(Map.of("version", version(client, id), "reclassifyAsGoods", asGoods)));
+	}
+
+	private long completeOrder(long id) {
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"QUICK\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+		List<Map<String, Object>> rfqLines = rfq.json("$.lines");
+		ines.post("/api/v1/sourcing/rfqs/" + rfq.json("$.id") + "/quotes", json(Map.of("rfqSupplierId", rfq.json("$.suppliers[0].id"),
+				"currency", "EUR", "freightAmount", 0, "dutyAmount", 0, "otherAmount", 0, "lines",
+				rfqLines.stream().map(l -> Map.of("rfqLineId", l.get("id"), "quantity", l.get("quantity"), "unitPrice", 5)).toList())))
+			.expectStatus(200);
+		ines.post("/api/v1/sourcing/requests/" + id + "/validate-technical",
+				"{\"requestVersion\":" + version(ines, id) + ",\"comment\":\"Fits\"}").expectStatus(200);
+		ines.post("/api/v1/sourcing/requests/" + id + "/validate-commercial",
+				"{\"requestVersion\":" + version(ines, id) + ",\"comment\":\"Price OK\"}").expectStatus(200);
+		long quoteId = ((Number) ines.get("/api/v1/sourcing/requests/" + id + "/rfq").json("$.quotes[0].id")).longValue();
+		ines.post("/api/v1/ordering/requests/" + id + "/award",
+				"{\"requestVersion\":" + version(ines, id) + ",\"quotationId\":" + quoteId + ",\"reason\":\"QA award\"}")
+			.expectStatus(200);
+		ApiClient.Response po = ines.post("/api/v1/ordering/requests/" + id + "/purchase-order",
+				"{\"requestVersion\":" + version(ines, id) + "}").expectStatus(200);
+		ApiClient.Response issued = ines.post("/api/v1/ordering/purchase-orders/" + po.json("$.id") + "/issue",
+				"{\"version\":" + po.json("$.version") + "}").expectStatus(200);
+		ines.post("/api/v1/ordering/purchase-orders/" + po.json("$.id") + "/confirm",
+				"{\"version\":" + issued.json("$.version") + ",\"confirmationNote\":\"OK\"}").expectStatus(200);
+		return id;
+	}
+
 	private long poLineId(long id) {
 		return jdbc.queryForObject(
 				"SELECT id FROM purchase_order_line WHERE purchase_order_id = (SELECT id FROM purchase_order WHERE request_id = ?)",

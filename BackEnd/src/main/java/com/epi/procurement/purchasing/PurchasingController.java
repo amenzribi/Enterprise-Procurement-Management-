@@ -107,6 +107,11 @@ class PurchasingController {
 				() -> ResponseEntity.ok(purchasing.purchaseMode(user, id, body.version(), body.purchaseMode())));
 	}
 
+	@PostMapping("/requests/{id}/line-classification")
+	QueueItem lineClassification(@PathVariable long id, @RequestBody ClassificationBody body) {
+		return purchasing.decideLineClassification(currentUser.require(), id, body);
+	}
+
 	@PostMapping("/requests/{id}/completeness-return")
 	ResponseEntity<?> completenessReturn(@PathVariable long id, @RequestBody ActionBody body,
 			@RequestHeader(name = Idempotency.HEADER, required = false) String key) {

@@ -34,7 +34,7 @@ final class RequestViews {
 
 	record Line(long id, int lineNo, String status, String description, String itemReference, BigDecimal quantity,
 			String unit, BigDecimal estimatedUnitPrice, BigDecimal lineTotal, LocalDate requiredDate,
-			String deliveryLocation) {
+			String deliveryLocation, String lineKind, boolean serviceConfirmed) {
 	}
 
 	record Transition(String fromStatus, String toStatus, String stage, UserRef owner, UserRef actor,

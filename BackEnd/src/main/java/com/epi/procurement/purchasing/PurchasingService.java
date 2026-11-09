@@ -255,6 +255,25 @@ class PurchasingService {
 		return item(requests.currentLocked(requestId));
 	}
 
+	/** Records purchasing's decision on the service lines; the requester who chose the type cannot make it (D-10). */
+	@Transactional
+	QueueItem decideLineClassification(CurrentUser user, long requestId, ClassificationBody body) {
+		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
+		requirePurchasingOn(user, request);
+		if (request.isAuthor(user.id())) {
+			throw new ApiProblemException(org.springframework.http.HttpStatus.FORBIDDEN, "own-classification",
+					"Another person must decide the classification of your own request.");
+		}
+		requireVersion(body.version(), request);
+		List<Long> toGoods = body.reclassifyAsGoods() == null ? List.of() : body.reclassifyAsGoods();
+		Instant now = clock.instant();
+		requests.decideLineClassification(requestId, toGoods, user.id(), now);
+		RequestSnapshot after = requests.currentLocked(requestId);
+		audit(user, after, "LINE_CLASSIFICATION_DECIDED", after.status(), StringUtils.hasText(body.comment()) ? body.comment().strip() : null,
+				"{\"reclassifiedAsGoods\":" + toGoods + "}");
+		return item(after);
+	}
+
 	@Transactional
 	QueueItem completenessReturn(CurrentUser user, long requestId, Integer version, String reason) {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);

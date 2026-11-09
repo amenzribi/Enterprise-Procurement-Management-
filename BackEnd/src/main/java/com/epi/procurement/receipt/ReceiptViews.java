@@ -36,7 +36,7 @@ record ReceiptView(long id, long requestId, long purchaseOrderId, Long shipmentI
 
 record ReceiptLineView(long id, long purchaseOrderLineId, Long shipmentLineId, long requestLineId, int lineNo,
 		String description, BigDecimal quantityReceived, BigDecimal quantityAccepted, BigDecimal quantityRejected,
-		BigDecimal quantityDamaged, String condition, String note) {
+		BigDecimal quantityDamaged, String condition, String note, String nonConformity) {
 }
 
 record EvidenceView(long id, String kind, String referenceNumber, String note, String fileName, Instant uploadedAt) {
@@ -58,6 +58,10 @@ record PurchaseOrderSummary(String currency, BigDecimal total, List<PurchaseOrde
 }
 
 record PurchaseOrderLineSummary(long id, String description, BigDecimal quantity, String unit, BigDecimal received,
+		BigDecimal receivable, String kind, List<ShipmentLineSummary> shipmentLines) {
+}
+
+record ShipmentLineSummary(long id, long shipmentId, String shipmentNumber, BigDecimal quantity, BigDecimal received,
 		BigDecimal receivable) {
 }
 

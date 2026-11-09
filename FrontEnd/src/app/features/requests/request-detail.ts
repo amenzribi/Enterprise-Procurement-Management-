@@ -17,6 +17,7 @@ import { ApprovalActions } from '../approvals/approval-actions';
 import { PurchasingActions } from '../purchasing/purchasing-actions';
 import { OrderingActions } from '../ordering/ordering-actions';
 import { LogisticsActions } from '../logistics/logistics-actions';
+import { LineClassification } from '../purchasing/line-classification';
 import { ReceiptActions } from '../receipt/receipt-actions';
 import { SourcingActions } from '../sourcing/sourcing-actions';
 import { ApprovalCountService } from '../approvals/approval-count.service';
@@ -42,7 +43,7 @@ export { elapsedText } from '../../shared/relative-time';
 @Component({
   selector: 'app-request-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RouterLink, Skeleton, SourcingActions, StatusBadge, TranslatePipe],
+  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LineClassification, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RouterLink, Skeleton, SourcingActions, StatusBadge, TranslatePipe],
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
 })
@@ -131,6 +132,10 @@ export class RequestDetailPage {
     const ticker = setInterval(() => this.now.set(Date.now()), 60_000);
     inject(DestroyRef).onDestroy(() => clearInterval(ticker));
     this.load();
+  }
+
+  protected serviceLineCount(request: PurchaseRequest): number {
+    return request.lines.filter((line) => line.lineKind === 'SERVICE').length;
   }
 
   protected load(): void {

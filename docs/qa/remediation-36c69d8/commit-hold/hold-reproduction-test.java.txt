@@ -1,0 +1,42 @@
+	@Test
+	void holdReproPhysicalGoodsDeclaredAsServiceReachClosure() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		Map<String, Object> draft = request("Physical bearings declared as service");
+		draft.put("lines", List.of(line("SKF 6205 bearing, 10 physical units", "SERVICE", 10)));
+		long id = accept(assign(approveAndReportWhatApproverSees(submit(sami, draft))));
+		completeToOrder(id);
+		sami.post("/api/v1/receipts/requests/" + id + "/service-acceptance",
+				JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Self accepted"))).expectStatus(200);
+		System.out.println("HOLD-REPRO status after requester-only acceptance=" + samiStatus(id));
+		ApiClient ines = signedIn("buyer@demo.local");
+		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion", version(ines, id),
+				"invoiceNumber", "INV-HOLD", "amount", 50, "currency", "EUR", "matchAttested", true))).expectStatus(200);
+		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version(sami, id) + "}").expectStatus(200);
+		System.out.println("HOLD-REPRO final status=" + samiStatus(id) + " shipments="
+				+ jdbc.queryForObject("SELECT COUNT(*) FROM shipment WHERE request_id=?", Integer.class, id) + " receipts="
+				+ jdbc.queryForObject("SELECT COUNT(*) FROM goods_receipt WHERE request_id=?", Integer.class, id));
+	}
+
+	private long approveAndReportWhatApproverSees(long id) {
+		ApiClient karim = signedIn("manager.tn@demo.local");
+		String inbox = karim.get("/api/v1/approvals/inbox?size=100").expectStatus(200).body();
+		System.out.println("HOLD-REPRO inbox contains request=" + inbox.contains("Physical bearings") + " inbox mentions lineKind=" + inbox.contains("lineKind")
+				+ " mentions SERVICE=" + inbox.contains("SERVICE"));
+		return approve(id);
+	}
+
+	private void completeToOrder(long id) {
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		ApiClient.Response rfq = ines.post("/api/v1/sourcing/requests/" + id + "/rfq", "{\"kind\":\"QUICK\",\"supplierIds\":[" + skf + "]}").expectStatus(200);
+		ines.post("/api/v1/sourcing/rfqs/" + rfq.json("$.id") + "/quotes", json(Map.of("rfqSupplierId", rfq.json("$.suppliers[0].id"), "currency", "EUR", "freightAmount", 0, "dutyAmount", 0, "otherAmount", 0,
+				"lines", List.of(Map.of("rfqLineId", rfq.json("$.lines[0].id"), "quantity", 10, "unitPrice", 5))))).expectStatus(200);
+		ines.post("/api/v1/sourcing/requests/" + id + "/validate-technical", "{\"requestVersion\":" + version(ines, id) + ",\"comment\":\"Fits\"}").expectStatus(200);
+		ines.post("/api/v1/sourcing/requests/" + id + "/validate-commercial", "{\"requestVersion\":" + version(ines, id) + ",\"comment\":\"OK\"}").expectStatus(200);
+		long quoteId = ((Number) ines.get("/api/v1/sourcing/requests/" + id + "/rfq").json("$.quotes[0].id")).longValue();
+		ines.post("/api/v1/ordering/requests/" + id + "/award", "{\"requestVersion\":" + version(ines, id) + ",\"quotationId\":" + quoteId + ",\"reason\":\"QA award\"}").expectStatus(200);
+		ApiClient.Response po = ines.post("/api/v1/ordering/requests/" + id + "/purchase-order", "{\"requestVersion\":" + version(ines, id) + "}").expectStatus(200);
+		ApiClient.Response issued = ines.post("/api/v1/ordering/purchase-orders/" + po.json("$.id") + "/issue", "{\"version\":" + po.json("$.version") + "}").expectStatus(200);
+		ines.post("/api/v1/ordering/purchase-orders/" + po.json("$.id") + "/confirm", "{\"version\":" + issued.json("$.version") + ",\"confirmationNote\":\"OK\"}").expectStatus(200);
+	}
+

@@ -146,6 +146,7 @@ export interface InboxItem {
   onBehalfOf?: PersonOption | null;
   decidedAt?: string | null;
   requiredDate?: string | null;
+  serviceLineCount?: number;
 }
 
 export type InboxView = 'pending' | 'decided';
@@ -186,9 +187,11 @@ export interface LinkSummary {
   currency: string;
   requiredDate?: string | null;
   stageName?: string | null;
-  lines?: { description: string; quantity: Amount; unit?: string | null }[];
+  lines?: { description: string; quantity: Amount; unit?: string | null; lineKind?: string | null }[];
   /** Total number of lines; the summary shows the first few. */
   lineCount?: number | null;
+  /** Counted over all lines, so a service line beyond the first few is still flagged. */
+  serviceLineCount?: number | null;
   currencyMinorUnits?: number | null;
   expiresAt?: string | null;
 }

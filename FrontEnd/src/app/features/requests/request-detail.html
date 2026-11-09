@@ -129,7 +129,11 @@
       </section>
 
       <!-- The approver's decision and the requester's answer come first, above the details (mobile-first, S2-AC-08). -->
+      @if (approval()?.myTask && serviceLineCount(r) > 0) {
+        <p class="panel service-flag" role="note">{{ 'approvals.inbox.serviceLines' | translate: { count: serviceLineCount(r) } }}</p>
+      }
       <app-approval-actions class="decide" [requestId]="r.id" [approval]="approval()" (changed)="onApprovalChanged($event)" />
+      <app-line-classification [request]="r" (changed)="load()" />
       <app-purchasing-actions [request]="r" (changed)="load()" />
       <app-sourcing-actions [request]="r" (changed)="load()" />
       <app-ordering-actions [request]="r" (changed)="load()" />
@@ -161,6 +165,9 @@
                       <td class="numeric tabular muted">{{ line.lineNo ?? index + 1 }}</td>
                       <td>
                         <span class="line-description">{{ line.description }}</span>
+                        @if (line.lineKind === 'SERVICE') {
+                          <span class="line-meta">{{ 'requests.lineKind.SERVICE' | translate }}</span>
+                        }
                         @if (line.itemReference || line.requiredDate || line.deliveryLocation) {
                           <span class="line-meta">
                             @if (line.itemReference) {
@@ -197,6 +204,9 @@
                 <li class="line-card">
                   <p class="line-card-title">
                     <span class="muted tabular">{{ line.lineNo ?? index + 1 }}.</span> {{ line.description }}
+                    @if (line.lineKind === 'SERVICE') {
+                      <span class="muted"> · {{ 'requests.lineKind.SERVICE' | translate }}</span>
+                    }
                   </p>
                   <dl class="line-card-facts">
                     <div><dt>{{ 'requests.fields.quantity' | translate }}</dt><dd class="tabular">{{ line.quantity }} {{ line.unit }}</dd></div>

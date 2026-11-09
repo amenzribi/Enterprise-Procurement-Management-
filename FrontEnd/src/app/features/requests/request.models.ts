@@ -102,7 +102,11 @@ export interface RequestLine {
   requiredDate?: string | null;
   deliveryLocation?: string | null;
   status?: string;
+  lineKind?: LineKind;
+  serviceConfirmed?: boolean;
 }
+
+export type LineKind = 'GOODS' | 'SERVICE';
 
 export interface RequestTransition {
   fromStatus?: string | null;
@@ -203,6 +207,7 @@ export interface RequestPayload {
     estimatedUnitPrice: number | null;
     requiredDate: string | null;
     deliveryLocation: string | null;
+    lineKind: LineKind;
   }[];
   version?: number;
 }

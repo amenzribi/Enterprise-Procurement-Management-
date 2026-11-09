@@ -23,7 +23,7 @@ final class ApprovalViews {
 			String userStatus, UserRef requester, Ref company, BigDecimal amount, String currency,
 			BigDecimal companyAmount, String companyCurrency, int stageNo, String stageName, String policy,
 			Instant waitingSince, Instant dueAt, boolean overdue, boolean questionOpen, UserRef onBehalfOf,
-			Instant decidedAt, LocalDate requiredDate) {
+			Instant decidedAt, LocalDate requiredDate, int serviceLineCount) {
 	}
 
 	record InboxPage(List<InboxItem> items, int page, int size, long totalItems, int totalPages) {
@@ -107,10 +107,10 @@ final class ApprovalViews {
 
 	record LinkSummary(String number, String title, UserRef requester, Ref company, BigDecimal amount, String currency,
 			int currencyMinorUnits, LocalDate requiredDate, String stageName, List<LinkLine> lines, int lineCount,
-			Instant expiresAt) {
+			int serviceLineCount, Instant expiresAt) {
 	}
 
-	record LinkLine(String description, BigDecimal quantity, String unit) {
+	record LinkLine(String description, BigDecimal quantity, String unit, String lineKind) {
 	}
 
 	record LinkResult(String outcome, String number) {

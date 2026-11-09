@@ -10,7 +10,28 @@ export interface ReceiptDossier {
 export interface PurchaseOrderSummary {
   currency: string;
   total: number;
-  lines: { id: number; description: string; quantity: number; unit: string; received: number; receivable: number }[];
+  lines: PurchaseOrderLine[];
+}
+
+export interface PurchaseOrderLine {
+  id: number;
+  description: string;
+  quantity: number;
+  unit: string;
+  received: number;
+  receivable: number;
+  kind: 'GOODS' | 'SERVICE';
+  shipmentLines: ShipmentLineReceipt[];
+}
+
+/** A delivered shipment line of a goods line: receipts are recorded against one of these. */
+export interface ShipmentLineReceipt {
+  id: number;
+  shipmentId: number;
+  shipmentNumber: string;
+  quantity: number;
+  received: number;
+  receivable: number;
 }
 
 export interface ReceiptLineDraft {
@@ -18,6 +39,8 @@ export interface ReceiptLineDraft {
   accepted: string;
   rejected: string;
   condition: string;
+  /** Once the user edits Accepted, it no longer follows Received. */
+  acceptedEdited?: boolean;
 }
 
 export interface GoodsReceipt {
@@ -35,6 +58,7 @@ export interface GoodsReceipt {
     quantityRejected: number;
     quantityDamaged: number;
     condition: string;
+    nonConformity?: 'OPEN' | 'RESOLVED' | null;
   }[];
   evidence: { id: number; kind: string; referenceNumber: string | null }[];
 }

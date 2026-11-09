@@ -119,7 +119,7 @@ class ApprovalQueries {
 					round == null ? null : round.companyCurrency(), task.stageNo(), task.stageName(), task.policy(),
 					task.createdAt(), task.dueAt(), task.isPending() && !task.questionOpen() && !task.dueAt().isAfter(now),
 					task.questionOpen(), task.originalUserId() == null ? null : ref(contacts, task.originalUserId()),
-					task.decidedAt(), request.requiredDate()));
+					task.decidedAt(), request.requiredDate(), request.serviceLineCount()));
 		}
 		items.sort(comparator);
 		int from = Math.min(page * size, items.size());

@@ -188,7 +188,7 @@ class RequestSubmissionIntegrationTests extends SqlServerTestSupport {
 		return new RequestPayload(null, title, category, "NORMAL", "LOCAL", "TND", null, department, null, null, null,
 				null, null, null, null, null, null, null, null, requiredDate, null,
 				List.of(new RequestPayload.LinePayload(null, "Bearing", null, BigDecimal.TEN, "PCE", new BigDecimal("12.5"), null,
-						null)),
+						null, null)),
 				null, null, null, null, null, null, null);
 	}
 

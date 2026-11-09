@@ -20,7 +20,21 @@ public record RequestSnapshot(long id, String number, String title, String statu
 		return requesterUserId == userId || enteredByUserId == userId;
 	}
 
-	public record LineSnapshot(long id, int lineNo, String description, BigDecimal quantity, String unit) {
+	public record LineSnapshot(long id, int lineNo, String description, BigDecimal quantity, String unit, String lineKind,
+			boolean serviceConfirmed) {
+
+		public boolean service() {
+			return "SERVICE".equals(lineKind);
+		}
+	}
+
+	public int serviceLineCount() {
+		return (int) lines.stream().filter(LineSnapshot::service).count();
+	}
+
+	/** A service line still waits for purchasing's decision, so the order cannot be awarded (D-10). */
+	public boolean classificationPending() {
+		return lines.stream().anyMatch(l -> l.service() && !l.serviceConfirmed());
 	}
 
 }

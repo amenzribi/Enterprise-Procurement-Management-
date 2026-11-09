@@ -82,7 +82,7 @@ class RequestMapper {
 			.map(l -> new RequestViews.Line(l.getId(), l.getLineNo(), l.getStatus().name(), l.getDescription(),
 					l.getItemReference(), plain(l.getQuantity()), l.getUnitCode(), plain(l.getEstimatedUnitPrice()),
 					money(l.getLineTotal(), r.getCurrencyCode(), minorUnits), l.getRequiredDate(),
-					l.getDeliveryLocation()))
+					l.getDeliveryLocation(), l.getLineKind(), l.isServiceConfirmed()))
 			.toList();
 		List<RequestViews.Transition> history = timeline.stream()
 			.map(t -> new RequestViews.Transition(t.getFromStatus() == null ? null : t.getFromStatus().name(),

@@ -84,9 +84,9 @@ class ApprovalLinks {
 					.stream()
 					.limit(5)
 					.map(l -> new ApprovalViews.LinkLine(l.description(),
-							l.quantity() == null ? null : l.quantity().stripTrailingZeros(), l.unit()))
+							l.quantity() == null ? null : l.quantity().stripTrailingZeros(), l.unit(), l.lineKind()))
 					.toList(),
-				request.lines().size(), valid.token().expiresAt());
+				request.lines().size(), request.serviceLineCount(), valid.token().expiresAt());
 	}
 
 	/**

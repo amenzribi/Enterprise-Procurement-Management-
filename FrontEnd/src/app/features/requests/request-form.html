@@ -354,6 +354,14 @@
                   </div>
 
                   <div class="field">
+                    <label [for]="'line-' + index + '-lineKind'">{{ 'requests.fields.lineKind' | translate }}</label>
+                    <select [id]="'line-' + index + '-lineKind'" formControlName="lineKind" [attr.disabled]="request()?.status === 'PURCHASING_RETURNED' ? '' : null">
+                      <option value="GOODS">{{ 'requests.lineKind.GOODS' | translate }}</option>
+                      <option value="SERVICE">{{ 'requests.lineKind.SERVICE' | translate }}</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
                     <label [for]="'line-' + index + '-itemReference'">{{ 'requests.fields.itemReference' | translate }}</label>
                     <input [id]="'line-' + index + '-itemReference'" type="text" formControlName="itemReference" maxlength="100" />
                   </div>

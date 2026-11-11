@@ -26,6 +26,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       background: var(--color-surface);
       border: 1px solid var(--color-line);
       border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
     }
 
     .panel-header {
@@ -33,7 +34,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       align-items: center;
       justify-content: space-between;
       gap: var(--space-3);
-      padding: var(--space-4) var(--space-5);
+      min-block-size: 3.5rem;
+      padding: var(--space-3) var(--space-5);
       border-block-end: 1px solid var(--color-line);
     }
 

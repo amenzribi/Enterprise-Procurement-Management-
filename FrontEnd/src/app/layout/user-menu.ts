@@ -121,8 +121,12 @@ import { Icon } from '../shared/ui/icon';
       padding: var(--space-2);
       border: 1px solid var(--color-line);
       border-radius: var(--radius-md);
-      background: var(--color-surface);
+      background: var(--glass-surface-strong);
       box-shadow: var(--shadow-overlay);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      transform-origin: top;
+      animation: overlay-in var(--duration-base) var(--ease-out) both;
     }
 
     .identity {

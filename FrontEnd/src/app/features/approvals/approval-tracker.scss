@@ -67,6 +67,9 @@
 
 .step.is-current .step-dot {
   border-color: var(--color-accent);
+  background:
+    radial-gradient(circle, var(--color-accent) 0 38%, transparent 42%),
+    var(--color-surface);
   box-shadow: 0 0 0 4px var(--color-accent-soft);
 }
 

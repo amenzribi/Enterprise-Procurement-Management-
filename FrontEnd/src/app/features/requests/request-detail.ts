@@ -11,6 +11,7 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
 import { Skeleton } from '../../shared/ui/skeleton';
+import { StageRing } from '../../shared/ui/stage-ring';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { elapsedText } from '../../shared/relative-time';
 import { ApprovalActions } from '../approvals/approval-actions';
@@ -29,7 +30,7 @@ import { DashboardsApi } from '../dashboards/dashboards.api';
 import { Attachments } from '../documents/attachments';
 import { formatMoney } from './money';
 import { PurchaseRequest, RequestAction, optionLabel } from './request.models';
-import { stageOf, statusKey, userStatusKey, userStatusOf, userStatusTone } from './request-status';
+import { TRACKER_STEPS, ringToneOf, stageOf, statusKey, trackerIndex, userStatusKey, userStatusOf, userStatusTone } from './request-status';
 import { RequestsApi } from './requests.api';
 
 type PageState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -43,7 +44,7 @@ export { elapsedText } from '../../shared/relative-time';
 @Component({
   selector: 'app-request-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LineClassification, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RouterLink, Skeleton, SourcingActions, StatusBadge, TranslatePipe],
+  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LineClassification, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RouterLink, Skeleton, SourcingActions, StageRing, StatusBadge, TranslatePipe],
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
 })
@@ -225,6 +226,10 @@ export class RequestDetailPage {
       error: () => this.approval.set(null),
     });
   }
+
+  protected readonly trackerTotal = TRACKER_STEPS.length;
+  protected readonly trackerStep = computed(() => trackerIndex(this.userStatus()));
+  protected readonly ringTone = computed(() => ringToneOf(this.userStatus()));
 
   protected tone(): ReturnType<typeof userStatusTone> {
     return userStatusTone(this.userStatus());

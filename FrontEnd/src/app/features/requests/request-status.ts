@@ -1,3 +1,4 @@
+import { StageRingTone } from '../../shared/ui/stage-ring';
 import { StatusTone } from '../../shared/ui/status-badge';
 
 /**
@@ -241,6 +242,17 @@ export function trackerIndex(status: UserStatus | null): number {
     return TRACKER_STEPS.indexOf('SUBMITTED');
   }
   return status ? TRACKER_STEPS.indexOf(status) : 0;
+}
+
+/** How the lifecycle ring is coloured: finished, stopped (rejected or cancelled), not started, or under way. */
+export function ringToneOf(status: UserStatus | null): StageRingTone {
+  if (status === 'CLOSED') {
+    return 'done';
+  }
+  if (status === 'REJECTED' || status === 'CANCELLED') {
+    return 'stopped';
+  }
+  return status === 'DRAFT' || status === null ? 'idle' : 'active';
 }
 
 /**

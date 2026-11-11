@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
-import { LanguageSelect } from '../../shared/ui/language-select';
+import { PublicFrame } from '../../shared/ui/public-frame';
 
 /**
  * Public forgot-password. The server always returns the same outcome so account existence is not revealed.
@@ -13,11 +13,10 @@ import { LanguageSelect } from '../../shared/ui/language-select';
 @Component({
   selector: 'app-forgot-password',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, Icon, LanguageSelect, ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [Button, Icon, PublicFrame, ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page">
+    <app-public-frame>
       <main class="form-side" id="main" tabindex="-1">
-        <div class="form-top"><app-language-select /></div>
         <div class="form-wrap">
           <h1 class="title" tabindex="-1">{{ 'auth.forgot.title' | translate }}</h1>
           <p class="lead">{{ 'auth.forgot.lead' | translate }}</p>
@@ -39,20 +38,19 @@ import { LanguageSelect } from '../../shared/ui/language-select';
           }
         </div>
       </main>
-    </div>
+    </app-public-frame>
   `,
   styles: `
-    .page {
-      min-block-size: 100dvh;
-      display: grid;
-      place-items: center;
-      padding: var(--space-4);
-      background: var(--color-canvas, var(--color-surface));
+    .form-side:focus {
+      outline: none;
     }
     .form-wrap {
-      inline-size: min(24rem, 100%);
       display: grid;
       gap: var(--space-4);
+    }
+    label {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
     }
     .title {
       margin: 0;
@@ -72,13 +70,24 @@ import { LanguageSelect } from '../../shared/ui/language-select';
       gap: var(--space-3);
     }
     input {
-      min-block-size: 2.5rem;
-      padding-inline: var(--space-3);
+      min-block-size: 3rem;
+      padding-inline: var(--space-4);
+      font-size: var(--text-md);
+    }
+    .form button {
+      min-block-size: 3rem;
     }
     .notice {
       display: flex;
       gap: var(--space-2);
       align-items: start;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-success-soft);
+      color: var(--color-success);
+    }
+    .notice p {
+      color: var(--color-text);
     }
   `,
 })

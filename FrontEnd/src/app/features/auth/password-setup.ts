@@ -7,12 +7,14 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { NotificationService } from '../../core/notifications/notification.service';
 import { Button } from '../../shared/ui/button';
 import { PageHeader } from '../../shared/ui/page-header';
+import { PublicFrame } from '../../shared/ui/public-frame';
 
 @Component({
   selector: 'app-password-setup',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, PageHeader, ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [Button, PageHeader, PublicFrame, ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
+    <app-public-frame>
     <main class="wrap">
       <app-page-header [heading]="'passwordSetup.title' | translate" [description]="'passwordSetup.description' | translate" />
       @if (invalid()) {
@@ -34,26 +36,36 @@ import { PageHeader } from '../../shared/ui/page-header';
         </form>
       }
     </main>
+    </app-public-frame>
   `,
   styles: `
     .wrap {
-      max-inline-size: 28rem;
-      margin-inline: auto;
-      padding: 1.5rem;
       display: grid;
-      gap: 1rem;
+      gap: var(--space-2);
     }
     form {
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-4);
     }
     label {
       display: grid;
-      gap: 0.25rem;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
     }
     input {
-      min-block-size: 2.4rem;
-      padding-inline: 0.6rem;
+      min-block-size: 3rem;
+      padding-inline: var(--space-4);
+      font-size: var(--text-md);
+      font-weight: var(--weight-regular);
+    }
+    form button {
+      min-block-size: 3rem;
+    }
+    [role='alert'] {
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-danger-soft);
     }
   `,
 })

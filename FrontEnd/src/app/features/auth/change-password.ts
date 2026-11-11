@@ -39,17 +39,29 @@ import { PageHeader } from '../../shared/ui/page-header';
   `,
   styles: `
     .form {
-      max-inline-size: 28rem;
+      max-inline-size: 30rem;
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-4);
+      padding: var(--space-6);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-card);
     }
     label {
       display: grid;
-      gap: 0.25rem;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
     }
     input {
-      min-block-size: 2.4rem;
-      padding-inline: 0.6rem;
+      min-block-size: 2.75rem;
+      padding-inline: var(--space-3);
+      font-size: var(--text-base);
+      font-weight: var(--weight-regular);
+    }
+    .form button {
+      justify-self: start;
     }
   `,
 })

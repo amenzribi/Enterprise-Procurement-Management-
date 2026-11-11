@@ -17,6 +17,7 @@ import { PageHeader } from '../../shared/ui/page-header';
 import { Skeleton } from '../../shared/ui/skeleton';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { formatMoney, minorUnitsOf } from '../requests/money';
+import { isUserStatus, userStatusTone } from '../requests/request-status';
 import { DashboardsApi } from './dashboards.api';
 import { ManagementPage, PipelineView } from './dashboards.models';
 
@@ -79,21 +80,29 @@ function triggerDownload(blob: Blob, fileName: string): void {
                 [message]="'dashboards.pipeline.emptyMessage' | translate"
               />
             } @else {
-              <ul class="counts" role="list">
-                @for (row of pipe.byUserStatus; track row.userStatus) {
-                  <li>
-                    <span>{{ 'requests.userStatus.' + row.userStatus | translate }}</span>
-                    <strong class="tabular">{{ row.count }}</strong>
-                  </li>
-                }
-              </ul>
+              <div class="pipeline">
+                <div class="figure">
+                  <p class="figure-value tabular">{{ pipelineTotal() }}</p>
+                  <p class="figure-label">{{ 'dashboards.pipeline.total' | translate }}</p>
+                </div>
+                <!-- One bar per status, in lifecycle order; the count is always written, the bar only compares. -->
+                <ul class="bars" role="list">
+                  @for (row of pipe.byUserStatus; track row.userStatus) {
+                    <li class="bar-row">
+                      <span class="bar-label">{{ 'requests.userStatus.' + row.userStatus | translate }}</span>
+                      <span class="bar-track" aria-hidden="true"><span class="bar-fill" [style.inline-size.%]="share(row.count, pipelineMax())"></span></span>
+                      <strong class="bar-value tabular">{{ row.count }}</strong>
+                    </li>
+                  }
+                </ul>
+              </div>
               @if (pipe.openAmountsByCurrency.length) {
-                <p class="muted">{{ 'dashboards.pipeline.amountsNote' | translate }}</p>
+                <p class="muted amounts-note">{{ 'dashboards.pipeline.amountsNote' | translate }}</p>
                 <ul class="amounts" role="list">
                   @for (row of pipe.openAmountsByCurrency; track row.currency) {
                     <li>
-                      <span>{{ row.currency }}</span>
-                      <strong class="tabular">{{ money(row.amount, row.currency) }}</strong>
+                      <span class="amount-currency">{{ row.currency }}</span>
+                      <strong class="amount-value tabular">{{ money(row.amount, row.currency) }}</strong>
                       <span class="muted">({{ row.requestCount }})</span>
                     </li>
                   }
@@ -108,11 +117,12 @@ function triggerDownload(blob: Blob, fileName: string): void {
               @if (pipe.byRequestingCompany.length === 0) {
                 <p class="muted">{{ 'dashboards.group.empty' | translate }}</p>
               } @else {
-                <ul class="counts" role="list">
+                <ul class="bars" role="list">
                   @for (row of pipe.byRequestingCompany; track row.companyCode) {
-                    <li>
-                      <span>{{ row.companyName }} <span class="muted">({{ row.companyCode }})</span></span>
-                      <strong class="tabular">{{ row.count }}</strong>
+                    <li class="bar-row bar-row--wide">
+                      <span class="bar-label">{{ row.companyName }} <span class="muted">({{ row.companyCode }})</span></span>
+                      <span class="bar-track" aria-hidden="true"><span class="bar-fill" [style.inline-size.%]="share(row.count, companyMax())"></span></span>
+                      <strong class="bar-value tabular">{{ row.count }}</strong>
                     </li>
                   }
                 </ul>
@@ -146,13 +156,13 @@ function triggerDownload(blob: Blob, fileName: string): void {
                 <tbody>
                   @for (row of rows(); track row.id) {
                     <tr>
-                      <td>
+                      <td class="number">
                         <a [routerLink]="['/requests', row.id]">{{ row.number ?? ('requests.list.draftNumber' | translate) }}</a>
                       </td>
-                      <td>{{ row.title }}</td>
+                      <td class="title-cell">{{ row.title }}</td>
                       <td>
                         @if (row.userStatus) {
-                          {{ 'requests.userStatus.' + row.userStatus | translate }}
+                          <app-status-badge [tone]="statusTone(row.userStatus)">{{ 'requests.userStatus.' + row.userStatus | translate }}</app-status-badge>
                         } @else {
                           —
                         }
@@ -219,36 +229,124 @@ function triggerDownload(blob: Blob, fileName: string): void {
     }
 
     .panel {
-      background: var(--color-surface);
-      border: 1px solid var(--color-line);
-      border-radius: var(--radius-md);
-      padding: var(--space-4);
-      margin-block-end: var(--space-4);
+      margin-block-end: var(--space-5);
     }
 
     .panel-title {
-      margin: 0 0 var(--space-3);
-      font-size: var(--font-size-lg);
+      margin: 0 0 var(--space-4);
+      font-size: var(--text-lg);
     }
 
-    .counts,
+    /* The pipeline: one figure to read first, then where those requests stand. */
+    .pipeline {
+      display: grid;
+      grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+      gap: var(--space-6);
+      align-items: start;
+    }
+
+    .figure {
+      padding: var(--space-5);
+      border: 1px solid var(--color-ink-line);
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(90% 120% at 100% 0%, var(--color-ink-glow), transparent 70%),
+        var(--color-ink);
+      color: var(--color-on-ink-muted);
+    }
+
+    .figure-value {
+      color: var(--color-on-ink);
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .figure-label {
+      margin-block-start: var(--space-2);
+      font-size: var(--text-sm);
+    }
+
+    .bars,
     .amounts {
       list-style: none;
       margin: 0;
       padding: 0;
+    }
+
+    .bars {
       display: grid;
       gap: var(--space-2);
     }
 
-    .counts li,
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) 2.5rem;
+      gap: var(--space-3);
+      align-items: center;
+      min-block-size: 1.75rem;
+    }
+
+    .bar-row--wide {
+      grid-template-columns: minmax(9rem, 20rem) minmax(0, 1fr) 2.5rem;
+    }
+
+    .bar-label {
+      overflow-wrap: anywhere;
+    }
+
+    .bar-track {
+      display: block;
+      block-size: 0.625rem;
+      border-radius: var(--radius-pill);
+      background: var(--color-surface-sunken);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      display: block;
+      block-size: 100%;
+      min-inline-size: 0.25rem;
+      border-radius: var(--radius-pill);
+      background: var(--color-accent);
+    }
+
+    .bar-value {
+      text-align: end;
+    }
+
+    .amounts-note {
+      margin-block: var(--space-5) var(--space-2);
+      font-size: var(--text-sm);
+    }
+
+    .amounts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+
     .amounts li {
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-2);
       align-items: baseline;
-      justify-content: space-between;
-      padding-block: var(--space-1);
-      border-block-end: 1px solid var(--color-line);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-paper);
+    }
+
+    .amount-currency {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+    }
+
+    .amount-value {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
     }
 
     .muted {
@@ -256,33 +354,91 @@ function triggerDownload(blob: Blob, fileName: string): void {
     }
 
     .small {
-      font-size: var(--font-size-sm);
+      font-size: var(--text-xs);
       display: block;
     }
 
     .table-wrap {
       overflow-x: auto;
+      margin-inline: calc(-1 * var(--space-6));
     }
 
     .table {
-      width: 100%;
+      inline-size: 100%;
       border-collapse: collapse;
+      font-size: var(--text-sm);
     }
 
     .table th,
     .table td {
       text-align: start;
-      padding: var(--space-2);
+      padding: var(--space-3) var(--space-4);
       border-block-end: 1px solid var(--color-line);
-      vertical-align: top;
+      vertical-align: middle;
     }
 
-    .numeric {
+    .table th {
+      padding-block: var(--space-2);
+      background: var(--color-paper);
+      white-space: nowrap;
+    }
+
+    .table th:first-child,
+    .table td:first-child {
+      padding-inline-start: var(--space-6);
+    }
+
+    .table th:last-child,
+    .table td:last-child {
+      padding-inline-end: var(--space-6);
+    }
+
+    .table tbody tr:hover {
+      background: var(--color-paper);
+    }
+
+    .number {
+      white-space: nowrap;
+    }
+
+    .number a {
+      font-weight: var(--weight-semibold);
+      text-decoration: none;
+    }
+
+    .title-cell {
+      min-inline-size: 12rem;
+      font-weight: var(--weight-medium);
+    }
+
+    .table .numeric {
       text-align: end;
+      white-space: nowrap;
     }
 
     .tabular {
       font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 40rem) {
+      .pipeline {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-4);
+      }
+
+      .bar-row,
+      .bar-row--wide {
+        grid-template-columns: minmax(0, 1fr) 2.5rem;
+      }
+
+      .bar-track {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+
+      .table-wrap {
+        margin-inline: calc(-1 * var(--space-4));
+      }
     }
 
     .pagination {
@@ -317,6 +473,9 @@ export class DashboardsPage {
     return Math.max(1, Math.ceil(m.totalElements / m.size));
   });
   protected readonly locale = computed(() => this.language.locale());
+  protected readonly pipelineTotal = computed(() => (this.pipeline()?.byUserStatus ?? []).reduce((sum, row) => sum + row.count, 0));
+  protected readonly pipelineMax = computed(() => Math.max(1, ...(this.pipeline()?.byUserStatus ?? []).map((row) => row.count)));
+  protected readonly companyMax = computed(() => Math.max(1, ...(this.pipeline()?.byRequestingCompany ?? []).map((row) => row.count)));
   protected readonly canExport = computed(() => hasPermission(this.auth.me(), 'ERP_EXPORT'));
 
   constructor() {
@@ -344,6 +503,15 @@ export class DashboardsPage {
         this.management.set(result.management);
         this.state.set('ready');
       });
+  }
+
+  /** Width of a comparison bar, as a percentage of the largest value in its group. */
+  protected share(count: number, max: number): number {
+    return Math.round((count / max) * 100);
+  }
+
+  protected statusTone(status: string) {
+    return userStatusTone(isUserStatus(status) ? status : null);
   }
 
   protected go(next: number): void {

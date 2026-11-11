@@ -126,7 +126,8 @@
       "label": "Your next approval",
       "count": "{{count}} waiting for your decision",
       "action": "Open approvals"
-    }
+    },
+    "shortcuts": "Go to your work"
   },
   "planned": {
     "title": "Planned for sprint {{sprint}}",
@@ -1489,7 +1490,8 @@
       "title": "Pipeline",
       "emptyTitle": "No requests in the pipeline",
       "emptyMessage": "Submitted requests you can see will appear here by status.",
-      "amountsNote": "Open amounts by currency (not summed across currencies):"
+      "amountsNote": "Open amounts by currency (not summed across currencies):",
+      "total": "Requests in the pipeline"
     },
     "group": {
       "title": "By requesting company",
@@ -1750,5 +1752,9 @@
       "list": "Conversations",
       "pick": "Select a conversation."
     }
+  },
+  "theme": {
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
   }
 }

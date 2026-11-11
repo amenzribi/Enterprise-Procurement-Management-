@@ -45,9 +45,11 @@ import { NotificationService } from './notification.service';
       gap: var(--space-3);
       padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
       border-radius: var(--radius-md);
+      border: 1px solid var(--color-ink-line);
       background: var(--color-nav);
       color: var(--color-nav-text-strong);
       box-shadow: var(--shadow-overlay);
+      animation: overlay-in var(--duration-base) var(--ease-out) both;
       pointer-events: auto;
     }
 

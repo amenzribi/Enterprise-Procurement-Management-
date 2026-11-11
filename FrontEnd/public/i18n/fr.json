@@ -126,7 +126,8 @@
       "label": "Votre prochaine validation",
       "count": "{{count}} en attente de votre décision",
       "action": "Ouvrir les validations"
-    }
+    },
+    "shortcuts": "Accéder à votre travail"
   },
   "planned": {
     "title": "Prévu pour le sprint {{sprint}}",
@@ -1489,7 +1490,8 @@
       "title": "Pipeline",
       "emptyTitle": "Aucune demande dans le pipeline",
       "emptyMessage": "Les demandes soumises visibles apparaîtront ici par statut.",
-      "amountsNote": "Montants ouverts par devise (jamais additionnés entre devises) :"
+      "amountsNote": "Montants ouverts par devise (jamais additionnés entre devises) :",
+      "total": "Demandes dans le pipeline"
     },
     "group": {
       "title": "Par société demandeuse",
@@ -1750,5 +1752,9 @@
       "list": "Conversations",
       "pick": "Selectionnez une conversation."
     }
+  },
+  "theme": {
+    "toDark": "Passer au thème sombre",
+    "toLight": "Passer au thème clair"
   }
 }

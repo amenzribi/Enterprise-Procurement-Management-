@@ -6,6 +6,7 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { newIdempotencyKey } from '../../core/api/idempotency';
 import { LanguageService } from '../../core/i18n/language.service';
 import { Button } from '../../shared/ui/button';
+import { BrandMark } from '../../shared/ui/brand-mark';
 import { Icon } from '../../shared/ui/icon';
 import { LanguageSelect } from '../../shared/ui/language-select';
 import { formatMoney, minorUnitsOf } from '../requests/money';
@@ -39,11 +40,11 @@ export function takeTokenFromFragment(document: Document): string | null {
 @Component({
   selector: 'app-one-tap-approval',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, DatePipe, Icon, LanguageSelect, RouterLink, TranslatePipe],
+  imports: [BrandMark, Button, DatePipe, Icon, LanguageSelect, RouterLink, TranslatePipe],
   template: `
     <div class="page">
       <header class="top">
-        <span class="brand"><span class="brand-mark" aria-hidden="true">P</span>{{ 'app.name' | translate }}</span>
+        <span class="brand"><span class="brand-mark"><app-brand-mark [size]="22" /></span>{{ 'app.name' | translate }}</span>
         <app-language-select />
       </header>
 
@@ -155,19 +156,19 @@ export function takeTokenFromFragment(document: Document): string | null {
     .brand {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-2);
-      font-weight: var(--weight-semibold);
+      gap: var(--space-3);
+      font-family: var(--font-display);
+      font-size: 1.0625rem;
+      font-weight: 600;
     }
 
     .brand-mark {
       display: inline-grid;
       place-items: center;
-      inline-size: 2rem;
-      block-size: 2rem;
-      border-radius: var(--radius-sm);
-      background: var(--color-nav);
-      color: var(--color-nav-text-strong);
-      font-size: var(--text-xs);
+      inline-size: 2.25rem;
+      block-size: 2.25rem;
+      border-radius: var(--radius-md);
+      background: var(--color-ink);
     }
 
     .card {
@@ -175,10 +176,11 @@ export function takeTokenFromFragment(document: Document): string | null {
       gap: var(--space-4);
       inline-size: min(34rem, 100%);
       margin-inline: auto;
-      padding: var(--space-6);
+      padding: var(--space-8);
       border: 1px solid var(--color-line);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-xl);
       background: var(--color-surface);
+      box-shadow: var(--shadow-raised);
     }
 
     .card:focus {

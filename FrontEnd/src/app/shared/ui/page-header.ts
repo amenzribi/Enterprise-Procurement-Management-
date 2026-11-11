@@ -21,12 +21,23 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       flex-wrap: wrap;
       align-items: flex-end;
       justify-content: space-between;
-      gap: var(--space-4);
-      margin-block-end: var(--space-8);
+      gap: var(--space-4) var(--space-6);
+      margin-block-end: var(--space-6);
+    }
+
+    .text {
+      min-inline-size: 0;
     }
 
     .title {
       font-size: var(--text-xl);
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 40rem) {
+      .title {
+        font-size: 1.5rem;
+      }
     }
 
     .title:focus {
@@ -34,10 +45,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     }
 
     .description {
-      margin-block-start: var(--space-2);
-      max-inline-size: 65ch;
+      margin-block-start: var(--space-1);
+      max-inline-size: 68ch;
       color: var(--color-text-muted);
-      font-size: var(--text-md);
+      font-size: var(--text-base);
     }
 
     .actions {

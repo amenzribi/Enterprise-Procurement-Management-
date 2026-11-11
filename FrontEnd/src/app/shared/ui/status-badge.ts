@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 /**
- * Compact status label. Meaning is carried by the text; the colour and dot only reinforce it.
+ * Compact status label: a soft pill. Meaning is carried by the text; the colour and dot only reinforce it.
  */
 @Component({
   selector: 'app-status-badge',
@@ -14,11 +14,16 @@ export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
     :host {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-2);
-      font-size: var(--text-sm);
+      gap: 0.375rem;
+      padding-block: 0.125rem;
+      padding-inline: 0.5rem 0.625rem;
+      border-radius: var(--radius-pill);
+      background: var(--badge-soft);
+      color: var(--badge-strong);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
       line-height: 1.5;
       white-space: nowrap;
-      color: var(--color-text);
     }
 
     .dot {

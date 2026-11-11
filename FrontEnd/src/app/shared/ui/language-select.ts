@@ -46,7 +46,7 @@ import { Icon } from './icon';
       gap: var(--space-1);
       padding: 0.1875rem;
       border: 1px solid var(--color-line);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-pill);
       background: var(--color-surface);
     }
 
@@ -60,11 +60,11 @@ import { Icon } from './icon';
       min-block-size: 2rem;
       padding-inline: var(--space-2);
       border: 0;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-pill);
       background: transparent;
       color: var(--color-text-muted);
       font-size: var(--text-sm);
-      font-weight: var(--weight-medium);
+      font-weight: var(--weight-semibold);
       cursor: pointer;
       transition: background-color var(--duration-fast) var(--ease-standard);
     }
@@ -75,8 +75,8 @@ import { Icon } from './icon';
     }
 
     .option[aria-pressed='true'] {
-      background: var(--color-accent);
-      color: var(--color-text-inverse);
+      background: var(--color-selected);
+      color: var(--color-on-selected);
     }
 
     @media (max-width: 29.99rem) {

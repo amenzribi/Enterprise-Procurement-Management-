@@ -1,70 +1,115 @@
 // Design tokens. Components use these custom properties only - never raw colour values.
 //
-// Direction "Ledger" (DESIGN.md): neutral paper, hairlines instead of shadows, and one deep green accent reserved
-// for interaction. Text and status pairs are chosen for WCAG 2.2 AA (4.5:1) on white, paper, row hover and soft fills.
+// Direction "Meridian" (DESIGN.md): a deep ink navigation frame around porcelain work surfaces, ultramarine reserved
+// for interaction, saffron reserved for "this is waiting for you". Two themes share every token name: light on
+// :root, dark on :root[data-theme='dark'] (set by ThemeService from the person's choice or the system setting).
+// Text and status pairs are chosen for WCAG 2.2 AA (4.5:1) on their surface, sunken and soft fills in both themes.
 
 :root {
   color-scheme: light;
 
+  // Brand
+  --color-ink: #11132b;
+  --color-ink-raised: #1c1f45;
+  --color-ink-line: #2a2e5a;
+  --color-ink-glow: rgb(42 60 199 / 0.5); // The ultramarine haze behind ink feature surfaces
+  --color-on-ink: #ffffff;
+  --color-on-ink-muted: #a9aecb;
+  --color-brand: #f0b429; // Saffron: attention on ink, the travelling point of the brand ring
+  --color-brand-glow: rgb(240 180 41 / 0.24);
+  --color-on-brand: #11132b;
+
   // Neutrals
-  --color-paper: #fafafa;
+  --color-paper: #f3f4f9;
   --color-surface: #ffffff;
-  --color-surface-sunken: #f2f2f2;
-  --color-line: #e6e6e6;
-  --color-line-strong: #cfcfcf;
-  --color-text: #171717;
-  --color-text-muted: #5c5c5c;
+  --color-surface-sunken: #eceef6;
+  --color-line: #e0e3ee;
+  --color-line-strong: #c3c8d8;
+  --color-text: #16182f;
+  --color-text-muted: #565b76;
   --color-text-inverse: #ffffff;
 
-  // Navigation surface
-  --color-nav: #ffffff;
-  --color-nav-raised: #f2f2f2;
-  --color-nav-text: #4d4d4d;
-  --color-nav-text-strong: #171717;
-  --color-nav-muted: #666666;
-  --color-nav-line: #e6e6e6;
+  // The chosen option of a segmented switch, and numbered markers
+  --color-selected: #11132b;
+  --color-on-selected: #ffffff;
+
+  // Navigation surface (ink in both themes)
+  --color-nav: var(--color-ink);
+  --color-nav-raised: var(--color-ink-raised);
+  --color-nav-text: #c3c7df;
+  --color-nav-text-strong: #ffffff;
+  --color-nav-muted: #8a8fb0;
+  --color-nav-line: var(--color-ink-line);
 
   // Accent (interactive)
-  --color-accent: #0b6b5e;
-  --color-accent-hover: #08564b;
-  --color-accent-soft: #e3f0ed;
-  --color-accent-on-dark: #0b6b5e; // Navigation is light in Ledger; the name is kept for its consumers.
-  --color-focus: #2f5fb3;
+  --color-accent: #2a3cc7;
+  --color-accent-hover: #1f2ea3;
+  --color-accent-soft: #e7eafb;
+  --color-accent-on-dark: var(--color-brand);
+  --color-focus: #2a3cc7;
 
   // Aliases used by older screens, so they follow the palette instead of their local fallbacks.
   --color-border: var(--color-line);
   --color-surface-muted: var(--color-surface-sunken);
   --color-muted: var(--color-text-muted);
   --color-warning-fg: var(--color-warning);
+  --font-size-sm: var(--text-sm);
+  --font-size-lg: var(--text-lg);
+  --shadow-lg: var(--shadow-overlay);
 
   // Status (text colour on its own soft background)
-  --color-success: #1d7346;
-  --color-success-soft: #e3f2e9;
-  --color-warning: #8f5300;
-  --color-warning-soft: #fbefd9;
-  --color-danger: #b42318;
-  --color-danger-soft: #fce8e6;
-  --color-info: #2b589c;
-  --color-info-soft: #e6edf8;
-  --color-neutral: #5c5c5c;
-  --color-neutral-soft: #efefef;
+  --color-success: #177245;
+  --color-success-soft: #e2f3ea;
+  --color-warning: #8a5300;
+  --color-warning-soft: #fcf1d8;
+  --color-danger: #b3261e;
+  --color-danger-soft: #fce9e7;
+  --color-info: #0f6a7a;
+  --color-info-soft: #e1f1f4;
+  --color-neutral: #565b76;
+  --color-neutral-soft: #eceef6;
+  --color-on-danger: #ffffff;
 
-  // Typography
-  --font-sans: 'Geist Variable', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Geist Mono Variable', 'IBM Plex Sans Arabic', ui-monospace, 'Cascadia Mono', monospace; // References and field labels
+  // Glass: a translucent surface over the page, for things that float (top bar, menus, the sign-in panel). Never
+  // for tables or forms inside the workspace. Opaque enough that text contrast is decided by the glass itself.
+  --glass-surface: rgb(255 255 255 / 0.78);
+  --glass-surface-strong: rgb(255 255 255 / 0.9);
+  --glass-line: rgb(255 255 255 / 0.9);
+  --glass-edge: rgb(17 19 43 / 0.1);
+  --glass-blur: saturate(1.6) blur(18px);
+  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 24px 60px -24px rgb(17 19 43 / 0.35);
+
+  // The sign-in stage: the lifecycle orbit and the light behind it
+  --stage-bg: #e9ecfa;
+  --stage-glow-a: rgb(42 60 199 / 0.3);
+  --stage-glow-b: rgb(240 180 41 / 0.26);
+  --stage-glow-c: rgb(15 106 122 / 0.16);
+  --stage-ring: rgb(17 19 43 / 0.34);
+  --stage-ring-faint: rgb(17 19 43 / 0.14);
+  --stage-text: #11132b;
+  --stage-text-muted: #474c69;
+  --stage-node: #ffffff;
+  --stage-core: #2a3cc7;
+
+  // Typography: Bricolage Grotesque for titles and figures that should be read first, IBM Plex Sans for everything
+  // else, IBM Plex Sans Arabic for Arabic (same family, so the three languages share one voice).
+  --font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'IBM Plex Sans Arabic', 'IBM Plex Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  // Reference numbers are set in the text face with tabular figures; the name is kept for its consumers.
+  --font-mono: var(--font-sans);
   --text-xs: 0.75rem;    // 12px - metadata only
   --text-sm: 0.8125rem;  // 13px - table cells, secondary text
   --text-base: 0.875rem; // 14px - UI default
   --text-md: 1rem;       // 16px - reading text
-  --text-lg: 1.125rem;   // 18px - section titles
-  --text-xl: 1.75rem;    // 28px - page titles
-  --text-2xl: 2rem;      // 32px - overview title
-  --leading-tight: 1.25;
+  --text-lg: 1.1875rem;  // 19px - section titles
+  --text-xl: 1.875rem;   // 30px - page titles
+  --text-2xl: 2.5rem;    // 40px - key figures
+  --leading-tight: 1.2;
   --leading-normal: 1.5;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
-  --tracking-tight: -0.02em;
+  --tracking-tight: -0.015em;
 
   // Spacing (4px grid)
   --space-1: 0.25rem;
@@ -77,67 +122,105 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
 
-  // Shape: small radius for controls, slightly larger for containers - hierarchy, not decoration
-  --radius-sm: 6px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  // Shape: the radius grows with the size of the thing - controls, containers, then the one feature surface per page
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
   --radius-pill: 999px;
 
-  --color-scrim: rgb(0 0 0 / 0.4);
+  --color-scrim: rgb(17 19 43 / 0.5);
 
-  // Elevation: only for things that float above the page
-  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.22), 0 0 0 1px rgb(0 0 0 / 0.06);
+  // Elevation, tinted with ink. Resting surfaces get a whisper; only things that float get a real shadow.
+  --shadow-card: 0 1px 2px rgb(17 19 43 / 0.05), 0 2px 10px -6px rgb(17 19 43 / 0.1);
+  --shadow-raised: 0 2px 4px rgb(17 19 43 / 0.06), 0 14px 32px -14px rgb(17 19 43 / 0.22);
+  --shadow-overlay: 0 18px 48px -12px rgb(17 19 43 / 0.35), 0 0 0 1px rgb(17 19 43 / 0.08);
+  --shadow-button: 0 1px 2px rgb(17 19 43 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.14);
 
   // Layout
-  --header-height: 3.5rem;
-  --sidebar-width: 15rem;
-  --sidebar-rail-width: 4rem;
-  --content-max-width: 84rem;
+  --header-height: 3.75rem;
+  --sidebar-width: 16rem;
+  --sidebar-rail-width: 4.5rem;
+  --content-max-width: 86rem;
 
-  // Motion
+  // Motion: one family of timings. Fast for colour, base for state, slow for things arriving, scene for sign-in.
   --duration-fast: 120ms;
-  --duration-base: 180ms;
+  --duration-base: 200ms;
+  --duration-slow: 420ms;
+  --duration-scene: 900ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-cinematic: cubic-bezier(0.19, 1, 0.22, 1);
 }
 
-// Dark theme tokens are defined so components stay theme-agnostic; a user-facing switch is planned later.
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-paper: #0f1a22;
-  --color-surface: #16242f;
-  --color-surface-sunken: #12202a;
-  --color-line: #263846;
-  --color-line-strong: #34495a;
-  --color-text: #e6ecef;
-  --color-text-muted: #a3b2bc;
-  --color-nav: #0b141b;
-  --color-nav-raised: #172631;
-  --color-nav-text: #c7d1d8;
-  --color-nav-text-strong: #ffffff;
-  --color-nav-muted: #8fa1ad;
-  --color-nav-line: #2a3f4e;
-  --color-accent-on-dark: #5cc4c0;
-  --color-accent: #4fb8b4;
-  // Text on the light dark-theme accent must be dark: white on #4fb8b4 is only 2.4:1 (CR-20), #0b141b is 8.5:1.
-  --color-text-inverse: #0b141b;
-  --color-accent-hover: #6cc9c5;
-  --color-accent-soft: #163a3c;
-  --color-focus: #6cc9c5;
-  --color-success: #6fcf97;
-  --color-success-soft: #173426;
-  --color-warning: #f2b55c;
-  --color-warning-soft: #3a2a12;
-  --color-danger: #f58b80;
-  --color-danger-soft: #3d1c19;
-  --color-info: #8fb4ec;
-  --color-info-soft: #1b2b44;
-  --color-neutral: #a3b2bc;
-  --color-neutral-soft: #22323e;
+
+  --color-ink: #070818;
+  --color-ink-raised: #1a1d42;
+  --color-ink-line: #262a55;
+  --color-ink-glow: rgb(88 104 255 / 0.4);
+
+  --color-paper: #0d0f24;
+  --color-surface: #15183a;
+  --color-surface-sunken: #1c2049;
+  --color-line: #282c59;
+  --color-line-strong: #40457d;
+  --color-text: #eceef8;
+  --color-text-muted: #a9aecb;
+  // Text on the light dark-theme accent must be dark (CR-20).
+  --color-text-inverse: #0b0d22;
+
+  --color-selected: #eceef8;
+  --color-on-selected: #0d0f24;
+
+  --color-accent: #99a5ff;
+  --color-accent-hover: #b5beff;
+  --color-accent-soft: #23296a;
+  --color-focus: #f0b429;
+
+  --color-success: #72d19c;
+  --color-success-soft: #153426;
+  --color-warning: #f2b85f;
+  --color-warning-soft: #3a2b12;
+  --color-danger: #f6928a;
+  --color-danger-soft: #401c1b;
+  --color-info: #7fd0de;
+  --color-info-soft: #12343c;
+  --color-neutral: #a9aecb;
+  --color-neutral-soft: #232752;
+  --color-on-danger: #0b0d22;
+
+  --glass-surface: rgb(21 24 58 / 0.72);
+  --glass-surface-strong: rgb(21 24 58 / 0.9);
+  --glass-line: rgb(255 255 255 / 0.12);
+  --glass-edge: rgb(0 0 0 / 0.4);
+  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 24px 60px -24px rgb(0 0 0 / 0.7);
+
+  --stage-bg: #070818;
+  --stage-glow-a: rgb(72 90 255 / 0.42);
+  --stage-glow-b: rgb(240 180 41 / 0.16);
+  --stage-glow-c: rgb(64 196 214 / 0.14);
+  --stage-ring: rgb(255 255 255 / 0.32);
+  --stage-ring-faint: rgb(255 255 255 / 0.13);
+  --stage-text: #ffffff;
+  --stage-text-muted: #a9aecb;
+  --stage-node: #070818;
+  --stage-core: #ffffff;
+
+  --color-scrim: rgb(0 0 0 / 0.62);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 10px -6px rgb(0 0 0 / 0.5);
+  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.3), 0 16px 36px -14px rgb(0 0 0 / 0.7);
+  --shadow-overlay: 0 18px 48px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-button: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.25);
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;
     --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-scene: 0ms;
   }
 }

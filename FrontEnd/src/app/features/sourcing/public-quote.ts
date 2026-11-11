@@ -4,6 +4,7 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { Button } from '../../shared/ui/button';
 import { ErrorState } from '../../shared/ui/error-state';
 import { PageHeader } from '../../shared/ui/page-header';
+import { PublicFrame } from '../../shared/ui/public-frame';
 import { Skeleton } from '../../shared/ui/skeleton';
 import { PublicSummary } from './sourcing.models';
 import { SourcingApi } from './sourcing.api';
@@ -14,8 +15,9 @@ import { SourcingApi } from './sourcing.api';
 @Component({
   selector: 'app-public-quote',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, ErrorState, PageHeader, Skeleton, TranslatePipe],
+  imports: [Button, ErrorState, PageHeader, PublicFrame, Skeleton, TranslatePipe],
   template: `
+    <app-public-frame class="frame">
     <main class="page">
       <app-page-header [heading]="'sourcing.public.title' | translate" [description]="'sourcing.public.description' | translate" />
       @if (state() === 'loading') {
@@ -43,13 +45,18 @@ import { SourcingApi } from './sourcing.api';
         }
       }
     </main>
+    </app-public-frame>
   `,
   styles: `
-    .page { max-inline-size: 40rem; margin-inline: auto; padding: var(--space-5); }
+    .frame { --frame-width: 40rem; }
+    .meta { margin-block-end: var(--space-4); font-weight: var(--weight-semibold); }
     .form { display: grid; gap: var(--space-2); }
-    .lines { padding-inline-start: 1.25rem; }
-    .error { color: var(--color-danger); }
-    input { min-block-size: 2.5rem; padding: var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); }
+    .form label { margin-block-start: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .form button { min-block-size: 3rem; }
+    .lines { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-8); border-radius: var(--radius-md); background: var(--color-paper); }
+    .lines li + li { margin-block-start: var(--space-1); }
+    .error { min-block-size: 1.25rem; color: var(--color-danger); font-size: var(--text-sm); }
+    input { min-block-size: 3rem; padding-inline: var(--space-4); font-size: var(--text-md); }
   `,
 })
 export class PublicQuotePage {

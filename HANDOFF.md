@@ -1,3 +1,98 @@
+# Handoff: Meridian redesign, light and dark (2026-11-10)
+
+**Candidate:** uncommitted working tree on `stabilization-and-ledger-redesign`, on top of `6869b2e`. UI only. No backend, migration, route, permission, validation or API change. Not committed, pushed or deployed.
+
+**Running for review:** http://localhost:4201 (Angular dev server, serving this working tree) against a backend on :8081 with its own database `procurement_qa_redesign` (synthetic demo data only). Backend sources are an export of `HEAD` in `C:\qa\p360-redesign\src\BackEnd`. Demo accounts are in the README; the QA password is the `DEMO_USER_PASSWORD` the backend was started with. The owner's :8080 and :4200 were not touched. Both processes belong to the session that started them and stop with it; restart commands are under "Restart".
+
+## What changed
+
+- **Identity.** Ledger is replaced by Meridian ([DESIGN.md](DESIGN.md)): ink navigation, porcelain work surfaces, ultramarine for action, saffron for "waiting for you", and the ring (brand mark and lifecycle progress). Bricolage Grotesque and IBM Plex Sans replace Geist; both are self-hosted.
+- **Themes.** Light and dark share every token. `ThemeService` follows the system until the person uses the switch (top bar, sign-in, guest pages); the choice is stored on the device.
+- **Sign-in.** Full-screen stage with the lifecycle orbit and a glass panel. CSS and SVG with one pointer listener; still under reduced motion.
+- **Navigation.** Ink sidebar, glass top bar and menus, saffron marker on the current item. One location now lights one item: sourcing, purchase orders and receipts share the request list's route and no longer all show as current.
+- **Home.** Next-approval band with wait and due date, shortcuts taken from the navigation (same permissions), late approvals marked.
+- **Dashboard, approvals, list, record, form.** Rebuilt or restyled as listed in [the route checklist](docs/design/redesign/route-checklist.md).
+- **New shared components:** `app-brand-mark`, `app-stage-ring`, `app-theme-toggle`, `app-public-frame`.
+- **New translation keys (EN, FR, AR):** `overview.shortcuts`, `dashboards.pipeline.total`, `theme.toDark`, `theme.toLight`. The Arabic and French are the developer's and have not had native review.
+
+## Decisions
+
+- No GSAP or Lenis. The cinematic skill's choreography and timings are implemented in CSS. Why: sign-in has no scroll scenes, and the initial bundle is already over its 500 kB warning.
+- Glass only on the top bar, menus and the sign-in panel. Why: tables and forms must keep full contrast.
+- A lifecycle ring next to every written status, never instead of it. Why: colour and shape must not carry meaning alone.
+- The dashboard figure is the sum of the status counts the API returned. It makes no claim beyond 5,000 requests (D-05 still applies).
+
+## Verification (2026-11-10, on this working tree)
+
+| Check | Result |
+|---|---|
+| `npm run lint` | Passed |
+| `npm test` | Passed, 245 of 245 |
+| `npm run build` | Passed. Warning: initial bundle 515.47 kB, 15.47 kB over the 500 kB budget (it was 6.50 kB over before the redesign) |
+| Playwright, full suite | 63 of 63 passed, on the tree before the last two small changes (one active navigation item; definition-list margin reset) |
+| Playwright after those two changes: `session`, `accessibility`, `accessibility-purchasing`, `purchasing-journey`, `ledger-verification` | 32 of 33 passed. One failure: `ledger-verification` "deciding keeps focus in the queue". Repeated four times afterwards, it passed four times |
+| axe WCAG A/AA, 18 screens in light and 18 in dark, 1440 px | First run: light all passed; dark found one defect (notification count text). After the fix, repeated on the final tree: no violations in either theme. Script: `C:\qa\p360-redesign\axe.mjs` |
+| Horizontal overflow at 390, 820 and 1440 px, EN, FR and AR samples | None found on the screens captured |
+
+The full suite covers sign-in and session expiry, request submission, the three-language approval journey with the e-mail link, return and rejection, purchasing assignment, line classification, sourcing, order and shipment, split delivery, partial receipt, two-person receipt confirmation, service acceptance, closure, messaging, request administration and the 20-step journey.
+
+**Not verified**
+
+- The focus failure above is intermittent (one failure in six runs today); its cause is not established. The earlier verification report also recorded intermittent races in this area.
+- Invoice attestation recovery and payment recording were exercised only as far as the existing 20-step and receipt specs cover them; no new scenario was written.
+- Dark theme was not looked at on the order, logistics and receipt panels, the administration screens, the supplier portal, the assistant, dialogs or toasts. The checklist lists them.
+- Screen reader, a full keyboard walk-through, real touch devices, native French and Arabic review, runtime performance.
+- The Playwright suite runs in light theme only.
+- Backend tests were not run: no backend file changed.
+
+**Release gates are unchanged:** independent QA, penetration test, MFA and restore drill are still open. This redesign does not alter the earlier no-go for pilot and production.
+
+## Functional ideas for the next phase (not done here)
+
+1. The shell asks for the approval and purchasing counts for every user; roles without the permission get a 403 on each navigation. Ask only when the permission is held.
+2. Sourcing, Purchase orders and Receipts in the sidebar all open the request list unfiltered. Give each a filtered view (for example by stage).
+3. The record's back link always reads "My requests", including for buyers who arrived from the purchasing inbox.
+4. The supplier quote link takes one unit price for the whole request; quote per line.
+5. The requester's home shows no due dates; the list API has no SLA field for requests in approval.
+6. Dashboard: late count and ageing by stage as figures. The data is only on the paged table today.
+7. Guest pages (`/p`, `/q`) had no language switch before; they have one now through the shared frame. Confirm the link e-mails should carry the recipient's language.
+8. A Playwright project that runs the accessibility specs in dark theme.
+9. A lint rule against raw colour values in component styles (carried over).
+
+## Restart
+
+```powershell
+# Backend (isolated database, port 8081)
+cd C:\qa\p360-redesign\src\BackEnd
+$env:SERVER_PORT="8081"; $env:DEMO_USER_PASSWORD="<choose>"; $env:APP_PUBLIC_BASE_URL="http://localhost:4201"
+$env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=procurement_qa_redesign;integratedSecurity=true;encrypt=true;trustServerCertificate=true"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev,demo"
+# Frontend
+cd FrontEnd; npx ng serve --port 4201 --proxy-config proxy.conf.8081.json
+# Browser tests against it
+$env:E2E_BASE_URL="http://localhost:4201"; $env:MAIL_DIR="C:\qa\p360-redesign\src\BackEnd\storage\mail"; npm run e2e
+```
+
+Running the suite overwrites `docs/qa/evidence` and `docs/design/verification`; both were restored with `git checkout --` after each run.
+
+## Next action
+
+The owner reviews http://localhost:4201 in both themes. If the direction is accepted: rerun the full Playwright suite once on the final tree, look at the "still to look at by eye" list in the route checklist, then commit. When committing, leave out `docs/tooling.md` and `.anchor/`.
+
+## Skills Review
+
+- ✅ `frontend-design:frontend-design`: set the direction and the rule against generic defaults.
+- ⚠️ `anthropic-skills:ui-ux-pro-max`: its generated system (navy, Plus Jakarta Sans) was generic and was not adopted; its checklist items were used.
+- ✅ `design-skills:design-systems`: token tiers and the component table in DESIGN.md.
+- ✅ `audit-suite:web-animation-design`: easing and duration choices, reduced-motion handling.
+- ⚠️ `anthropic-skills:cinematic-gsap-lenis-motion-system`: choreography and timings used; its GSAP and Lenis implementation was not.
+- ⚠️ `design-skills:accessibility-audit`: automated layer and a partial visual layer done; keyboard walk-through and screen reader not done in this pass.
+- ⚠️ `zizi-skills:i18n`: key parity (unit test), logical properties and mirrored icons checked; no pseudo-locale sweep.
+- ❌ `design-skills:interaction-design`, Refero, GetLayers: not used. Refero needs sign-in; GetLayers is not installed.
+- ❌ Self-assessment: arrows were double-mirrored in Arabic and white text was placed on a light red in dark; screenshots and the axe scan caught both, not review.
+
+---
+
 # Handoff: Remediation of independent QA findings (2026-11-09)
 
 **Candidate:** the local commit that introduces this text, on branch `stabilization-and-ledger-redesign`, based on `36c69d8`. Find its SHA with `git log -1 --format=%H -- HANDOFF.md`. Not pushed, merged or deployed.

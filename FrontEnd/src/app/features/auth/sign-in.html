@@ -1,20 +1,46 @@
 <div class="page">
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
   <section class="brand-side" aria-hidden="true">
     <div class="brand-row">
-      <span class="brand-mark">P</span>
+      <app-brand-mark [size]="34" />
       <span class="brand-product">{{ 'app.name' | translate }}</span>
     </div>
-    <div class="principle">
-      <p class="principle-line">{{ 'auth.signIn.principle.one' | translate }}</p>
-      <p class="principle-line">{{ 'auth.signIn.principle.two' | translate }}</p>
-      <p class="principle-line">{{ 'auth.signIn.principle.three' | translate }}</p>
+
+    <!-- The lifecycle as an orbit: every stage a request passes, and the request travelling it. Static when motion is reduced. -->
+    <div class="orbit">
+      <svg class="orbit-rings" viewBox="0 0 200 100" preserveAspectRatio="none" focusable="false">
+        <ellipse class="ring ring--outer" cx="100" cy="50" rx="92" ry="42" />
+        <ellipse class="ring ring--mid" cx="100" cy="50" rx="62" ry="27" />
+        <ellipse class="ring ring--inner" cx="100" cy="50" rx="32" ry="13" />
+      </svg>
+      <span class="orbit-core"></span>
+      @for (station of stations; track station.key) {
+        <span class="station" [class.is-below]="station.below" [class.is-right]="station.side === 'right'" [class.is-left]="station.side === 'left'" [style.left.%]="station.x" [style.top.%]="station.y" [style.--i]="$index">
+          <span class="station-dot"></span>
+          <span class="station-label">{{ 'requests.stages.' + station.key | translate }}</span>
+        </span>
+      }
+      <span class="traveller"></span>
     </div>
-    <p class="brand-foot">{{ 'auth.signIn.principle.foot' | translate }}</p>
+
+    <div class="pitch">
+      <div class="principle">
+        <p class="principle-line"><span>{{ 'auth.signIn.principle.one' | translate }}</span></p>
+        <p class="principle-line"><span>{{ 'auth.signIn.principle.two' | translate }}</span></p>
+        <p class="principle-line"><span>{{ 'auth.signIn.principle.three' | translate }}</span></p>
+      </div>
+      <p class="brand-foot">{{ 'auth.signIn.principle.foot' | translate }}</p>
+    </div>
   </section>
 
   <main class="form-side" id="main" tabindex="-1">
     <div class="form-top">
+      <span class="form-brand">
+        <app-brand-mark class="form-brand-mark" [size]="28" />
+        <span>{{ 'app.name' | translate }}</span>
+      </span>
       <app-language-select />
+      <app-theme-toggle />
     </div>
 
     <div class="form-wrap">

@@ -15,6 +15,7 @@ import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
 import { PageHeader } from '../../shared/ui/page-header';
 import { Skeleton } from '../../shared/ui/skeleton';
+import { StageRing, StageRingTone } from '../../shared/ui/stage-ring';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { formatMoney, minorUnitsOf } from './money';
 import {
@@ -25,7 +26,7 @@ import {
   SortColumn,
   SortDirection,
 } from './request.models';
-import { USER_STATUSES, statusKey, userStatusKey, userStatusOf, userStatusTone } from './request-status';
+import { USER_STATUSES, ringToneOf, statusKey, trackerIndex, userStatusKey, userStatusOf, userStatusTone } from './request-status';
 import { RequestsApi } from './requests.api';
 
 export const PAGE_SIZE = 20;
@@ -59,7 +60,7 @@ export function queryFromParams(params: ParamMap): RequestQuery {
 @Component({
   selector: 'app-requests-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Button, DatePipe, EmptyState, ErrorState, Icon, PageHeader, RouterLink, Skeleton, StatusBadge, TranslatePipe],
+  imports: [Button, DatePipe, EmptyState, ErrorState, Icon, PageHeader, RouterLink, Skeleton, StageRing, StatusBadge, TranslatePipe],
   templateUrl: './requests-list.html',
   styleUrl: './requests-list.scss',
 })
@@ -203,6 +204,14 @@ export class RequestsListPage {
       return null;
     }
     return query.direction === 'asc' ? 'ascending' : 'descending';
+  }
+
+  protected step(item: RequestListItem): number {
+    return trackerIndex(userStatusOf(item));
+  }
+
+  protected ringTone(item: RequestListItem): StageRingTone {
+    return ringToneOf(userStatusOf(item));
   }
 
   protected tone(item: RequestListItem) {

@@ -67,10 +67,12 @@ export interface ConfirmData {
 
     .is-danger {
       background: var(--color-danger);
+      color: var(--color-on-danger);
     }
 
     .is-danger:hover {
-      background: color-mix(in srgb, var(--color-danger) 85%, black);
+      background: color-mix(in srgb, var(--color-danger) 85%, var(--color-text));
+      color: var(--color-on-danger);
     }
   `,
 })

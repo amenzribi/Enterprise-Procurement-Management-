@@ -163,8 +163,16 @@ export const MAX_TEXT = 2000;
     }
 
     .decide {
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 1px var(--color-accent-soft);
+      border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-line));
+      box-shadow: 0 0 0 4px var(--color-accent-soft);
+    }
+    /* In the inbox the decision already sits inside the selected request's pane: no second frame. */
+    :host-context(.pane) .decide {
+      padding: var(--space-4) 0 0;
+      border: 0;
+      border-block-start: 1px solid var(--color-line);
+      border-radius: 0;
+      box-shadow: none;
     }
 
     .panel-title {
@@ -197,6 +205,7 @@ export const MAX_TEXT = 2000;
     .is-danger {
       background: var(--color-danger);
       border-color: var(--color-danger);
+      color: var(--color-on-danger);
     }
 
     .form {
@@ -213,9 +222,6 @@ export const MAX_TEXT = 2000;
     select {
       inline-size: 100%;
       padding: var(--space-2) var(--space-3);
-      border: 1px solid var(--color-line-strong);
-      border-radius: var(--radius-sm);
-      background: var(--color-surface);
     }
 
     textarea[aria-invalid='true'],
@@ -237,8 +243,8 @@ export const MAX_TEXT = 2000;
 
     .asked {
       margin: 0 0 var(--space-3);
-      padding: var(--space-2) var(--space-3);
-      border-inline-start: 3px solid var(--color-info);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
       background: var(--color-info-soft);
     }
   `,

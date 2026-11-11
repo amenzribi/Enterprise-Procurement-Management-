@@ -17,17 +17,23 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { filter, map, skip } from 'rxjs';
+import { BrandMark } from '../../shared/ui/brand-mark';
 import { Icon } from '../../shared/ui/icon';
 import { LanguageSelect } from '../../shared/ui/language-select';
 import { StatusBadge } from '../../shared/ui/status-badge';
+import { ThemeToggle } from '../../shared/ui/theme-toggle';
 import { hasPermission } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { ApprovalCountService } from '../../features/approvals/approval-count.service';
 import { PurchasingCountService } from '../../features/purchasing/purchasing-count.service';
 import { InAppNotifications } from '../../features/notifications/in-app-notifications';
-import { NAVIGATION, NavGroup } from '../navigation';
+import { NAVIGATION, NavGroup, NavItem } from '../navigation';
 import { NotificationBell } from '../notification-bell';
 import { UserMenu } from '../user-menu';
+
+interface ShellNavGroup extends NavGroup {
+  items: (NavItem & { sharesRoute: boolean })[];
+}
 
 const COLLAPSED_KEY = 'epi.sidebar.collapsed';
 /** Below this width the sidebar becomes an off-canvas drawer. */
@@ -37,6 +43,7 @@ export const DRAWER_QUERY = '(max-width: 63.99rem)';
   selector: 'app-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BrandMark,
     CdkTrapFocus,
     Icon,
     LanguageSelect,
@@ -45,6 +52,7 @@ export const DRAWER_QUERY = '(max-width: 63.99rem)';
     RouterLinkActive,
     RouterOutlet,
     StatusBadge,
+    ThemeToggle,
     TranslatePipe,
     UserMenu,
   ],
@@ -62,11 +70,21 @@ export class Shell {
   private readonly inAppNotifications = inject(InAppNotifications);
 
   /** Navigation filtered by the user's permissions; empty groups are hidden. */
-  protected readonly navigation = computed<NavGroup[]>(() => {
+  protected readonly navigation = computed<ShellNavGroup[]>(() => {
     const me = this.auth.me();
+    const seen = new Set<string>();
     return NAVIGATION.map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.permission || hasPermission(me, item.permission)),
+      items: group.items
+        .filter((item) => !item.permission || hasPermission(me, item.permission))
+        .map((item) => {
+          // Several journey entries open the same page; only the first is marked as the current location.
+          const sharesRoute = !!item.route && seen.has(item.route);
+          if (item.route) {
+            seen.add(item.route);
+          }
+          return { ...item, sharesRoute };
+        }),
     })).filter((group) => group.items.length > 0);
   });
   protected readonly isDevMode = isDevMode();

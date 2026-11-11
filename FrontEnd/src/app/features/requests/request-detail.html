@@ -34,6 +34,7 @@
 
       <!-- The dossier header: number, status, stage, owner and since when — the answer to "where is my purchase?" -->
       <header class="dossier">
+        <app-stage-ring class="dossier-ring" [step]="trackerStep()" [total]="trackerTotal" [tone]="ringTone()" [size]="64" [showCount]="true" />
         <div class="dossier-main">
           <div class="dossier-ref-row">
             <p class="dossier-number tabular" [class.is-draft]="!r.number">

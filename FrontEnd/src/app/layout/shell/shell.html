@@ -16,7 +16,7 @@
     [cdkTrapFocus]="isDrawerMode() && drawerOpen()"
   >
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true">P</span>
+      <app-brand-mark class="brand-mark" [size]="30" />
       <span class="brand-name">
         <span class="brand-product">{{ 'app.name' | translate }}</span>
         <span class="brand-suite">{{ 'app.suite' | translate }}</span>
@@ -44,8 +44,8 @@
                   class="nav-link"
                   [class.is-planned]="item.plannedSprint"
                   [routerLink]="item.route ?? ['/planned', item.key]"
-                  routerLinkActive="is-active"
-                  ariaCurrentWhenActive="page"
+                  [routerLinkActive]="item.sharesRoute ? '' : 'is-active'"
+                  [ariaCurrentWhenActive]="item.sharesRoute ? undefined : 'page'"
                   [attr.title]="collapsed() && !isDrawerMode() ? (('nav.items.' + item.key) | translate) : null"
                 >
                   <app-icon class="nav-icon" [name]="item.icon" />
@@ -115,6 +115,7 @@
           <app-status-badge tone="info">{{ 'shell.environment.development' | translate }}</app-status-badge>
         }
         <app-language-select />
+        <app-theme-toggle />
         <app-notification-bell />
         <app-user-menu />
       </div>

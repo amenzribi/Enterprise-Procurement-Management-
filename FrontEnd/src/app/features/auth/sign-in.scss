@@ -1,23 +1,79 @@
 :host {
   display: block;
+  // Pointer position, -1 to 1 on each axis, set by the component on fine pointers only. The layers of the stage
+  // shift against each other by a few pixels to give it depth.
+  --mx: 0;
+  --my: 0;
 }
 
-// Two panes: the product's promise on paper, the form on white, split by a hairline. Static by decision (DESIGN.md). On phones only the form remains.
+// One stage for the whole screen: light behind, the lifecycle orbit and the product's promise on it, and the form
+// in a glass panel floating in front. Everything decorative is `aria-hidden` and none of it is needed to sign in.
 .page {
+  position: relative;
+  isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
   min-block-size: 100dvh;
+  overflow: hidden;
+  background: var(--stage-bg);
+  color: var(--stage-text);
 }
+
+// Light --------------------------------------------------------------------------------------------------
+// Three soft sources that drift very slowly. They are gradients, not blurred elements, so they cost nothing to paint.
+
+.aurora {
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  pointer-events: none;
+  transform: translate3d(calc(var(--mx) * 18px), calc(var(--my) * 14px), 0);
+  transition: transform var(--duration-scene) var(--ease-cinematic);
+}
+
+.aurora span {
+  position: absolute;
+  border-radius: 50%;
+  animation: drift 26s ease-in-out infinite alternate;
+}
+
+.aurora span:nth-child(1) {
+  inset: 8% 38% 20% 2%;
+  background: radial-gradient(closest-side, var(--stage-glow-a), transparent);
+}
+
+.aurora span:nth-child(2) {
+  inset: 42% 4% -6% 48%;
+  background: radial-gradient(closest-side, var(--stage-glow-b), transparent);
+  animation-duration: 34s;
+  animation-direction: alternate-reverse;
+}
+
+.aurora span:nth-child(3) {
+  inset: -4% 10% 52% 50%;
+  background: radial-gradient(closest-side, var(--stage-glow-c), transparent);
+  animation-duration: 30s;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(3%, 3%, 0) scale(1.08);
+  }
+}
+
+// Brand pane ------------------------------------------------------------------------------------------
 
 .brand-side {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: var(--space-10);
-  padding: var(--space-10) clamp(var(--space-8), 5vw, var(--space-12));
-  background: var(--color-paper);
-  border-inline-end: 1px solid var(--color-line);
-  color: var(--color-nav-text);
+  gap: var(--space-8);
+  min-inline-size: 0;
+  padding: var(--space-8) clamp(var(--space-8), 5vw, 4.5rem) var(--space-10);
 }
 
 .brand-row {
@@ -26,52 +82,218 @@
   gap: var(--space-3);
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-text);
-  color: var(--color-surface);
-  font-size: var(--text-base);
-  font-weight: var(--weight-medium);
+.brand-row app-brand-mark,
+.form-brand-mark {
+  color: var(--stage-text);
 }
 
 .brand-product {
-  color: var(--color-nav-text-strong);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
 }
 
-// The product promise, set as three stacked lines in the page's one large type size.
+// The orbit: three flattened rings (a circle seen at an angle), the ten lifecycle stages on the outer one, and a
+// saffron point travelling it.
+.orbit {
+  position: relative;
+  inline-size: min(100% - 11rem, 34rem);
+  aspect-ratio: 2 / 1;
+  margin: auto;
+  // Room for the stage labels, which sit outside the ring.
+  margin-block: var(--space-8);
+  transform: translate3d(calc(var(--mx) * -10px), calc(var(--my) * -8px), 0);
+  transition: transform var(--duration-scene) var(--ease-cinematic);
+  animation: orbit-in var(--duration-scene) var(--ease-cinematic) both;
+}
+
+.orbit-rings {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--stage-ring);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.ring--mid {
+  stroke: var(--stage-ring-faint);
+  stroke-dasharray: 2 5;
+}
+
+.ring--inner {
+  stroke: var(--stage-ring-faint);
+}
+
+.orbit-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+  border-radius: 50%;
+  background: var(--stage-core);
+  box-shadow: 0 0 0 6px var(--stage-ring-faint), 0 0 48px 18px var(--stage-glow-a);
+  transform: translate(-50%, -50%);
+}
+
+.station {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  animation: station-in 500ms var(--ease-out) both;
+  animation-delay: calc(260ms + var(--i) * 60ms);
+}
+
+.station-dot {
+  position: absolute;
+  top: -0.25rem;
+  left: -0.25rem;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border: 1.5px solid var(--stage-text);
+  border-radius: 50%;
+  background: var(--stage-node);
+}
+
+.station-label {
+  position: absolute;
+  inset-block-end: 0.75rem;
+  left: 0;
+  color: var(--stage-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.station.is-below .station-label {
+  inset-block: 0.75rem auto;
+}
+
+.station.is-right .station-label,
+.station.is-left .station-label {
+  inset-block: auto;
+  top: 0;
+  transform: translateY(-50%);
+}
+
+.station.is-right .station-label {
+  left: 0.875rem;
+}
+
+.station.is-left .station-label {
+  left: auto;
+  right: 0.875rem;
+}
+
+.traveller {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  border-radius: 50%;
+  background: var(--color-brand);
+  box-shadow: 0 0 0 5px var(--color-brand-glow), 0 0 28px 6px var(--color-brand-glow);
+  offset-path: ellipse(46% 42% at 50% 50%);
+  offset-rotate: 0deg;
+  // Rests a little past the first stage when it cannot move.
+  offset-distance: 31%;
+  animation: travel 64s linear infinite;
+}
+
+@supports not (offset-path: ellipse(46% 42% at 50% 50%)) {
+  .traveller {
+    display: none;
+  }
+}
+
+@keyframes travel {
+  from {
+    offset-distance: 31%;
+  }
+
+  to {
+    offset-distance: 131%;
+  }
+}
+
+@keyframes orbit-in {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+@keyframes station-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.pitch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// The product promise: three short statements in the display face, each rising out of its own line.
 .principle {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
 .principle-line {
-  color: var(--color-nav-text-strong);
-  font-size: clamp(1.75rem, 3.2vw, 2.75rem);
-  font-weight: var(--weight-medium);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  // Measured in the line's own large type, so each statement keeps to one or two lines.
-  max-inline-size: 16ch;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 2.9vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.principle-line span {
+  display: block;
+  animation: line-in var(--duration-scene) var(--ease-cinematic) both;
+}
+
+.principle-line:nth-child(2) span {
+  animation-delay: 110ms;
+}
+
+.principle-line:nth-child(3) span {
+  animation-delay: 220ms;
+}
+
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateY(105%);
+  }
 }
 
 .brand-foot {
-  max-inline-size: 42ch;
-  color: var(--color-nav-muted);
-  font-size: var(--text-sm);
+  max-inline-size: 44ch;
+  color: var(--stage-text-muted);
+  font-size: var(--text-base);
+  animation: station-in 700ms var(--ease-out) 420ms both;
 }
+
+// Form pane -------------------------------------------------------------------------------------------
 
 .form-side {
   display: flex;
   flex-direction: column;
-  padding: var(--space-6) clamp(var(--space-4), 5vw, var(--space-12));
-  background: var(--color-surface);
+  min-inline-size: 0;
+  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-10));
 }
 
 .form-side:focus {
@@ -80,18 +302,72 @@
 
 .form-top {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-2);
 }
 
+// Shown only when the brand pane is folded away (phones).
+.form-brand {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-end: auto;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+// The glass panel. It is opaque enough that the text on it is judged against the panel, not the stage.
 .form-wrap {
   inline-size: 100%;
-  max-inline-size: 24rem;
+  max-inline-size: 27rem;
   margin: auto;
-  padding-block: var(--space-10);
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-edge);
+  color: var(--color-text);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  animation: panel-in var(--duration-scene) var(--ease-cinematic) 180ms both;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .form-wrap {
+    background: var(--glass-surface-strong);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.875rem);
+  }
+}
+
+// Static fallback: no drift, no travelling point, no entrance. The composition stays, as a still image.
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .orbit {
+    transform: none;
+    transition: none;
+  }
+
+  .aurora span,
+  .orbit,
+  .station,
+  .traveller,
+  .principle-line span,
+  .brand-foot,
+  .form-wrap {
+    animation: none;
+  }
 }
 
 .title {
-  font-size: var(--text-xl);
+  font-size: 2.25rem;
 }
 
 .title:focus {
@@ -109,7 +385,7 @@
   gap: var(--space-2);
   align-items: flex-start;
   margin-block-start: var(--space-5);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--color-info-soft);
   color: var(--color-info);
@@ -139,30 +415,20 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 label {
-  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
+// Fields are solid: glass is for the panel, never for where people type.
 input {
   inline-size: 100%;
-  min-block-size: 2.75rem;
-  padding-inline: var(--space-3);
-  border: 1px solid var(--color-line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  min-block-size: 3rem;
+  padding-inline: var(--space-4);
   font-size: var(--text-md);
-}
-
-input:focus-visible {
-  outline-offset: 0;
-  border-color: var(--color-focus);
-}
-
-input[aria-invalid='true'] {
-  border-color: var(--color-danger);
 }
 
 .password-row {
@@ -179,8 +445,9 @@ input[aria-invalid='true'] {
   inset-inline-end: 0;
   display: grid;
   place-items: center;
-  inline-size: 2.75rem;
+  inline-size: 3rem;
   border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
@@ -193,15 +460,18 @@ input[aria-invalid='true'] {
 .field-error {
   color: var(--color-danger);
   font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
 
 .submit {
-  min-block-size: 2.75rem;
+  min-block-size: 3rem;
   margin-block-start: var(--space-1);
+  font-size: var(--text-md);
 }
 
 .forgot {
   margin-block-start: var(--space-3);
+  text-align: center;
 }
 
 .forgot a {
@@ -210,15 +480,30 @@ input[aria-invalid='true'] {
   min-block-size: 2.75rem;
   padding-block: var(--space-2);
   padding-inline: var(--space-1);
+  font-weight: var(--weight-medium);
 }
 
 .dev-note {
   display: flex;
   gap: var(--space-2);
   align-items: flex-start;
-  margin-block-start: var(--space-8);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+}
+
+// Tablets: the orbit needs width; below it the stage labels would collide, so only the promise remains.
+@media (max-width: 68rem) {
+  .station-label {
+    display: none;
+  }
+
+  .orbit {
+    inline-size: min(100% - 2rem, 30rem);
+  }
 }
 
 @media (max-width: 52rem) {
@@ -230,7 +515,19 @@ input[aria-invalid='true'] {
     display: none;
   }
 
+  .form-brand {
+    display: inline-flex;
+  }
+
+  .form-side {
+    padding: var(--space-4);
+  }
+
   .form-wrap {
-    padding-block: var(--space-6);
+    margin-block: var(--space-8) auto;
+  }
+
+  .title {
+    font-size: 1.875rem;
   }
 }

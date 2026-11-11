@@ -106,7 +106,7 @@ type ListState = 'loading' | 'ready' | 'error';
       padding-inline: 0.25rem;
       border-radius: var(--radius-pill);
       background: var(--color-danger);
-      color: #fff;
+      color: var(--color-on-danger);
       font-size: 0.6875rem;
       font-weight: var(--weight-semibold);
       line-height: 1.125rem;
@@ -120,8 +120,12 @@ type ListState = 'loading' | 'ready' | 'error';
       padding: var(--space-2);
       border: 1px solid var(--color-line);
       border-radius: var(--radius-lg);
-      background: var(--color-surface);
+      background: var(--glass-surface-strong);
       box-shadow: var(--shadow-overlay);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      transform-origin: top;
+      animation: overlay-in var(--duration-base) var(--ease-out) both;
     }
 
     .menu-head {

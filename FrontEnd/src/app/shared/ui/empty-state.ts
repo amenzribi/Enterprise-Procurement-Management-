@@ -25,12 +25,18 @@ import { Icon, IconName } from './icon';
       padding: var(--space-8) var(--space-6);
       border: 1px dashed var(--color-line-strong);
       border-radius: var(--radius-lg);
-      background: var(--color-surface);
+      background: color-mix(in srgb, var(--color-surface) 60%, transparent);
     }
 
     .icon {
-      color: var(--color-text-muted);
+      display: grid;
+      place-items: center;
+      inline-size: 2.75rem;
+      block-size: 2.75rem;
       margin-block-end: var(--space-2);
+      border-radius: var(--radius-md);
+      background: var(--color-accent-soft);
+      color: var(--color-accent);
     }
 
     .title {

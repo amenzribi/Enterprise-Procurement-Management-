@@ -29,7 +29,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
       border: 1px solid transparent;
       border-radius: var(--radius-sm);
       font-size: var(--text-base);
-      font-weight: var(--weight-medium);
+      font-weight: var(--weight-semibold);
       line-height: 1;
       text-decoration: none;
       white-space: nowrap;
@@ -37,7 +37,14 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
       transition:
         background-color var(--duration-fast) var(--ease-standard),
         border-color var(--duration-fast) var(--ease-standard),
-        color var(--duration-fast) var(--ease-standard);
+        box-shadow var(--duration-fast) var(--ease-standard),
+        color var(--duration-fast) var(--ease-standard),
+        transform var(--duration-fast) var(--ease-standard);
+    }
+
+    // A press is acknowledged at once, before the server answers.
+    :host(:active) {
+      transform: scale(0.98);
     }
 
     :host(.app-button--small) {
@@ -49,6 +56,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
     :host(.app-button--primary) {
       background: var(--color-accent);
       color: var(--color-text-inverse);
+      box-shadow: var(--shadow-button);
     }
 
     :host(.app-button--primary:hover) {
@@ -63,8 +71,9 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
     }
 
     :host(.app-button--secondary:hover) {
-      border-color: var(--color-text-muted);
-      color: var(--color-text);
+      border-color: var(--color-accent);
+      background: var(--color-accent-soft);
+      color: var(--color-accent-hover);
     }
 
     :host(.app-button--ghost) {
@@ -79,7 +88,8 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
     :host([disabled]),
     :host([aria-disabled='true']) {
-      opacity: 0.55;
+      opacity: 0.5;
+      box-shadow: none;
       cursor: not-allowed;
       pointer-events: none;
     }

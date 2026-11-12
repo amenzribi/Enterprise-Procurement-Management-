@@ -215,6 +215,8 @@
 
 .drawer-close {
   margin-inline-start: auto;
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
 }
 
 // Collapsed rail: icons only, labels remain available to assistive technology
@@ -299,6 +301,29 @@
   text-overflow: ellipsis;
 }
 
+// Location trail: which part of the journey, then which page.
+.trail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.trail-sep {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.trail-page {
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+}
+
 .topbar-end {
   display: flex;
   align-items: center;
@@ -332,7 +357,9 @@
     inset-block: 0;
     inset-inline-start: 0;
     z-index: 50;
-    inline-size: min(var(--sidebar-width), 85vw);
+    inline-size: min(18rem, 86vw);
+    border-start-end-radius: var(--radius-xl);
+    border-end-end-radius: var(--radius-xl);
     box-shadow: var(--shadow-overlay);
     transform: translateX(-105%);
     visibility: hidden;
@@ -345,6 +372,10 @@
     transform: none;
     visibility: visible;
     transition: transform var(--duration-base) var(--ease-standard);
+  }
+
+  .nav-link {
+    min-block-size: 2.75rem;
   }
 
   .topbar {
@@ -365,11 +396,27 @@
   inset: 0;
   z-index: 40;
   background: var(--color-scrim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: backdrop-in var(--duration-base) var(--ease-out) both;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
 }
 
 // The development badge must never push the header past a tablet's width.
 @media (max-width: 64rem) {
   .topbar-end app-status-badge {
+    display: none;
+  }
+}
+
+@media (max-width: 80rem) {
+  .trail-group,
+  .trail-sep {
     display: none;
   }
 }

@@ -1,0 +1,28 @@
+sign-in tab order: button[عربيالعربية] > button[FRFrançais] > button[ENEnglish] > button[Passer au thème sombre] > input[sign-in-email] > input[sign-in-password] > button[Afficher le mot de passe] > button[Se connecter] > a[Mot de passe oublié ?]
+PASS sign-in: every stop shows a focus ring
+PASS sign-in: e-mail comes before password
+PASS sign-in: Enter in the password field signs in (/overview)
+PASS shell: first Tab reaches the skip link (a[Skip to main content])
+PASS shell: skip link moves focus to the main content (main[main])
+PASS theme switch: focus ring visible (button[Switch to dark theme])
+PASS theme switch: Enter changes the theme (light -> dark)
+PASS theme switch: Space changes it back
+PASS notifications: Enter opens the menu
+PASS notifications: Escape closes it and focus returns (button[Notifications, 0 unread])
+PASS account menu: Enter opens it; arrow moves to button[Sign out]
+PASS sidebar: focus ring visible on ink (a[My work])
+dashboard links: 9
+PASS dashboard link: focus ring visible
+PASS "Submitted" (89) -> /requests?scope=visible&status=SUBMITTED | filter shows SUBMITTED | rows all "Submitted": true | list total 89
+PASS "Returned for revision" (1) -> /requests?scope=visible&status=RETURNED | filter shows RETURNED | rows all "Returned for revision": true | list total 1
+PASS "Rejected" (4) -> /requests?scope=visible&status=REJECTED | filter shows REJECTED | rows all "Rejected": true | list total 4
+PASS "Approved" (37) -> /requests?scope=visible&status=APPROVED | filter shows APPROVED | rows all "Approved": true | list total 37
+PASS "Assigned" (9) -> /requests?scope=visible&status=ASSIGNED | filter shows ASSIGNED | rows all "Assigned": true | list total 9
+PASS "Quoting" (5) -> /requests?scope=visible&status=QUOTING | filter shows QUOTING | rows all "Quoting": true | list total 5
+PASS "Ordered" (4) -> /requests?scope=visible&status=ORDERED | filter shows ORDERED | rows all "Ordered": true | list total 4
+PASS "Received" (8) -> /requests?scope=visible&status=RECEIVED | filter shows RECEIVED | rows all "Received": true | list total 8
+PASS "Closed" (12) -> /requests?scope=visible&status=CLOSED | filter shows CLOSED | rows all "Closed": true | list total 12
+PASS drawer: opens with Enter, focus moves inside (button[Close navigation])
+PASS drawer: Tab stays inside while it is open
+PASS drawer: Escape closes it and returns focus to the menu button (button[Open navigation])
+failures: 0

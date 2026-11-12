@@ -1,0 +1,10 @@
+
+> procurement-web@0.1.0 lint
+> ng lint
+
+
+Linting "procurement-web"...
+
+All files pass linting.
+
+lint exit=0

@@ -136,6 +136,8 @@ type LoadState = 'loading' | 'ready' | 'error';
                   {{ purchasingCount.count() }}
                   <span class="visually-hidden">{{ 'nav.pendingCount' | translate: { count: purchasingCount.count() } }}</span>
                 </span>
+              } @else if (item.route === '/requests' && mineTotal() > 0) {
+                <span class="shortcut-figure tabular">{{ mineTotal() }}</span>
               } @else {
                 <app-icon class="shortcut-go" name="chevron-right" [size]="16" />
               }
@@ -382,7 +384,7 @@ type LoadState = 'loading' | 'ready' | 'error';
     .shortcut-label {
       flex: 1;
       min-inline-size: 0;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
     .shortcut-count {
       flex-shrink: 0;
@@ -398,6 +400,14 @@ type LoadState = 'loading' | 'ready' | 'error';
     .shortcut-go {
       flex-shrink: 0;
       color: var(--color-text-muted);
+    }
+    /* A plain count (how many requests are mine), not a call to act: no saffron. */
+    .shortcut-figure {
+      flex-shrink: 0;
+      color: var(--color-text-muted);
+      font-family: var(--font-display);
+      font-size: var(--text-md);
+      font-weight: 600;
     }
 
     .grid {
@@ -499,13 +509,8 @@ type LoadState = 'loading' | 'ready' | 'error';
         inline-size: 100%;
       }
       .shortcuts {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .shortcut {
-        flex-wrap: wrap;
-      }
-      .shortcut-go {
-        display: none;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-2);
       }
     }
   `,
@@ -528,6 +533,7 @@ export class OverviewPage {
   protected readonly notices = signal<NoticeItem[]>([]);
 
   protected readonly approvalTotal = signal(0);
+  protected readonly mineTotal = signal(0);
   protected readonly nextApproval = computed(() => this.approvals()[0] ?? null);
   protected readonly isSupplier = computed(() => hasPermission(this.auth.me(), 'MESSAGING_SUPPLIER'));
   protected readonly canCreate = computed(() => hasPermission(this.auth.me(), 'REQUEST_CREATE'));
@@ -642,6 +648,7 @@ export class OverviewPage {
           this.approvalTotal.set(result.approvals.totalItems ?? 0);
           this.purchasing.set(result.purchasing.items ?? []);
           this.mine.set(result.mine.items ?? []);
+          this.mineTotal.set(result.mine.totalItems ?? 0);
           this.notices.set(result.notices.items ?? []);
           this.state.set('ready');
         },

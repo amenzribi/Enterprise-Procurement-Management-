@@ -151,13 +151,18 @@ export function formatSize(bytes: number, locale: string): string {
       align-items: center;
       gap: var(--space-2);
       justify-self: start;
-      min-block-size: 2.5rem;
+      min-block-size: 2.75rem;
       padding-inline: var(--space-4);
-      border: 1px dashed var(--color-line-strong, var(--color-line));
-      border-radius: var(--radius-sm);
-      color: var(--color-accent);
-      font-weight: var(--weight-medium);
+      border: 1px dashed var(--color-accent);
+      border-radius: var(--radius-md);
+      background: var(--color-accent-soft);
+      color: var(--color-accent-hover);
+      font-weight: var(--weight-semibold);
       cursor: pointer;
+      transition: background-color var(--duration-fast) var(--ease-standard);
+    }
+    .upload-button:hover {
+      background: color-mix(in srgb, var(--color-accent-soft) 70%, var(--color-surface));
     }
 
     input:focus-visible + .upload-button {
@@ -180,6 +185,8 @@ export function formatSize(bytes: number, locale: string): string {
     .progress {
       inline-size: 100%;
       max-inline-size: 20rem;
+      block-size: 0.5rem;
+      accent-color: var(--color-accent);
     }
 
     .error {
@@ -201,11 +208,19 @@ export function formatSize(bytes: number, locale: string): string {
       gap: var(--space-3);
       padding: var(--space-2) var(--space-3);
       border: 1px solid var(--color-line);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
+      background: var(--color-paper);
     }
 
     .file-icon {
-      color: var(--color-text-muted);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      inline-size: 2rem;
+      block-size: 2rem;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-accent);
     }
 
     .file-main {

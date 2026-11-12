@@ -74,7 +74,7 @@ import { ShipmentView } from './logistics.models';
             </ul>
             <ul class="milestones">
               @for (m of s.milestones; track m.id) {
-                <li [class.late]="m.late">
+                <li [class.late]="m.late" [class.done]="!!m.actualDate">
                   <span>{{ 'logistics.milestone.' + m.code | translate }}</span>
                   @if (m.late) {
                     <span class="badge">{{ 'logistics.actions.late' | translate }}</span>
@@ -124,10 +124,45 @@ import { ShipmentView } from './logistics.models';
     .small { font-size: var(--text-sm); }
     .error { color: var(--color-danger); }
     .milestones, .docs { list-style: none; padding: 0; margin: 0 0 var(--space-3); display: grid; gap: var(--space-2); }
-    .milestones li { display: grid; gap: var(--space-1); padding: var(--space-2); border-inline-start: 3px solid var(--color-line); }
-    .milestones li.late { border-inline-start-color: var(--color-danger); }
-    .badge { color: var(--color-danger); font-size: var(--text-sm); }
-    .dates { font-size: var(--text-sm); color: var(--color-text-muted); }
+    /* Milestones read as a timeline: a filled point when reached, red when late, hollow when still to come. */
+    .milestones { gap: 0; margin-block: var(--space-3) var(--space-4); }
+    .milestones li {
+      position: relative;
+      display: grid;
+      justify-items: start;
+      gap: var(--space-1);
+      padding-block-end: var(--space-4);
+      padding-inline-start: var(--space-6);
+      font-weight: var(--weight-medium);
+    }
+    .milestones li:last-child { padding-block-end: 0; }
+    .milestones li::before {
+      content: '';
+      position: absolute;
+      inset-block-start: 0.25rem;
+      inset-inline-start: 0;
+      inline-size: 0.75rem;
+      block-size: 0.75rem;
+      border: 2px solid var(--color-line-strong);
+      border-radius: 50%;
+      background: var(--color-surface);
+    }
+    .milestones li::after {
+      content: '';
+      position: absolute;
+      inset-block: 1.125rem 0;
+      inset-inline-start: 0.3125rem;
+      inline-size: 2px;
+      border-radius: 1px;
+      background: var(--color-line);
+    }
+    .milestones li:last-child::after { display: none; }
+    .milestones li.done::before { border-color: var(--color-accent); background: var(--color-accent); }
+    .milestones li.done::after { background: var(--color-accent); }
+    .milestones li.late::before { border-color: var(--color-danger); background: var(--color-danger-soft); }
+    .badge { color: var(--color-danger); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .dates { font-size: var(--text-sm); font-weight: var(--weight-regular); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+    .shipment { padding-block-start: var(--space-3); border-block-start: 1px solid var(--color-line); }
     .refs { display: flex; flex-wrap: wrap; gap: var(--space-3); }
     .tabular { user-select: all; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
     .qtys { list-style: none; margin: 0 0 var(--space-2); padding: 0; font-size: var(--text-sm); }

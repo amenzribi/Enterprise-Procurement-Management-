@@ -23,7 +23,8 @@
     "expandSidebar": "Expand sidebar",
     "environment": {
       "development": "Development environment"
-    }
+    },
+    "location": "You are here"
   },
   "nav": {
     "groups": {
@@ -1491,7 +1492,9 @@
       "emptyTitle": "No requests in the pipeline",
       "emptyMessage": "Submitted requests you can see will appear here by status.",
       "amountsNote": "Open amounts by currency (not summed across currencies):",
-      "total": "Requests in the pipeline"
+      "total": "Requests in the pipeline",
+      "byPhase": "By phase of the lifecycle",
+      "byStatus": "By status (opens the filtered list)"
     },
     "group": {
       "title": "By requesting company",
@@ -1509,7 +1512,30 @@
       "amount": "Amount",
       "late": "Late",
       "lateYes": "Late",
-      "lateNo": "On time"
+      "lateNo": "On time",
+      "lateOnPage": "{{count}} late on this page"
+    },
+    "phases": {
+      "preparation": {
+        "name": "Being prepared",
+        "meaning": "Draft or returned to the requester"
+      },
+      "approval": {
+        "name": "In approval",
+        "meaning": "Submitted, waiting for a decision"
+      },
+      "purchasing": {
+        "name": "In purchasing",
+        "meaning": "Approved, assigned, quoting or awarded"
+      },
+      "delivery": {
+        "name": "Ordered and in delivery",
+        "meaning": "Ordered, in transit or received"
+      },
+      "finished": {
+        "name": "Finished",
+        "meaning": "Closed, rejected or cancelled"
+      }
     }
   },
   "usersAdmin": {

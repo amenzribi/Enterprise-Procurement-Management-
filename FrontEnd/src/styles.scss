@@ -100,6 +100,19 @@ select {
   }
 }
 
+// Dialogs (confirmations, submit preview, session warning): the page dims and softens behind them, and they arrive
+// with the same short rise as menus and toasts.
+.cdk-overlay-dark-backdrop {
+  background: var(--color-scrim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.cdk-dialog-container {
+  outline: none;
+  animation: overlay-in var(--duration-base) var(--ease-out) both;
+}
+
 ::selection {
   background: var(--color-accent-soft);
   color: var(--color-text);
@@ -202,6 +215,28 @@ dl {
 
 dd {
   margin-inline-start: 0;
+}
+
+// Work panels on the record (purchasing, sourcing, order, logistics, receipt): forms keep a readable measure and
+// their action sits at the start of the row instead of stretching across the panel.
+.panel.decide .form {
+  max-inline-size: 46rem;
+}
+
+.panel.decide .form > button,
+.panel.decide form > button {
+  justify-self: start;
+  min-inline-size: 11rem;
+}
+
+.panel.decide .label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+// A busy button shows the ring in place of its icon (the icon is the caller's content, so this lives here).
+.app-button.is-busy app-icon {
+  display: none;
 }
 
 // Shared content helpers for feature pages (panels, muted and emphasised text, overdue marks).

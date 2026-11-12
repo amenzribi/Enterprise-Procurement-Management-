@@ -16,6 +16,8 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
     '[class.app-button--secondary]': "variant() === 'secondary'",
     '[class.app-button--ghost]': "variant() === 'ghost'",
     '[class.app-button--small]': "size() === 'small'",
+    '[class.is-busy]': 'busy()',
+    '[attr.aria-busy]': "busy() ? 'true' : null",
   },
   template: '<ng-content />',
   styles: `
@@ -86,6 +88,32 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
       color: var(--color-text);
     }
 
+    /* Busy: the brand ring turns in front of the label. Tied to a real request, never shown for effect. */
+    :host(.is-busy)::before {
+      content: '';
+      flex-shrink: 0;
+      inline-size: 1rem;
+      block-size: 1rem;
+      border: 2px solid currentColor;
+      border-inline-end-color: transparent;
+      border-radius: 50%;
+      animation: button-ring 700ms linear infinite;
+    }
+
+    @keyframes button-ring {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :host(.is-busy)::before {
+        animation: none;
+        border-inline-end-color: currentColor;
+        opacity: 0.6;
+      }
+    }
+
     :host([disabled]),
     :host([aria-disabled='true']) {
       opacity: 0.5;
@@ -98,4 +126,6 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 export class Button {
   readonly variant = input<ButtonVariant>('primary');
   readonly size = input<'default' | 'small'>('default');
+  /** Shows the ring while the action this button started is in flight. The caller also disables it. */
+  readonly busy = input(false);
 }

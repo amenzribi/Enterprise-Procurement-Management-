@@ -505,11 +505,11 @@
           </div>
 
           <div class="summary-actions">
-            <button appButton type="submit" [disabled]="busy() !== 'idle'">
+            <button appButton type="submit" [busy]="busy() === 'submitting'" [disabled]="busy() !== 'idle'">
               <app-icon name="send" [size]="16" />
               {{ (busy() === 'submitting' ? 'requests.form.submitting' : 'requests.form.submit') | translate }}
             </button>
-            <button appButton variant="secondary" type="button" [disabled]="busy() !== 'idle'" (click)="saveDraft()">
+            <button appButton variant="secondary" type="button" [busy]="busy() === 'saving'" [disabled]="busy() !== 'idle'" (click)="saveDraft()">
               <app-icon name="save" [size]="16" />
               {{ (busy() === 'saving' ? 'requests.form.saving' : 'requests.form.saveDraft') | translate }}
             </button>

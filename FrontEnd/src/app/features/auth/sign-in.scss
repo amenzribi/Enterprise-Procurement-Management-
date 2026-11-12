@@ -8,15 +8,52 @@
 
 // One stage for the whole screen: light behind, the lifecycle orbit and the product's promise on it, and the form
 // in a glass panel floating in front. Everything decorative is `aria-hidden` and none of it is needed to sign in.
+//
+// Layout: a masthead row, then the stage and the form side by side. Every vertical measure below is tied to the
+// viewport height (--u is one percent of it), so on a short desktop window the orbit, the type and the spacing
+// shrink before the form does, and the form with its actions stays in view. The page is only as tall as the
+// viewport at minimum: when the content needs more (small phones, 200 % zoom, validation messages, an open
+// keyboard) it grows and the document scrolls. Nothing is clipped except the decorative light.
 .page {
+  --u: 1vh;
+  --u: 1dvh;
   position: relative;
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  min-block-size: 100vh;
   min-block-size: 100dvh;
-  overflow: hidden;
+  // Clips the oversized light without making the page a scroll container.
+  overflow: clip;
   background: var(--stage-bg);
   color: var(--stage-text);
+}
+
+// A soft vignette gives the stage an edge, so the light reads as depth and not as a flat tint.
+.page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 90% at 40% 45%, transparent 55%, var(--stage-vignette));
+  pointer-events: none;
+}
+
+.masthead {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: clamp(var(--space-3), calc(var(--u) * 3), var(--space-6)) clamp(var(--space-4), 5vw, 4.5rem);
+}
+
+.masthead-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 // Light --------------------------------------------------------------------------------------------------
@@ -34,6 +71,7 @@
 .aurora span {
   position: absolute;
   border-radius: 50%;
+  will-change: transform;
   animation: drift 26s ease-in-out infinite alternate;
 }
 
@@ -71,19 +109,18 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: var(--space-8);
+  gap: clamp(var(--space-3), calc(var(--u) * 3), var(--space-8));
   min-inline-size: 0;
-  padding: var(--space-8) clamp(var(--space-8), 5vw, 4.5rem) var(--space-10);
+  padding: 0 clamp(var(--space-8), 5vw, 4.5rem) clamp(var(--space-5), calc(var(--u) * 5), var(--space-10));
 }
 
 .brand-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-3);
 }
 
-.brand-row app-brand-mark,
-.form-brand-mark {
+.brand-row app-brand-mark {
   color: var(--stage-text);
 }
 
@@ -98,11 +135,12 @@
 // saffron point travelling it.
 .orbit {
   position: relative;
-  inline-size: min(100% - 11rem, 34rem);
+  // As wide as the pane allows, and never taller than about a third of the viewport (it is twice as wide as tall).
+  inline-size: min(100% - 11rem, 34rem, calc(var(--u) * 68));
   aspect-ratio: 2 / 1;
   margin: auto;
   // Room for the stage labels, which sit outside the ring.
-  margin-block: var(--space-8);
+  margin-block: clamp(var(--space-5), calc(var(--u) * 4), var(--space-8));
   transform: translate3d(calc(var(--mx) * -10px), calc(var(--my) * -8px), 0);
   transition: transform var(--duration-scene) var(--ease-cinematic);
   animation: orbit-in var(--duration-scene) var(--ease-cinematic) both;
@@ -126,6 +164,12 @@
 .ring--mid {
   stroke: var(--stage-ring-faint);
   stroke-dasharray: 2 5;
+}
+
+// A wider, fainter ring behind the lifecycle: the orbit sits inside something larger.
+.ring--halo {
+  stroke: var(--stage-ring-faint);
+  opacity: 0.6;
 }
 
 .ring--inner {
@@ -254,7 +298,7 @@
 .principle-line {
   overflow: hidden;
   font-family: var(--font-display);
-  font-size: clamp(1.75rem, 2.9vw, 2.75rem);
+  font-size: clamp(1.5rem, min(2.9vw, calc(var(--u) * 5.4)), 2.75rem);
   font-weight: 600;
   line-height: 1.12;
   letter-spacing: -0.025em;
@@ -293,45 +337,41 @@
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
-  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-10));
+  // The masthead above already separates the panel from the controls; this keeps a floor under and beside it.
+  padding: clamp(var(--space-2), calc(var(--u) * 2), var(--space-6)) clamp(var(--space-4), 4vw, var(--space-10)) clamp(var(--space-5), calc(var(--u) * 5), var(--space-10));
 }
 
 .form-side:focus {
   outline: none;
 }
 
-.form-top {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-// Shown only when the brand pane is folded away (phones).
-.form-brand {
-  display: none;
-  align-items: center;
-  gap: var(--space-2);
-  margin-inline-end: auto;
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-
 // The glass panel. It is opaque enough that the text on it is judged against the panel, not the stage.
 .form-wrap {
   inline-size: 100%;
+  position: relative;
   max-inline-size: 27rem;
   margin: auto;
-  padding: clamp(var(--space-6), 4vw, var(--space-10));
+  padding: clamp(var(--space-5), calc(var(--u) * 4.5), var(--space-10)) clamp(var(--space-5), 3vw, var(--space-10));
   border: 1px solid var(--glass-line);
   border-radius: var(--radius-xl);
-  background: var(--glass-surface);
+  // Brighter where the light would catch it, denser toward the far corner.
+  background: linear-gradient(155deg, var(--glass-surface-strong), var(--glass-surface) 62%);
   box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-edge);
   color: var(--color-text);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   animation: panel-in var(--duration-scene) var(--ease-cinematic) 180ms both;
+}
+
+// The lit top edge of the glass.
+.form-wrap::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -1px;
+  inset-inline: var(--radius-xl);
+  block-size: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+  pointer-events: none;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -367,7 +407,7 @@
 }
 
 .title {
-  font-size: 2.25rem;
+  font-size: clamp(1.625rem, calc(var(--u) * 4.6), 2.25rem);
 }
 
 .title:focus {
@@ -408,8 +448,8 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  margin-block-start: var(--space-6);
+  gap: clamp(var(--space-3), calc(var(--u) * 2.4), var(--space-5));
+  margin-block-start: clamp(var(--space-4), calc(var(--u) * 3), var(--space-6));
 }
 
 .field {
@@ -426,7 +466,8 @@ label {
 // Fields are solid: glass is for the panel, never for where people type.
 input {
   inline-size: 100%;
-  min-block-size: 3rem;
+  // 44 px at least, 48 px when the window is tall enough.
+  min-block-size: clamp(2.75rem, calc(var(--u) * 6.4), 3rem);
   padding-inline: var(--space-4);
   font-size: var(--text-md);
 }
@@ -464,13 +505,13 @@ input {
 }
 
 .submit {
-  min-block-size: 3rem;
+  min-block-size: clamp(2.75rem, calc(var(--u) * 6.4), 3rem);
   margin-block-start: var(--space-1);
   font-size: var(--text-md);
 }
 
 .forgot {
-  margin-block-start: var(--space-3);
+  margin-block-start: var(--space-1);
   text-align: center;
 }
 
@@ -487,12 +528,36 @@ input {
   display: flex;
   gap: var(--space-2);
   align-items: flex-start;
-  margin-block-start: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  margin-block-start: var(--space-1);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-surface-sunken);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+}
+
+// Short windows: the supporting sentence goes first, then the stage labels, then the orbit itself. The promise and
+// the form remain.
+@media (max-height: 46rem) {
+  .brand-foot {
+    display: none;
+  }
+}
+
+@media (max-height: 38rem) {
+  .station-label {
+    display: none;
+  }
+}
+
+@media (max-height: 30rem) {
+  .orbit {
+    display: none;
+  }
+
+  .brand-side {
+    justify-content: flex-end;
+  }
 }
 
 // Tablets: the orbit needs width; below it the stage labels would collide, so only the promise remains.
@@ -502,10 +567,11 @@ input {
   }
 
   .orbit {
-    inline-size: min(100% - 2rem, 30rem);
+    inline-size: min(100% - 2rem, 30rem, calc(var(--u) * 68));
   }
 }
 
+// Phones and narrow windows (including a desktop at 200 % zoom): the stage folds away and the panel takes the page.
 @media (max-width: 52rem) {
   .page {
     grid-template-columns: minmax(0, 1fr);
@@ -515,19 +581,23 @@ input {
     display: none;
   }
 
-  .form-brand {
-    display: inline-flex;
-  }
-
   .form-side {
-    padding: var(--space-4);
+    padding-inline: var(--space-4);
   }
 
   .form-wrap {
-    margin-block: var(--space-8) auto;
+    margin-block: clamp(var(--space-2), calc(var(--u) * 4), var(--space-10)) auto;
   }
+}
 
-  .title {
-    font-size: 1.875rem;
+@media (max-width: 52rem) and (min-height: 56rem) {
+  .form-wrap {
+    margin-block: auto;
+  }
+}
+
+@media (max-width: 24rem) {
+  .brand-product {
+    font-size: var(--text-md);
   }
 }

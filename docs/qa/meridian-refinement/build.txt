@@ -1,0 +1,47 @@
+
+> procurement-web@0.1.0 build
+> ng build
+
+> Building...
+√ Building...
+Initial chunk files | Names              |  Raw size | Estimated transfer size
+chunk-DaX0fBId.js   | -                  | 221.89 kB |                63.84 kB
+main-BIKB73XN.js    | main               | 179.22 kB |                41.78 kB
+chunk-DdDHwQaa.js   | -                  |  92.82 kB |                23.57 kB
+styles-ZAQPCEYG.css | styles             |  15.32 kB |                 3.61 kB
+chunk-R-Fmnr8a.js   | -                  |   6.89 kB |                 2.20 kB
+chunk-hV4jUSjp.js   | -                  |   1.70 kB |               720 bytes
+chunk-DdF35Oim.js   | -                  | 545 bytes |               545 bytes
+chunk-N3dZzZ2t.js   | -                  | 310 bytes |               310 bytes
+
+                    | Initial total      | 518.70 kB |               136.58 kB
+
+Lazy chunk files    | Names              |  Raw size | Estimated transfer size
+chunk-DzGXCqMq.js   | request-detail     | 140.49 kB |                25.86 kB
+chunk-DIyolo-v.js   | request-form       |  63.47 kB |                13.35 kB
+chunk-BrtQURxe.js   | -                  |  52.47 kB |                10.69 kB
+chunk-CWhCUdA7.js   | purchasing-inbox   |  27.24 kB |                 6.15 kB
+chunk-DYvJS2jc.js   | request-admin      |  26.87 kB |                 6.39 kB
+chunk-DKj6yF1H.js   | approval-rules     |  25.86 kB |                 6.57 kB
+chunk-CBUu-Fs8.js   | approvals-inbox    |  25.25 kB |                 6.41 kB
+chunk-CRpcUMbc.js   | requests-list      |  23.11 kB |                 5.87 kB
+chunk-c20wJlQj.js   | dashboards-page    |  21.86 kB |                 5.58 kB
+chunk-Ddi205N7.js   | sign-in            |  21.50 kB |                 5.57 kB
+chunk-5gdInQHw.js   | overview           |  20.09 kB |                 5.12 kB
+chunk-BB2MZ0Cu.js   | organization-admin |  16.03 kB |                 4.22 kB
+chunk-C_2Th-N_.js   | -                  |  15.90 kB |                 4.82 kB
+chunk-BNSqMdf4.js   | users-admin        |  15.87 kB |                 4.18 kB
+chunk-Mwdv20xM.js   | system-status      |  15.54 kB |                 4.25 kB
+...and 35 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [24.236 seconds] - 2026-11-12T06:09:25.917Z
+
+▲ [WARNING] bundle initial exceeded maximum budget. Budget 500.00 kB was not met by 18.70 kB with a total of 518.70 kB.
+
+
+▲ [WARNING] src/app/features/auth/sign-in.scss exceeded maximum budget. Budget 8.00 kB was not met by 1.24 kB with a total of 9.24 kB.
+
+
+Output location: C:\Users\zribi\OneDrive\Desktop\Procurement Managamenet\FrontEnd\dist\procurement-web
+
+build exit=0

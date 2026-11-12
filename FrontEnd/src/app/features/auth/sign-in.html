@@ -1,14 +1,23 @@
 <div class="page">
   <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
-  <section class="brand-side" aria-hidden="true">
-    <div class="brand-row">
-      <app-brand-mark [size]="34" />
+  <!-- Its own row of the page: the brand at the start, language and theme at the end. Nothing overlaps it. -->
+  <header class="masthead">
+    <span class="brand-row">
+      <app-brand-mark [size]="32" />
       <span class="brand-product">{{ 'app.name' | translate }}</span>
-    </div>
+    </span>
+    <span class="masthead-tools">
+      <app-language-select />
+      <app-theme-toggle />
+    </span>
+  </header>
+
+  <section class="brand-side" aria-hidden="true">
 
     <!-- The lifecycle as an orbit: every stage a request passes, and the request travelling it. Static when motion is reduced. -->
     <div class="orbit">
       <svg class="orbit-rings" viewBox="0 0 200 100" preserveAspectRatio="none" focusable="false">
+        <ellipse class="ring ring--halo" cx="100" cy="50" rx="112" ry="52" />
         <ellipse class="ring ring--outer" cx="100" cy="50" rx="92" ry="42" />
         <ellipse class="ring ring--mid" cx="100" cy="50" rx="62" ry="27" />
         <ellipse class="ring ring--inner" cx="100" cy="50" rx="32" ry="13" />
@@ -34,15 +43,6 @@
   </section>
 
   <main class="form-side" id="main" tabindex="-1">
-    <div class="form-top">
-      <span class="form-brand">
-        <app-brand-mark class="form-brand-mark" [size]="28" />
-        <span>{{ 'app.name' | translate }}</span>
-      </span>
-      <app-language-select />
-      <app-theme-toggle />
-    </div>
-
     <div class="form-wrap">
       <h1 class="title" tabindex="-1">{{ 'auth.signIn.heading' | translate }}</h1>
       <p class="lead">{{ 'auth.signIn.lead' | translate }}</p>
@@ -114,7 +114,7 @@
           }
         </div>
 
-        <button appButton type="submit" class="submit" [attr.aria-disabled]="submitting()" [disabled]="submitting()">
+        <button appButton type="submit" class="submit" [busy]="submitting()" [attr.aria-disabled]="submitting()" [disabled]="submitting()">
           <app-icon name="log-in" [size]="16" />
           {{ (submitting() ? 'auth.signIn.submitting' : 'auth.signIn.submit') | translate }}
         </button>

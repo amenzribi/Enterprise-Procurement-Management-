@@ -44,6 +44,7 @@ Never test for a theme in a component. Use a token, and add one to both themes i
 | Status | `--color-success`, `-warning`, `-danger`, `-info`, `-neutral`, each with `-soft`; `--color-on-danger` | see tokens file | see tokens file |
 | Glass | `--glass-surface`, `-surface-strong`, `-line`, `-edge`, `-blur`, `-shadow` | white at 78 % and 90 % | surface at 72 % and 90 % |
 | Sign-in stage | `--stage-*` | pale ultramarine field, ink rings | ink field, white rings |
+| Chart categories | `--chart-1` to `--chart-5` | `#2a3cc7`, `#0f8296`, `#b97d00`, `#177245`, `#7a7fa0` | `#99a5ff`, `#5fcfe0`, `#f0b429`, `#72d19c`, `#8d93bd` |
 
 Text and status pairs meet WCAG 2.2 AA (4.5:1) on their surface and soft fills in both themes. Information is teal so that it never reads as the ultramarine action colour.
 
@@ -57,6 +58,8 @@ Text and status pairs meet WCAG 2.2 AA (4.5:1) on their surface and soft fills i
 
 **Motion.** One family of timings: 120 ms (`--duration-fast`) for hover and colour, 200 ms (`--duration-base`) for state change, 420 ms (`--duration-slow`) for things arriving, 900 ms (`--duration-scene`) for the sign-in scene only. Easing: `--ease-standard` for movement on screen, `--ease-out` for things entering, `--ease-cinematic` for the sign-in scene. Menus and toasts share one entrance (`overlay-in`: a 6 px rise, no bounce). Buttons acknowledge a press with a 2 % scale. A decided approval slides out of the queue. `prefers-reduced-motion` removes all of it.
 
+**Sign-in layout.** A masthead row (brand at the start, language and theme at the end) and, under it, the stage beside the glass panel. The form comes first: every vertical measure on the page is tied to the viewport height, so on a short window the orbit, the display type and the spacing shrink before the form does. Fields never go below 44 px. As height runs out the supporting sentence goes (46 rem), then the stage labels (38 rem), then the orbit (30 rem). At 1366 × 640 the whole form, the sign-in button and the recovery link are in view without scrolling, with 34 px between the masthead and the panel. The page is at least as tall as the viewport and grows past it when the content needs it (small phones, 200 % zoom, validation messages, an open keyboard), so the document scrolls and every control stays reachable. Only the decorative light is clipped (`overflow: clip`).
+
 **Sign-in scene.** In order: the light and the orbit, the three lines of the promise (each rising out of its own line, 110 ms apart), the supporting sentence, then the glass panel. Afterwards the light drifts slowly, the saffron point travels the orbit once every 64 s, and on a mouse the layers shift by up to 18 px against each other. It is CSS and SVG with one passive pointer listener; no animation library. With reduced motion, or without `offset-path` or `backdrop-filter`, it is a still composition with a near-opaque panel.
 
 **Loading.** Skeletons appear only while data is pending. No splash and no artificial delay.
@@ -67,7 +70,7 @@ Text and status pairs meet WCAG 2.2 AA (4.5:1) on their surface and soft fills i
 |---|---|
 | `app-brand-mark` | The ring mark. White on ink by default; set `color` for light surfaces. |
 | `app-stage-ring` | Lifecycle progress. Tones: active, done, stopped, idle. Sizes 22 to 64 px; `showCount` writes the step number. Decorative, always next to a written status. |
-| `button[appButton]` | Primary (one per view), secondary, ghost; default and small. |
+| `button[appButton]` | Primary (one per view), secondary, ghost; default and small. `[busy]` shows a turning ring in place of the icon while the button's request is in flight; the caller still disables it. |
 | `app-page-header` | Page title in the display face, one-line purpose, actions slot. |
 | `app-panel`, `.panel` | A group of related content. White, hairline, card shadow. |
 | `app-status-badge` | Soft pill: dot and word in the status colour. |
@@ -81,14 +84,17 @@ Text and status pairs meet WCAG 2.2 AA (4.5:1) on their surface and soft fills i
 
 ## Patterns
 
-- **Navigation:** ink sidebar grouped by the procurement journey; the current item has a saffron bar and icon; counts are saffron pills. It collapses to a rail and becomes a drawer below 64 rem. The top bar is glass and carries language, theme, notifications and the account menu.
+- **Navigation:** ink sidebar grouped by the procurement journey; the current item has a saffron bar and icon; counts are saffron pills. It collapses to a rail and becomes a drawer below 64 rem (18 rem wide, rounded trailing edge, 44 px links, the page dimmed and softened behind it; Escape closes it and returns focus to the menu button). The top bar is glass and carries a location trail (journey group, then page, taken from the navigation), language, theme, notifications and the account menu.
 - **Home:** next-approval band on ink (only when something waits; it states the wait and the due date, in saffron when late), shortcuts to the role's destinations (taken from the navigation, same permissions), then three lists. Late approvals carry a red badge and due line.
 - **Approvals inbox:** queue beside the decision from 64 rem; below that each row opens the record. The decision pane shows amount, requester, wait and due date in four cells above the actions.
-- **Lists:** table in a panel with a porcelain header row; ring and badge in the status column; cards on phones.
+- **Lists:** a filter bar (one contained strip: search, filters, sort) above a table in a panel with a porcelain header row; ring and badge in the status column; cards on phones; the page range or page number as a quiet pill beside the previous and next buttons.
 - **Record:** header with the ring, reference, title, status, four fact cells and the actions; next-action note; role panels; tracker, lines and attachments beside people, classification and history.
-- **Forms:** numbered sections (the form is filled in order), labels above fields, 44 px controls, errors under the field and in a summary, sticky total and actions.
-- **Dashboard:** one figure on ink, then one bar per status with the count always written.
+- **Forms:** numbered sections (the form is filled in order), labels above fields, 44 px controls, errors under the field and in a summary, sticky total and actions. Saving shows the ring on the button that was pressed and disables the others; the result is a toast. Attachments: a tinted, dashed "add a file" control, a progress bar while uploading, each file as a row with its icon.
+- **Work panels on the record** (purchasing, sourcing, order, logistics, receipt): forms keep a 46 rem measure and their action sits at the start of the row. Shipment milestones are a timeline: filled when reached, red when late, hollow when still to come.
+- **Dashboard:** the total inside a ring split into five lifecycle phases, with each phase's meaning, count and share written beside it; then one bar per status that opens the request list filtered to that status; open amounts per currency; requests by company; the management table with a "late on this page" count. Every figure states its scope in words. Charts are SVG and CSS (no chart library is installed); colour is never the only carrier, and the written figures are the tabular alternative.
 - **Sign-in:** one full-screen stage with the lifecycle orbit and the promise, and the form in a glass panel; on phones the stage light and the panel only.
+- **Menus:** Escape closes a menu whether focus is inside it or still on its trigger.
+- **Dialogs:** the page dims and softens behind them (`--color-scrim`, 3 px blur); they use the feature radius and the shared `overlay-in` entrance.
 - **Reference numbers:** wrapped in `<bdi>` so they stay left to right in Arabic.
 - **Icons:** Lucide, functional only. No decorative emojis, sparkles or robot motifs.
 

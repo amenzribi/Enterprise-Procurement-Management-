@@ -17,7 +17,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   styles: `
     :host {
       display: block;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       background: linear-gradient(
         90deg,
         var(--color-surface-sunken) 0%,

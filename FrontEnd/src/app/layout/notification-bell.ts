@@ -23,7 +23,9 @@ type ListState = 'loading' | 'ready' | 'error';
       type="button"
       class="bell"
       [cdkMenuTriggerFor]="panel"
+      #trigger="cdkMenuTriggerFor"
       (cdkMenuOpened)="load()"
+      (keydown.escape)="trigger.close()"
       [attr.aria-label]="'notifications.open' | translate: { count: shownCount() }"
       [attr.title]="'notifications.exactCount' | translate: { count: service.unread() }"
     >

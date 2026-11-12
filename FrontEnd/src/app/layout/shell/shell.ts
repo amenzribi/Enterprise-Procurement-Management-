@@ -89,6 +89,29 @@ export class Shell {
   });
   protected readonly isDevMode = isDevMode();
 
+  private readonly router = inject(Router);
+  private readonly url = signal(this.router.url);
+  /**
+   * Where the person is, as "journey group, page": the navigation entry whose route is the longest prefix of the
+   * current address. Entries that share another entry's route are skipped, as they are for the active marker.
+   */
+  protected readonly location = computed(() => {
+    const path = this.url().split(/[?#]/)[0];
+    let best: { group: string; item: string; length: number } | null = null;
+    for (const group of this.navigation()) {
+      for (const item of group.items) {
+        const route = item.route;
+        if (!route || item.sharesRoute || !(path === route || path.startsWith(route + '/'))) {
+          continue;
+        }
+        if (!best || route.length > best.length) {
+          best = { group: group.key, item: item.key, length: route.length };
+        }
+      }
+    }
+    return best;
+  });
+
   protected readonly isDrawerMode = toSignal(
     inject(BreakpointObserver)
       .observe(DRAWER_QUERY)
@@ -106,7 +129,10 @@ export class Shell {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(destroyRef),
       )
-      .subscribe(() => this.refreshCounts());
+      .subscribe(() => {
+        this.url.set(this.router.url);
+        this.refreshCounts();
+      });
     this.refreshCounts();
 
     inject(Router)

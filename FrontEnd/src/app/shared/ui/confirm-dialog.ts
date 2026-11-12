@@ -42,7 +42,8 @@ export interface ConfirmData {
       display: block;
       inline-size: min(28rem, calc(100vw - 2rem));
       padding: var(--space-6);
-      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-xl);
       background: var(--color-surface);
       box-shadow: var(--shadow-overlay);
     }

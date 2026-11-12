@@ -1,3 +1,152 @@
+# Handoff: Meridian refinement, approved and committed (2026-11-12)
+
+**Approved by the owner on 2026-11-12** and committed locally as `feat(ui): complete Meridian interface refinements`, annotated tag `meridian-refinement-approved` on `stabilization-and-ledger-redesign`. Find the commit with `git rev-parse meridian-refinement-approved^{commit}`. Not pushed; a push needs the owner's separate instruction.
+
+**The committed source is the tested source.** The last product file was edited at 08:07:12 on 2026-11-12; lint, unit tests and the build ran after that, then the Playwright suite (finished 08:33:48). No file under `FrontEnd/src`, `FrontEnd/public`, the specs in `FrontEnd/e2e` or `BackEnd/src` changed afterwards. Evidence: [docs/qa/meridian-refinement/](docs/qa/meridian-refinement/) (lint, unit, build and full-suite logs, the keyboard and dashboard-link check with its log, and the two-theme axe script).
+
+**Checkpoint before the refinement:** commit `507247a266f4121827d6a70b8224d2b50a0bc7ec` on `stabilization-and-ledger-redesign`, tag `meridian-before-refinement`. Local only; not pushed.
+
+**Contents:** both refinement passes (2026-11-11 and 2026-11-12). See them with `git diff meridian-before-refinement meridian-refinement-approved`. UI only: no backend, migration, route, permission, validation or API change.
+
+**Known at approval, carried forward**
+
+- **Two build warnings.** Initial bundle 518.70 kB, 18.70 kB over the 500 kB budget (it was 6.50 kB over before the redesign). `sign-in.scss` 9.24 kB against the 8 kB per-component warning (new). Neither fails the build.
+- **Visual checks not done.** Listed under "Not verified" below.
+- **Draft validation.** A draft cannot be saved while a line has no unit (finding 15 below). Behaviour left as it is; recorded as a functional issue for the next phase.
+
+**Review instance:** http://localhost:4201 (this working tree), backend on :8081, database `procurement_qa_redesign`. Separate from the owner's :8080 and :4200. It was restarted on 2026-11-12 and stops when the session that started it ends; restart commands are in the 2026-11-10 section below. Sign-in: the accounts in [docs/guides/global-admin-review.md](docs/guides/global-admin-review.md) with the `DEMO_USER_PASSWORD` given to the backend.
+
+## What changed in this pass
+
+| Area | Change |
+|---|---|
+| Request form | Saving shows a turning ring on the button that was pressed (`[busy]` on `appButton`); the other actions are disabled; the result is the toast |
+| Attachments | Tinted dashed "add a file" control, styled progress bar, file rows with an icon tile |
+| Lists | Filter bar as one contained strip on the request list, approvals inbox and purchasing inbox; page range and page number as a pill |
+| Record | Shipment milestones as a timeline (reached, late, to come); purchasing, sourcing, order, logistics and receipt forms keep a 46 rem measure with the action at the start of the row |
+| Mobile navigation | Drawer 18 rem wide with a rounded trailing edge, 44 px links, dimmed and softened page behind it |
+| Home on phones | Shortcuts in one column; labels no longer break inside a word |
+| Notifications | Escape now closes the menu when focus is still on the bell (it stayed open when the menu had nothing focusable) |
+| Buttons, skeletons | Busy state; skeleton radius follows containers |
+| Sign-in | On tall tablets the panel is centred; the earlier layout work is unchanged |
+
+The interaction rules came from the `design-skills:interaction-design` skill (feedback near the trigger, every state designed, no wait without feedback).
+
+## Verification (2026-11-12, final code)
+
+| Check | Result |
+|---|---|
+| `npm run lint` | Passed |
+| `npm test` | Passed, 245 of 245 |
+| `npm run build` | Passed with two warnings: initial bundle **518.70 kB** (18.70 kB over the 500 kB budget; 136.58 kB estimated transfer); `sign-in.scss` 9.24 kB against the 8 kB per-component warning |
+| Playwright, full suite, run alone | **63 of 63 passed** (24.0 min). No screenshot or other script touched the instance during the run. No source file changed after it |
+| `ledger-verification` "deciding keeps focus" | Passed. Not reproduced on 2026-11-11 or 2026-11-12 (5 passes); the 2026-11-10 failure remains unexplained |
+| axe WCAG A/AA, 17 screens in each theme, 1440 px | No violations (one buyer record view is skipped by the script: the buyer's "visible" list is empty) |
+| Keyboard walk-through, scripted (`C:\qa\p360-redesign\verify.mjs`) | 16 checks, all passed: sign-in tab order and focus rings, sign-in by Enter, skip link, theme switch by Enter and Space, notification menu open and Escape, account menu, sidebar focus ring on ink, mobile drawer open, focus trap and Escape |
+| Dashboard links | All 9 status bars clicked (the first by keyboard). Each lands on `/requests?scope=visible&status=…`, the filter shows that status, every row has it, and the list total equals the bar's count |
+| Saving state, toast, dialog | Seen in both themes: one busy button and two disabled while the save is held; "Draft saved" toast; discard dialog takes focus and closes with Escape |
+| Screens looked at this pass | Sign-in on phone, tablet and 200 % zoom; record with order, shipment and receipt panels (light and dark); logistics inbox (dark); form validation on a phone; mobile drawer (light and dark); notification menu; request list on desktop and phone |
+
+**Investigated and closed**
+
+- **Tracker looked collapsed in two full-page screenshots.** Measured in real viewports at 900 px and 3,200 px height, with and without reduced motion: 698 px wide, ten evenly spaced steps. It is a stitching artifact of full-page capture, not a layout defect; an element capture and a later full-page capture show it correctly.
+- **Two accessibility specs failed on 2026-11-11.** Caused by a screenshot script signing in to the same accounts during the run. Captures now run only when the suite is not running.
+
+**Not verified**
+
+- Screen reader, real touch devices, native French and Arabic review, browser text-size settings other than zoom.
+- Attachment upload progress and file rows with a real file: the styles changed, but no file was uploaded in this pass (the suite's attachment test passed).
+- Dark theme by eye on: sourcing comparison table, supplier portal, assistant, request administration detail, approval rules editor, exchange rates, import.
+- Error state and loading skeleton by eye (restyled, not captured).
+- GLOBAL_ADMIN write actions and single-company ADMIN isolation (unchanged from 2026-11-11).
+- The Playwright suite runs in light theme only.
+
+## Functional findings for the next phase
+
+Added to the fourteen below:
+
+15. **A draft cannot be saved while a line has no unit.** Saving a new request with only a title returns "Line 1, unit: Invalid value". The form says "Save a draft at any time". Seen on the review instance; not compared with the commit before the redesign, and no styling change touches it. Decide whether drafts may have incomplete lines.
+16. **Empty menus and Escape:** fixed for notifications in this pass; check other menus that can open empty.
+
+Unchanged and still in their own documents: GLOBAL_ADMIN gaps ([review](docs/guides/global-admin-review.md)), dashboard aggregates (item 10 below), assistant provider, transport, retention and action scope ([plan](docs/product/assistant-next-phase.md)), all proposals pending the owner's decision.
+
+## Next action
+
+Wait for the owner's instruction to push. Then the next phase: the functional findings (1 to 16), the GLOBAL_ADMIN gaps, the dashboard aggregates and the assistant decisions, each in its document. `docs/tooling.md` and `.anchor/` stay uncommitted on purpose.
+
+## Skills Review
+
+- ✅ `design-skills:interaction-design`: invoked this pass; drove the busy state, the Escape fix and the states checked.
+- ✅ `frontend-design:frontend-design`, `anthropic-skills:ui-ux-pro-max`, `design-skills:accessibility-audit`: loaded earlier in the session and applied; not invoked again this pass.
+- ❌ Self-assessment: a `:host` rule could not reach the button's projected icon, so the ring and icon showed together; caught by capturing the saving state, not by reading the code.
+
+---
+
+# Handoff: Meridian refinement pass (2026-11-11)
+
+**Checkpoint before this pass:** commit `507247a266f4121827d6a70b8224d2b50a0bc7ec` on `stabilization-and-ledger-redesign`, annotated tag `meridian-before-refinement`. Local only; not pushed. To return to it: `git checkout meridian-before-refinement`.
+
+**This pass:** uncommitted working tree on top of that commit, left for the owner's review. UI only. No backend, migration, route, permission, validation or API change.
+
+**Review instance:** http://localhost:4201 (this working tree) with its backend on :8081 and database `procurement_qa_redesign`. It is separate from the owner's :8080 and :4200, which were not touched. Sign-in: any demo account in [docs/guides/global-admin-review.md](docs/guides/global-admin-review.md) with the `DEMO_USER_PASSWORD` the backend was started with. Restart commands are in the section below this one.
+
+## What changed in this pass
+
+- **Sign-in layout.** A masthead row holds the brand, language and theme. Every vertical measure follows the viewport height, so the orbit, type and spacing shrink before the form. At 1366 × 640 the form, button and recovery link are in view with no scroll and 34 px between masthead and panel. The page grows and scrolls when content needs it. Glass panel: gradient surface, lit top edge. Stage: vignette and an outer ring.
+- **Dashboard.** Lifecycle ring by phase with meaning, count and share; status bars that open the filtered list; "late on this page" count. Chart colour tokens for both themes.
+- **Navigation.** Location trail in the top bar (journey group, page).
+- **Dialogs.** One scrim with a soft blur, shared entrance, feature radius.
+- **Home.** The request-list shortcut shows how many requests are the person's.
+- **Documents.** [GLOBAL_ADMIN review](docs/guides/global-admin-review.md), [assistant next-phase plan](docs/product/assistant-next-phase.md), DESIGN.md, route checklist.
+- **New translation keys (EN, FR, AR):** `shell.location`, `dashboards.pipeline.byPhase`, `dashboards.pipeline.byStatus`, `dashboards.phases.*`, `dashboards.management.lateOnPage`. Not reviewed by a native speaker.
+
+## Verification (2026-11-11, on the refined tree)
+
+| Check | Result |
+|---|---|
+| `npm run lint` | Passed |
+| `npm test` | Passed, 245 of 245 |
+| `npm run build` | Passed. Warning: initial bundle 517.41 kB, 17.41 kB over the 500 kB budget |
+| Playwright, full suite | 61 of 63. The two failures (`accessibility-approvals` AR desktop, `accessibility` FR desktop) timed out while a screenshot script of mine was signing in to the same accounts and changing their saved language |
+| Those two specs rerun alone | 10 of 10 passed |
+| `ledger-verification` "deciding keeps focus" (intermittent on 2026-11-10) | Passed in the suite and 3 of 3 repeats. Not reproduced today; cause still not established |
+| axe WCAG A/AA, 18 screens in each theme, 1440 px | No violations |
+| Sign-in fit, measured (document size against viewport) | Fits without scrolling at 1366 × 640 in EN, FR and AR, both themes; 1366 × 768; 1920 × 1080; 1024 × 768; 820 × 1180; 390 × 844. Scrolls, with every control reachable, at 1280 × 600 (3 px), 360 × 640, 320 × 568 and at 200 % zoom |
+
+The suite includes the receipt rules (partial receipt, unshipped line, two-person confirmation, service acceptance), order and split delivery, and the 20-step journey through invoice, payment and closure. All of those passed.
+
+**Not verified**
+
+- A full suite run with nothing else touching the accounts. The 63-of-63 claim rests on 61 in the suite plus the two reruns.
+- Keyboard: only what the suite covers (skip link, drawer, focus after a decision, form error focus). No manual walk-through of the new trail, theme switch or dashboard links.
+- Dashboard links: built on the list's existing `status` filter; not clicked through in a test.
+- Dark theme by eye on order, logistics and receipt panels, supplier portal, assistant, dialogs and toasts.
+- GLOBAL_ADMIN write actions and single-company ADMIN isolation (see the review document).
+- Screen reader, real touch devices, native French and Arabic review, browser text-size settings other than zoom.
+
+## Functionality gaps recorded for the next phase
+
+Added to the nine below (2026-11-10):
+
+10. **Dashboard measures that need the backend:** late count and ageing over all requests (today only on the loaded page); approvals overdue per approver; purchasing workload per buyer; delivery progress (shipments by milestone); a time series of submissions. Each needs an aggregate endpoint with company scope.
+11. **Per-role dashboards:** requesters and receivers have no dashboard permission; their overview is the home page. Decide whether they get one.
+12. **GLOBAL_ADMIN:** the six gaps in the review document (single-company demo ADMIN, role holders view, empty business menus, link from record to administration, administration activity view, last-GLOBAL_ADMIN protection).
+13. **Assistant:** provider, transport, retention and action scope decisions in the plan.
+14. **Tests:** screenshots and suites must not share demo accounts; give captures their own accounts or run them apart.
+
+## Next action
+
+The owner reviews http://localhost:4201 and the diff (`git diff meridian-before-refinement`). If accepted: run the full Playwright suite once more with nothing else signed in, then commit the refinement. Leave `docs/tooling.md` and `.anchor/` out.
+
+## Skills Review
+
+- ✅ `frontend-design:frontend-design`, `anthropic-skills:ui-ux-pro-max`: loaded earlier in this session and applied; not invoked again in this pass.
+- ✅ `design-skills:design-systems`, `audit-suite:web-animation-design`, `design-skills:accessibility-audit`, `zizi-skills:i18n`: same; their rules drove the tokens, the reduced-motion fallback, the axe scan and the key-parity check.
+- ❌ Refero, GetLayers, `design-skills:interaction-design`, `dataviz`: not used. Refero needs sign-in; GetLayers is not installed.
+- ❌ Self-assessment: I ran screenshots against the same accounts as a running test suite, which broke two tests and mislabelled one capture. Caught by reading the screenshot, then confirmed by rerunning.
+
+---
+
 # Handoff: Meridian redesign, light and dark (2026-11-10)
 
 **Candidate:** uncommitted working tree on `stabilization-and-ledger-redesign`, on top of `6869b2e`. UI only. No backend, migration, route, permission, validation or API change. Not committed, pushed or deployed.

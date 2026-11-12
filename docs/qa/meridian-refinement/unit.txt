@@ -1,0 +1,18 @@
+
+> procurement-web@0.1.0 test
+> ng test --watch=false
+
+> Building...
+√ Building...
+Application bundle generation complete. [17.902 seconds] - 2026-11-12T06:08:27.457Z
+
+
+ RUN  v5.0.5 C:/Users/zribi/OneDrive/Desktop/Procurement Managamenet/FrontEnd
+
+
+ Test Files  31 passed (31)
+      Tests  245 passed (245)
+   Start at  08:08:30
+   Duration  25.98s (environment 80%, import 10%, tests 7%, transform 2%, setup 2%)
+
+unit exit=0

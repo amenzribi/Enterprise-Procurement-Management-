@@ -23,7 +23,8 @@
     "expandSidebar": "Déployer la barre latérale",
     "environment": {
       "development": "Environnement de développement"
-    }
+    },
+    "location": "Vous êtes ici"
   },
   "nav": {
     "groups": {
@@ -1491,7 +1492,9 @@
       "emptyTitle": "Aucune demande dans le pipeline",
       "emptyMessage": "Les demandes soumises visibles apparaîtront ici par statut.",
       "amountsNote": "Montants ouverts par devise (jamais additionnés entre devises) :",
-      "total": "Demandes dans le pipeline"
+      "total": "Demandes dans le pipeline",
+      "byPhase": "Par phase du cycle",
+      "byStatus": "Par statut (ouvre la liste filtrée)"
     },
     "group": {
       "title": "Par société demandeuse",
@@ -1509,7 +1512,30 @@
       "amount": "Montant",
       "late": "Retard",
       "lateYes": "En retard",
-      "lateNo": "À l’heure"
+      "lateNo": "À l’heure",
+      "lateOnPage": "{{count}} en retard sur cette page"
+    },
+    "phases": {
+      "preparation": {
+        "name": "En préparation",
+        "meaning": "Brouillon ou renvoyée au demandeur"
+      },
+      "approval": {
+        "name": "En validation",
+        "meaning": "Soumise, en attente de décision"
+      },
+      "purchasing": {
+        "name": "Aux achats",
+        "meaning": "Approuvée, affectée, en consultation ou attribuée"
+      },
+      "delivery": {
+        "name": "Commandée et en livraison",
+        "meaning": "Commandée, en transit ou reçue"
+      },
+      "finished": {
+        "name": "Terminée",
+        "meaning": "Clôturée, rejetée ou annulée"
+      }
     }
   },
   "usersAdmin": {

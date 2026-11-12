@@ -2,12 +2,18 @@
   display: block;
 }
 
+// The filter bar: one contained strip above the results it filters.
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-3);
-  margin-block-end: var(--space-5);
+  margin-block-end: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .tabs {
@@ -389,4 +395,14 @@
   justify-content: center;
   gap: var(--space-3);
   margin-block-start: var(--space-5);
+}
+
+// "Page 1 of 3" as a quiet pill between the two buttons.
+.pagination > span {
+  padding: 0.125rem var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }

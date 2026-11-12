@@ -110,6 +110,14 @@
         </button>
         <span class="topbar-product">{{ 'app.name' | translate }}</span>
       }
+      @if (!isDrawerMode() && location(); as here) {
+        <p class="trail">
+          <span class="visually-hidden">{{ 'shell.location' | translate }}:</span>
+          <span class="trail-group">{{ 'nav.groups.' + here.group | translate }}</span>
+          <app-icon class="trail-sep" name="chevron-right" [size]="14" />
+          <span class="trail-page">{{ 'nav.items.' + here.item | translate }}</span>
+        </p>
+      }
       <div class="topbar-end">
         @if (isDevMode) {
           <app-status-badge tone="info">{{ 'shell.environment.development' | translate }}</app-status-badge>

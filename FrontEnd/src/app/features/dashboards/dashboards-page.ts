@@ -23,6 +23,15 @@ import { ManagementPage, PipelineView } from './dashboards.models';
 
 type PageState = 'loading' | 'ready' | 'error';
 
+/** Lifecycle phases shown on the dashboard, each a set of user-facing statuses (requests/request-status.ts). */
+const PHASES = [
+  { key: 'preparation', statuses: ['DRAFT', 'RETURNED'] },
+  { key: 'approval', statuses: ['SUBMITTED'] },
+  { key: 'purchasing', statuses: ['APPROVED', 'ASSIGNED', 'QUOTING', 'AWARDED'] },
+  { key: 'delivery', statuses: ['ORDERED', 'IN_TRANSIT', 'RECEIVED'] },
+  { key: 'finished', statuses: ['CLOSED', 'REJECTED', 'CANCELLED'] },
+] as const;
+
 function triggerDownload(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -81,21 +90,61 @@ function triggerDownload(blob: Blob, fileName: string): void {
               />
             } @else {
               <div class="pipeline">
-                <div class="figure">
-                  <p class="figure-value tabular">{{ pipelineTotal() }}</p>
-                  <p class="figure-label">{{ 'dashboards.pipeline.total' | translate }}</p>
+                <!-- Where the requests in scope stand, by phase of the lifecycle. The figures beside it are the same data as text. -->
+                <div class="donut-wrap">
+                  <svg class="donut" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+                    <circle class="donut-track" cx="60" cy="60" r="48" />
+                    @for (phase of phases(); track phase.key) {
+                      @if (phase.count > 0) {
+                        <circle
+                          class="donut-seg"
+                          [class]="'donut-seg phase-' + phase.key"
+                          cx="60"
+                          cy="60"
+                          r="48"
+                          pathLength="100"
+                          [attr.stroke-dasharray]="phase.dash"
+                          [attr.stroke-dashoffset]="phase.offset"
+                        />
+                      }
+                    }
+                  </svg>
+                  <div class="donut-center">
+                    <p class="figure-value tabular">{{ pipelineTotal() }}</p>
+                    <p class="figure-label">{{ 'dashboards.pipeline.total' | translate }}</p>
+                  </div>
                 </div>
-                <!-- One bar per status, in lifecycle order; the count is always written, the bar only compares. -->
-                <ul class="bars" role="list">
-                  @for (row of pipe.byUserStatus; track row.userStatus) {
-                    <li class="bar-row">
+                <div class="phase-side">
+                  <h3 class="sub-title">{{ 'dashboards.pipeline.byPhase' | translate }}</h3>
+                  <ul class="phases" role="list">
+                    @for (phase of phases(); track phase.key) {
+                      <li class="phase">
+                        <span class="phase-swatch" [class]="'phase-swatch phase-' + phase.key" aria-hidden="true"></span>
+                        <span class="phase-text">
+                          <span class="phase-name">{{ 'dashboards.phases.' + phase.key + '.name' | translate }}</span>
+                          <span class="phase-meaning">{{ 'dashboards.phases.' + phase.key + '.meaning' | translate }}</span>
+                        </span>
+                        <strong class="phase-count tabular">{{ phase.count }}</strong>
+                        <span class="phase-share tabular">{{ phase.share }}%</span>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </div>
+
+              <h3 class="sub-title sub-title--spaced">{{ 'dashboards.pipeline.byStatus' | translate }}</h3>
+              <!-- One bar per status; the count is always written, the bar only compares. Each row opens the list filtered to that status. -->
+              <ul class="bars" role="list">
+                @for (row of pipe.byUserStatus; track row.userStatus) {
+                  <li>
+                    <a class="bar-row bar-link" routerLink="/requests" [queryParams]="{ scope: 'visible', status: row.userStatus }">
                       <span class="bar-label">{{ 'requests.userStatus.' + row.userStatus | translate }}</span>
                       <span class="bar-track" aria-hidden="true"><span class="bar-fill" [style.inline-size.%]="share(row.count, pipelineMax())"></span></span>
                       <strong class="bar-value tabular">{{ row.count }}</strong>
-                    </li>
-                  }
-                </ul>
-              </div>
+                    </a>
+                  </li>
+                }
+              </ul>
               @if (pipe.openAmountsByCurrency.length) {
                 <p class="muted amounts-note">{{ 'dashboards.pipeline.amountsNote' | translate }}</p>
                 <ul class="amounts" role="list">
@@ -132,7 +181,12 @@ function triggerDownload(blob: Blob, fileName: string): void {
         }
 
         <section class="panel" aria-labelledby="mgmt-title">
-          <h2 class="panel-title" id="mgmt-title">{{ 'dashboards.management.title' | translate }}</h2>
+          <div class="title-row">
+            <h2 class="panel-title" id="mgmt-title">{{ 'dashboards.management.title' | translate }}</h2>
+            @if (lateOnPage() > 0) {
+              <app-status-badge tone="danger">{{ 'dashboards.management.lateOnPage' | translate: { count: lateOnPage() } }}</app-status-badge>
+            }
+          </div>
           @if (rows().length === 0) {
             <app-empty-state
               icon="search"
@@ -237,36 +291,161 @@ function triggerDownload(blob: Blob, fileName: string): void {
       font-size: var(--text-lg);
     }
 
-    /* The pipeline: one figure to read first, then where those requests stand. */
+    /* The pipeline: the total inside a ring split by lifecycle phase, with the same figures written beside it. */
     .pipeline {
       display: grid;
-      grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
-      gap: var(--space-6);
-      align-items: start;
+      grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+      gap: var(--space-8);
+      align-items: center;
     }
 
-    .figure {
-      padding: var(--space-5);
-      border: 1px solid var(--color-ink-line);
-      border-radius: var(--radius-lg);
-      background:
-        radial-gradient(90% 120% at 100% 0%, var(--color-ink-glow), transparent 70%),
-        var(--color-ink);
-      color: var(--color-on-ink-muted);
+    .donut-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1;
+    }
+
+    .donut {
+      inline-size: 100%;
+      block-size: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .donut-track,
+    .donut-seg {
+      fill: none;
+      stroke-width: 12;
+    }
+
+    .donut-track {
+      stroke: var(--color-surface-sunken);
+    }
+
+    .donut-seg {
+      stroke: var(--phase-color);
+    }
+
+    .phase-preparation { --phase-color: var(--chart-5); }
+    .phase-approval { --phase-color: var(--chart-3); }
+    .phase-purchasing { --phase-color: var(--chart-1); }
+    .phase-delivery { --phase-color: var(--chart-2); }
+    .phase-finished { --phase-color: var(--chart-4); }
+
+    .donut-center {
+      position: absolute;
+      text-align: center;
+      max-inline-size: 60%;
     }
 
     .figure-value {
-      color: var(--color-on-ink);
       font-family: var(--font-display);
-      font-size: 3rem;
+      font-size: 2.75rem;
       font-weight: 600;
       line-height: 1;
       letter-spacing: -0.02em;
     }
 
     .figure-label {
-      margin-block-start: var(--space-2);
+      margin-block-start: var(--space-1);
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+
+    .sub-title {
+      margin-block-end: var(--space-3);
+      color: var(--color-text-muted);
       font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      letter-spacing: 0;
+    }
+
+    .sub-title--spaced {
+      margin-block-start: var(--space-6);
+      padding-block-start: var(--space-5);
+      border-block-start: 1px solid var(--color-line);
+    }
+
+    .phases {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .phase {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto 3.25rem;
+      gap: var(--space-3);
+      align-items: center;
+      padding-block: var(--space-2);
+      border-block-start: 1px solid var(--color-line);
+    }
+
+    .phase:first-child {
+      border-block-start: 0;
+    }
+
+    .phase-swatch {
+      inline-size: 0.75rem;
+      block-size: 0.75rem;
+      border-radius: 3px;
+      background: var(--phase-color);
+    }
+
+    .phase-text {
+      display: grid;
+    }
+
+    .phase-name {
+      font-weight: var(--weight-semibold);
+    }
+
+    .phase-meaning {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+
+    .phase-count {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+    }
+
+    .phase-share {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      text-align: end;
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-block-end: var(--space-4);
+    }
+
+    .title-row .panel-title {
+      margin: 0;
+    }
+
+    .bar-link {
+      margin-inline: calc(-1 * var(--space-2));
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      color: inherit;
+      text-decoration: none;
+      transition: background-color var(--duration-fast) var(--ease-standard);
+    }
+
+    .bar-link:hover {
+      background: var(--color-paper);
+      color: inherit;
+    }
+
+    .bar-link:hover .bar-label {
+      color: var(--color-accent);
+      text-decoration: underline;
     }
 
     .bars,
@@ -426,6 +605,11 @@ function triggerDownload(blob: Blob, fileName: string): void {
         gap: var(--space-4);
       }
 
+      .donut-wrap {
+        max-inline-size: 13rem;
+        margin-inline: auto;
+      }
+
       .bar-row,
       .bar-row--wide {
         grid-template-columns: minmax(0, 1fr) 2.5rem;
@@ -474,6 +658,25 @@ export class DashboardsPage {
   });
   protected readonly locale = computed(() => this.language.locale());
   protected readonly pipelineTotal = computed(() => (this.pipeline()?.byUserStatus ?? []).reduce((sum, row) => sum + row.count, 0));
+  /**
+   * The statuses grouped into five phases of the lifecycle. `share` is the phase's percentage of the requests in
+   * scope; `dash` and `offset` place its arc on a ring whose circumference is 100.
+   */
+  protected readonly phases = computed(() => {
+    const counts = new Map((this.pipeline()?.byUserStatus ?? []).map((row) => [row.userStatus, row.count]));
+    const total = Math.max(1, this.pipelineTotal());
+    let start = 0;
+    return PHASES.map((phase) => {
+      const count = phase.statuses.reduce((sum, status) => sum + (counts.get(status) ?? 0), 0);
+      const size = (count / total) * 100;
+      // A one-unit gap separates neighbouring arcs, unless the arc is too small to spare it.
+      const visible = Math.max(0.5, size - (size > 3 ? 1 : 0));
+      const segment = { key: phase.key, count, share: Math.round(size), dash: `${visible} ${100 - visible}`, offset: -start };
+      start += size;
+      return segment;
+    });
+  });
+  protected readonly lateOnPage = computed(() => this.rows().filter((row) => row.late).length);
   protected readonly pipelineMax = computed(() => Math.max(1, ...(this.pipeline()?.byUserStatus ?? []).map((row) => row.count)));
   protected readonly companyMax = computed(() => Math.max(1, ...(this.pipeline()?.byRequestingCompany ?? []).map((row) => row.count)));
   protected readonly canExport = computed(() => hasPermission(this.auth.me(), 'ERP_EXPORT'));

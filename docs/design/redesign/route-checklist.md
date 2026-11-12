@@ -66,3 +66,37 @@ Every route in `FrontEnd/src/app/app.routes.ts`. No route was added, removed or 
 ## Still to look at by eye
 
 Dark theme on: the order, logistics and receipt panels, every administration screen, supplier portal, assistant, dialogs and toasts. They use tokens only, and the scanned ones pass contrast, but nobody has looked at them in dark.
+
+## Refinement pass (2026-11-11)
+
+Screenshots: `refined/` in this folder (sign-in at 1366 x 640 in EN, FR and AR, phone, tablet and 200 % zoom; dashboard, home, list, form, record, approvals and three administration screens in light and dark).
+
+| Route | Change | Checked |
+|---|---|---|
+| `/sign-in` | Masthead row; height-aware layout; refined glass and stage | Measured at 14 viewport, language and zoom combinations; seen L (EN) and D (AR) at 1366 x 640; Scan; Tests |
+| (shell) | Location trail in the top bar | Seen L (FR) and D (EN); Tests |
+| `/dashboards` | Lifecycle ring by phase, linked status bars, late-on-page count | Seen D; Scan; Tests (dashboards spec) |
+| `/overview` | Count of own requests on the shortcut | Seen L; Scan; Tests |
+| Dialogs | Shared scrim and entrance | Tests (used in journeys); not seen |
+| `/admin/users`, `/admin/requests`, `/admin/organization` | No change in this pass | Organisation seen D; users and request administration captured, not reviewed in dark; GLOBAL_ADMIN access verified (see `docs/guides/global-admin-review.md`) |
+
+## Second refinement pass (2026-11-12)
+
+Screenshots: `refined/` (screens, both themes) and `refined/states/` (interactive states, both themes: mobile drawer, notification and account menus, form validation on desktop and phone, saving state, toast, discard dialog, filtered list, phone list, records in quoting, ordered and received, logistics inbox, record as receiver on a phone, record not found).
+
+Checks: Playwright 63 of 63 in one run alone; axe clean in both themes; 16 scripted keyboard checks passed; all 9 dashboard links verified. Details in `HANDOFF.md`.
+
+| Route | Change | Checked |
+|---|---|---|
+| `/sign-in` | Panel centred on tall tablets | Seen: phone L, tablet D (FR), 200 % zoom L; keyboard order and focus rings; Scan; Tests |
+| (shell) | Mobile drawer refined; Escape closes the notification menu from the bell | Drawer seen L and D; notification menu seen L; keyboard: skip link, theme switch, menus, drawer trap and Escape; Tests |
+| `/overview` | One-column shortcuts on phones | Seen L desktop; phone layout not re-seen after the change; Scan; Tests |
+| `/requests` | Filter bar, pagination pill | Seen L desktop and phone, D filtered; Scan; Tests |
+| `/requests/new`, `/requests/:id/edit` | Busy ring on save and submit; attachment control and rows | Validation seen L phone and D desktop; saving state, toast and discard dialog seen L and D; upload with a real file not seen; Scan; Tests |
+| `/requests/:id` | Milestone timeline; work-panel form measure | Seen L (ordered) and D (received) as purchasing manager; quoting and receiver-on-phone captured, not reviewed; tracker measured at two viewport heights; Scan; Tests |
+| `/approvals`, `/purchasing` | Filter bar, pagination pill | Approvals captured L and D, not re-reviewed after the change; Scan; Tests |
+| `/logistics` | No change of its own | Seen D; Scan; Tests |
+| `/dashboards` | No change this pass | Every status link clicked and verified; Scan; Tests |
+| Dialogs, toasts | No change this pass | Discard dialog and "Draft saved" toast seen L and D |
+
+Still to look at by eye in dark: sourcing comparison table, supplier portal, assistant, request administration detail, approval rules editor, exchange rates, import, the error state and the loading skeleton.

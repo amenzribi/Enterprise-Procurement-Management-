@@ -120,12 +120,15 @@ test('Award → PO → ship → receipt → invoice → close (EN)', async ({ pa
     let visible = false;
     while (Date.now() < deadline) {
       await omar.locator('app-language-select button[lang="en"]').click().catch(() => undefined);
-      if (await recordBtn.isVisible().catch(() => false)) {
+      // Let the page load the request and the receipt dossier before reloading (several seconds under load).
+      try {
+        await expect(recordBtn).toBeVisible({ timeout: 10_000 });
         visible = true;
         break;
+      } catch {
+        /* reload and retry */
       }
       await omar.goto(`/requests/${request.id}`);
-      await omar.waitForTimeout(1_000);
     }
     expect(visible, 'Record goods receipt must appear for receiver after DELIVERED').toBe(true);
   }
@@ -147,10 +150,21 @@ test('Award → PO → ship → receipt → invoice → close (EN)', async ({ pa
   const inv = ines2.locator('app-receipt-actions');
   await expect(inv).toBeVisible({ timeout: 20_000 });
   await inv.locator('#inv-no').fill('INV-E2E-1');
-  await inv.locator('input[type="checkbox"]').check();
+  // F-5: recording never attests the match; the recorder is not offered the attestation.
+  await expect(inv.getByText(t('en', 'receipt.actions.invoiceSecondPerson'))).toBeVisible();
   await inv.getByRole('button', { name: t('en', 'receipt.actions.recordInvoice') }).click();
   await expect(ines2.getByText(t('en', 'receipt.actions.invoiceSaved')).first()).toBeVisible();
+  await expect(inv.getByRole('button', { name: t('en', 'receipt.actions.attestNow') })).toHaveCount(0);
   await ines2.context().close();
+
+  // A purchasing manager who did not record the invoice attests the match.
+  const mehdi2 = await newUserPage(browser);
+  await signIn(mehdi2, USERS.purchasingManager, 'en', `/requests/${request.id}`);
+  const attest = mehdi2.locator('app-receipt-actions');
+  await expect(attest).toBeVisible({ timeout: 20_000 });
+  await attest.getByRole('button', { name: t('en', 'receipt.actions.attestNow') }).click();
+  await expect(attest).toContainText(t('en', 'receipt.actions.matchAttested'), { timeout: 15_000 });
+  await mehdi2.context().close();
 
   // Requester (author) may close — matches production policy (isAuthor || PURCHASING_MANAGE).
   const samiClose = await newUserPage(browser);

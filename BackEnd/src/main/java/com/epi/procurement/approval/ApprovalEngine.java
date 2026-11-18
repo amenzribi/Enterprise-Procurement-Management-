@@ -403,7 +403,8 @@ class ApprovalEngine {
 		Set<Long> exclude = new HashSet<>();
 		exclude.add(actor.id());
 		tasks.stream().filter(ApprovalStore.Task::isPending).forEach(t -> exclude.add(t.assigneeUserId()));
-		boolean eligible = resolver.eligibleDelegates(task, request, exclude)
+		// Same four-eyes rule as absences: not to an account the approver created (F-12).
+		boolean eligible = !resolver.createdBy(delegateTo, actor.id()) && resolver.eligibleDelegates(task, request, exclude)
 			.stream()
 			.anyMatch(h -> h.userId() == delegateTo);
 		if (!eligible) {

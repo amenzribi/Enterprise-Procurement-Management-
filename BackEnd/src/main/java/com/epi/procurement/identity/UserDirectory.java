@@ -27,9 +27,12 @@ public class UserDirectory {
 
 	private final NamedParameterJdbcTemplate named;
 
-	UserDirectory(DataSource dataSource) {
+	private final com.epi.procurement.audit.AuditLog auditLog;
+
+	UserDirectory(DataSource dataSource, com.epi.procurement.audit.AuditLog auditLog) {
 		this.jdbc = new JdbcTemplate(dataSource);
 		this.named = new NamedParameterJdbcTemplate(jdbc);
+		this.auditLog = auditLog;
 	}
 
 	public Optional<UserSummary> findUser(long userId) {
@@ -96,6 +99,18 @@ public class UserDirectory {
 	 * any company) and text (name or e-mail), ordered by name, at most 200.
 	 */
 	public List<UserListing> searchUsers(long groupId, Long companyId, String role, String text) {
+		return searchUsers(groupId, companyId, role, text, null);
+	}
+
+	/**
+	 * @param scopeCompanyIds when not null, only users of these companies (home company or a role there) and holders
+	 * of a group-wide role are returned: what a company administrator may see (ADR-007, audit S-7)
+	 */
+	public List<UserListing> searchUsers(long groupId, Long companyId, String role, String text,
+			java.util.Collection<Long> scopeCompanyIds) {
+		if (scopeCompanyIds != null && scopeCompanyIds.isEmpty()) {
+			return List.of();
+		}
 		StringBuilder sql = new StringBuilder("""
 				SELECT TOP (200) u.id, u.display_name, u.email, u.company_id FROM user_account u
 				JOIN company c ON c.id = u.company_id WHERE c.group_id = :group AND u.is_active = 1""");
@@ -104,6 +119,11 @@ public class UserDirectory {
 		if (companyId != null) {
 			sql.append(" AND u.company_id = :company");
 			params.put("company", companyId);
+		}
+		if (scopeCompanyIds != null) {
+			sql.append(" AND (u.company_id IN (:scope) OR EXISTS (SELECT 1 FROM user_role sr WHERE sr.user_id = u.id "
+					+ "AND ((sr.company_id IS NULL AND sr.role = 'GROUP_MANAGEMENT') OR sr.company_id IN (:scope))))");
+			params.put("scope", scopeCompanyIds);
 		}
 		if (role != null) {
 			sql.append(" AND EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = :role)");
@@ -133,6 +153,67 @@ public class UserDirectory {
 	/**
 	 * Ids of every user of a group (active or not).
 	 */
+	/**
+	 * Whether {@code administratorId} created the account {@code userId}. Basis of the four-eyes rule (review R-1,
+	 * R-2, RR-3): the creator of an account never gives it a sensitive role, never names it approver or delegate.
+	 * The creator is stored on the account since V24; for older accounts it is the actor of the account's
+	 * {@code USER_CREATED} audit event. False when neither exists (demo seed, first administrator).
+	 */
+	public boolean createdBy(long userId, long administratorId) {
+		return creationChain(userId).contains(administratorId);
+	}
+
+	/** Depth of the creation chain followed: deeper chains need that many deceived second administrators. */
+	static final int CREATION_CHAIN_DEPTH = 5;
+
+	/**
+	 * The account's creator, that creator's creator, and so on (review of F-1/F-2, finding 3): whoever created B, who
+	 * created C, created C too, so A cannot activate or empower C either. Bounded, and safe against cycles.
+	 */
+	public java.util.Set<Long> creationChain(long userId) {
+		java.util.Set<Long> chain = new java.util.LinkedHashSet<>();
+		long current = userId;
+		for (int depth = 0; depth < CREATION_CHAIN_DEPTH; depth++) {
+			Optional<Long> creator = creatorOf(current);
+			if (creator.isEmpty() || creator.get() == userId || !chain.add(creator.get())) {
+				break;
+			}
+			current = creator.get();
+		}
+		return chain;
+	}
+
+	/** Who created the account: the stored creator (V24), else the actor of its {@code USER_CREATED} event. */
+	public Optional<Long> creatorOf(long userId) {
+		// queryForList: the column is NULL for accounts created before V24, and Optional cannot hold null.
+		List<Long> rows = jdbc.queryForList("SELECT created_by_user_id FROM user_account WHERE id = ?", Long.class,
+				userId);
+		Long stored = rows.isEmpty() ? null : rows.get(0);
+		if (stored != null) {
+			return Optional.of(stored);
+		}
+		return auditLog.firstActor("USER_ACCOUNT", Long.toString(userId), "USER_CREATED");
+	}
+
+	/**
+	 * Whether the account is an external supplier contact. Such an account takes no part in internal decisions: it
+	 * is never an approver, a delegate or the holder of an internal role (review R-1, RR-2, RR-5).
+	 */
+	public boolean isSupplierContact(long userId) {
+		Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM user_role WHERE user_id = ? AND role = ?",
+				Integer.class, userId, Role.SUPPLIER_CONTACT.name());
+		return count != null && count > 0;
+	}
+
+	/** Users whose home company is one of the given companies. */
+	public List<Long> userIdsOfCompanies(java.util.Collection<Long> companyIds) {
+		if (companyIds.isEmpty()) {
+			return List.of();
+		}
+		return named.queryForList("SELECT id FROM user_account WHERE company_id IN (:companies)",
+				Map.of("companies", companyIds), Long.class);
+	}
+
 	public List<Long> userIdsOfGroup(long groupId) {
 		return jdbc.queryForList("SELECT u.id FROM user_account u JOIN company c ON c.id = u.company_id WHERE c.group_id = ?",
 				Long.class, groupId);

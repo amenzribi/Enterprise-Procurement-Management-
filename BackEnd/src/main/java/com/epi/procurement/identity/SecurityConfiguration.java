@@ -82,6 +82,8 @@ class SecurityConfiguration {
 				.requestMatchers(HttpMethod.POST, "/api/v1/quote-links/summary", "/api/v1/quote-links/submit")
 				.permitAll()
 				.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+				// Metrics describe the whole installation, not one company: global administrators only (audit A-2).
+				.requestMatchers("/actuator/metrics", "/actuator/metrics/**").hasRole(Role.GLOBAL_ADMIN.name())
 				.requestMatchers("/error").permitAll()
 				.requestMatchers(API_DOC_PATHS.toArray(String[]::new)).hasAnyRole(Role.ADMIN.name(),
 						Role.GLOBAL_ADMIN.name())

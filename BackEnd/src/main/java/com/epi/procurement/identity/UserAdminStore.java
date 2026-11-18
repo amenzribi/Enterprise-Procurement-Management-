@@ -66,13 +66,16 @@ class UserAdminStore {
 		return count != null && count > 0;
 	}
 
+	/**
+	 * @param createdBy the administrator who creates the account, kept for the four-eyes rule (V24)
+	 */
 	long insertAccount(String email, String displayName, long companyId, Long siteId, Long departmentId,
-			String language, boolean active, boolean demo) {
+			String language, boolean active, boolean demo, long createdBy) {
 		return jdbc.queryForObject("""
 				INSERT INTO user_account (email, display_name, company_id, site_id, department_id, preferred_language,
-				                          is_active, is_demo)
-				OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", Long.class, email, displayName, companyId, siteId,
-				departmentId, language, active ? 1 : 0, demo ? 1 : 0);
+				                          is_active, is_demo, created_by_user_id)
+				OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", Long.class, email, displayName, companyId, siteId,
+				departmentId, language, active ? 1 : 0, demo ? 1 : 0, createdBy);
 	}
 
 	void updateAccount(long userId, String displayName, long companyId, Long siteId, Long departmentId,

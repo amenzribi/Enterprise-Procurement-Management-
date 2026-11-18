@@ -12,6 +12,10 @@ spring:
       # Pool-wide wait for a connection. Kept moderate so ordinary requests do not fail under short load peaks
       # (CR-26); the status probe has its own 1.5 s deadline, so the status page still answers DOWN quickly.
       connection-timeout: 5000
+      # A statement waits at most this long for a row lock, then fails with SQL Server error 1222, which the API
+      # answers as 503 "busy". Without it a reader waits for a writer without limit (audit DB-3). Set once per
+      # pooled connection; application locks (sp_getapplock) keep their own shorter timeout.
+      connection-init-sql: SET LOCK_TIMEOUT ${app.database.lock-timeout-ms}
   jpa:
     open-in-view: false
     hibernate:
@@ -22,6 +26,9 @@ spring:
       hibernate.jdbc.time_zone: UTC
       # Lists map entities with their lines: fetch those in batches instead of one query per request.
       hibernate.default_batch_fetch_size: 50
+  transaction:
+    # Upper bound for any transaction, also applied to its statements as a query timeout (audit DB-3).
+    default-timeout: ${app.database.transaction-timeout}
   flyway:
     locations: classpath:db/migration
     # Missing repeatable (demo) migrations are tolerated only by the dev/local/test profiles (CR-28): outside
@@ -44,6 +51,12 @@ spring:
     problemdetails:
       enabled: true
 
+logging:
+  pattern:
+    # Request id and user id in front of every line written while a request runs (RequestIdFilter, audit A-2).
+    # For JSON lines in a deployment set LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs: the same two fields are included.
+    correlation: "[%X{requestId:-},%X{userId:-}] "
+
 server:
   port: ${SERVER_PORT:8080}
   error:
@@ -60,6 +73,15 @@ server:
         secure: ${app.security.cookie-secure:true}
 
 app:
+  # Name of the deployed environment (uat, staging, production). Leave empty on a developer machine. Startup is
+  # refused when a development profile is combined with a deployed environment (audit S-15).
+  environment: ${APP_ENVIRONMENT:}
+  database:
+    lock-timeout-ms: ${DB_LOCK_TIMEOUT_MS:10000}
+    transaction-timeout: ${DB_TRANSACTION_TIMEOUT:30s}
+  retention:
+    # Link tokens (approval, quote, password) are deleted this long after they expired (audit DB-4).
+    expired-tokens: P90D
   security:
     # Secure cookies (HTTPS only). Disabled by the dev/local/test profiles, which run over plain HTTP.
     cookie-secure: true
@@ -81,12 +103,17 @@ app:
   # Base URL of the Angular application, used in e-mail links (one-tap approval, request pages).
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:4200}
   mail:
-    # file (default: .eml files in app.mail.directory, no external service) | smtp (production) | failing (tests)
-    mode: ${MAIL_MODE:file}
+    # smtp (sends e-mail) | file (.eml files in app.mail.directory; they contain live links) | failing (tests).
+    # No default outside the development profiles: startup fails until MAIL_MODE is chosen (audit S-16).
+    mode: ${MAIL_MODE:}
     directory: ${MAIL_DIRECTORY:storage/mail}
     from: ${MAIL_FROM:no-reply@procurement.local}
   storage:
     directory: ${STORAGE_DIRECTORY:storage/files}
+  attachments:
+    # Without an antivirus adapter, uploaded files are stored as PENDING. They can be downloaded only when this is
+    # true; outside development that is a risk the owner must accept in writing (audit S-1).
+    allow-unscanned-downloads: ${APP_ALLOW_UNSCANNED_DOWNLOADS:false}
   approval:
     # One-tap approval link lifetime (S2-AC-07).
     link-ttl: PT72H
@@ -117,7 +144,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # metrics: timings per endpoint, connection pool, JVM, outbox backlog, open streams (audit A-2, D-5).
+        # Everything except health and info is restricted to global administrators (SecurityConfiguration).
+        include: health,info,metrics
   endpoint:
     health:
       # Anonymous callers get only {"status":"UP"|"DOWN"}; administrators see the components (S1-AC-13).
@@ -125,7 +154,7 @@ management:
       show-details: when-authorized
       roles: ADMIN
       # Kubernetes liveness/readiness groups are not used yet (single node, ADR-003); enable them with the first
-      # container deployment.
+      # container deployment. The external check uses /actuator/health, which includes the database.
       probes:
         enabled: false
   info:

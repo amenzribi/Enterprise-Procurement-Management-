@@ -105,6 +105,18 @@ public class AuditLog {
 	}
 
 	/**
+	 * The user who performed the first {@code action} recorded for an entity, if any. Used to find who created an
+	 * account before the creator was stored on the account itself (review RR-3).
+	 */
+	@Transactional(readOnly = true)
+	public java.util.Optional<Long> firstActor(String entityType, String entityId, String action) {
+		return jdbc.query("""
+				SELECT TOP (1) actor_user_id FROM audit_event
+				WHERE entity_type = ? AND entity_id = ? AND action = ? AND actor_user_id IS NOT NULL
+				ORDER BY chain_seq""", (rs, i) -> rs.getLong(1), entityType, entityId, action).stream().findFirst();
+	}
+
+	/**
 	 * Events for one business entity (newest last), for audit packs (Sprint 8).
 	 */
 	@Transactional(readOnly = true)

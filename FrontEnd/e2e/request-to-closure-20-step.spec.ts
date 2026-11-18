@@ -16,7 +16,8 @@ import {
  * Developer-executed 20-step request-to-closure journey (AUTO-UAT).
  * Runs against the live app on :4200 → :8080. Screenshots land under docs/qa/evidence/.
  */
-const EVIDENCE = resolve(__dirname, '../../docs/qa/evidence');
+// E2E_EVIDENCE_DIR lets a validation run keep its screenshots out of the working tree (default: the documented folder).
+const EVIDENCE = process.env['E2E_EVIDENCE_DIR'] ?? resolve(__dirname, '../../docs/qa/evidence');
 const SUFFIX = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
 const TITLE = `AUTO-UAT — Pump seals — ${SUFFIX}`;
 
@@ -54,21 +55,14 @@ async function openReceiptPanel(page: Page, requestId: number, lang: 'en' | 'fr'
   while (Date.now() < deadline) {
     await page.goto(`/requests/${requestId}`);
     await page.locator('app-language-select button[lang="en"]').click().catch(() => undefined);
-    if (await recordBtn().isVisible().catch(() => false)) {
-      await expect(recordBtn()).toBeVisible();
+    // Give the page time to load the request, render the panel and fetch its dossier before reloading: under load
+    // that takes several seconds, and reloading sooner restarts it every time (seen in a full run).
+    try {
+      await expect(recordBtn()).toBeVisible({ timeout: 10_000 });
       return;
+    } catch {
+      /* reload and retry */
     }
-    // Panel host can be present before Angular shows the record form — wait for the action.
-    const host = page.locator('app-receipt-actions');
-    if ((await host.count()) > 0) {
-      try {
-        await expect(recordBtn()).toBeVisible({ timeout: 5_000 });
-        return;
-      } catch {
-        /* reload and retry */
-      }
-    }
-    await page.waitForTimeout(1_000);
   }
   throw new Error(`Receipt record action not visible for request ${requestId}`);
 }
@@ -290,16 +284,24 @@ test('AUTO-UAT 20-step request to closure (EN)', async ({ page, browser }) => {
   await inv.locator('#inv-no').fill(`INV-AUTO-UAT-${SUFFIX}`);
   await inv.locator('#inv-amt').fill('250');
   await inv.locator('#inv-doc').fill(`PDF-AUTO-UAT-${SUFFIX}`);
-  const attest = inv.locator('input[type="checkbox"]');
-  if (!(await attest.isChecked())) {
-    await attest.check();
-  }
   await inv.getByRole('button', { name: t('en', 'receipt.actions.recordInvoice') }).click();
   await expect(ines2.getByText(t('en', 'receipt.actions.invoiceSaved')).first()).toBeVisible();
   await expect(inv).toContainText(/250/);
   await expect(inv).toContainText(/PENDING|pending|En attente/i);
+  // F-5: the recorder is offered neither attestation nor payment.
+  await expect(inv.getByRole('button', { name: t('en', 'receipt.actions.attestNow') })).toHaveCount(0);
+  await expect(inv.getByRole('button', { name: t('en', 'receipt.actions.markPaid') })).toHaveCount(0);
   await shot(ines2, '17-18-ines-invoice-pending');
   await ines2.context().close();
+
+  // —— 18b Mehdi (purchasing manager, not the recorder) attests the match ——
+  const mehdiAttest = await newUserPage(browser);
+  await signIn(mehdiAttest, USERS.purchasingManager, 'en', `/requests/${requestId}`);
+  const attestPanel = mehdiAttest.locator('app-receipt-actions');
+  await expect(attestPanel).toBeVisible({ timeout: 20_000 });
+  await attestPanel.getByRole('button', { name: t('en', 'receipt.actions.attestNow') }).click();
+  await expect(attestPanel).toContainText(t('en', 'receipt.actions.matchAttested'), { timeout: 15_000 });
+  await mehdiAttest.context().close();
 
   // —— 19 Sami close with score 5 ——
   const samiClose = await newUserPage(browser);

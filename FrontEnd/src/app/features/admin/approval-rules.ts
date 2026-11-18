@@ -25,7 +25,16 @@ type PageState = 'loading' | 'ready' | 'error';
 
 const APPROVER_TYPES: ApproverType[] = ['DEPARTMENT_MANAGER', 'BUDGET_APPROVER', 'MANAGEMENT_APPROVER', 'NAMED_USER'];
 const POLICIES: StagePolicy[] = ['ANY', 'ALL'];
-const RULE_ERRORS = new Set(['ambiguous-approval-rule', 'band', 'invalid-value', 'required', 'not-in-company', 'save-failed']);
+const RULE_ERRORS = new Set([
+  'ambiguous-approval-rule',
+  'band',
+  'invalid-value',
+  'required',
+  'not-in-company',
+  'save-failed',
+  'approver-is-administrator',
+  'approver-created-by-administrator',
+]);
 
 type StageForm = FormGroup<{
   name: FormControl<string>;

@@ -21,6 +21,9 @@ import com.epi.procurement.platform.web.ApiProblemException;
 @Service
 public class UserAdminService {
 
+	private static final java.util.regex.Pattern EMAIL = java.util.regex.Pattern
+		.compile("[a-z0-9._%+'-]+@[a-z0-9-]+(\\.[a-z0-9-]+)+");
+
 	private static final Set<Role> COMPANY_ADMIN_FORBIDDEN = Set.of(Role.GLOBAL_ADMIN, Role.ADMIN, Role.GROUP_MANAGEMENT,
 			Role.SUPPLIER_CONTACT);
 
@@ -34,8 +37,14 @@ public class UserAdminService {
 
 	private final ApplicationEventPublisher events;
 
+	private final PasswordPolicy passwordPolicy;
+
+	private final UserDirectory directory;
+
 	UserAdminService(UserAdminStore store, CredentialStore credentials, PasswordEncoder encoder, AuditLog auditLog,
-			ApplicationEventPublisher events) {
+			ApplicationEventPublisher events, PasswordPolicy passwordPolicy, UserDirectory directory) {
+		this.passwordPolicy = passwordPolicy;
+		this.directory = directory;
 		this.store = store;
 		this.credentials = credentials;
 		this.encoder = encoder;
@@ -57,11 +66,7 @@ public class UserAdminService {
 		requireUserAdmin(actor);
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertSameGroup(actor, account);
-		if (!actor.isGlobalAdmin() && !actor.canAdminCompany(account.companyId())
-				&& !store.listGrants(userId).stream().anyMatch(g -> g.companyId() != null && actor.canAdminCompany(g.companyId()))) {
-			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
-		}
+		assertVisible(actor, account);
 		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
 					"Company administrators cannot manage global administrators.");
@@ -77,19 +82,22 @@ public class UserAdminService {
 			throw new ApiProblemException(HttpStatus.CONFLICT, "email-taken", "An account with this e-mail already exists.");
 		}
 		validateHome(actor, body.companyId(), body.siteId(), body.departmentId());
-		boolean active = body.active() == null || body.active();
+		// Four eyes on identities (F-1): a new account stays inactive until another administrator activates it, so
+		// nobody can create an account with a mailbox they control and use it alone. `active` in the body is ignored.
+		boolean active = false;
 		long id = store.insertAccount(email, requireName(body.displayName()), body.companyId(), body.siteId(),
-				body.departmentId(), language(body.preferredLanguage()), active, false);
+				body.departmentId(), language(body.preferredLanguage()), active, false, actor.id());
 		// Unusable random hash until setup link is redeemed (or bootstrap sets one).
 		credentials.savePasswordHash(id, encoder.encode(java.util.UUID.randomUUID().toString()), true);
 		if (body.roles() != null) {
 			for (UserAdminViews.GrantRequest grant : body.roles()) {
-				addGrantInternal(actor, id, grant, false);
+				// Audited like any later grant (review finding 6, ADR-006).
+				addGrantInternal(actor, id, grant, true);
 			}
 		}
 		auditLog.record(new AuditRecord(actor.id(), actor.email(), body.companyId(), "USER_ACCOUNT", Long.toString(id),
-				"USER_CREATED", null, active ? "ACTIVE" : "INACTIVE", null, "{\"email\":\"" + email + "\"}"));
-		publishPasswordSetup(id, "SETUP", actor, requireName(body.displayName()), body.companyId());
+				"USER_CREATED", null, active ? "ACTIVE" : "INACTIVE", null, "{\"email\":" + AuditRecord.jsonString(email) + "}"));
+		// The set-up link is sent when another administrator activates the account (setActive).
 		return get(actor, id);
 	}
 
@@ -117,6 +125,16 @@ public class UserAdminService {
 			throw new ApiProblemException(HttpStatus.CONFLICT, "cannot-deactivate-self",
 					"You cannot deactivate your own account.");
 		}
+		// Four eyes on identities (F-1, F-8): nobody in the account's creation chain activates it, and neither does an
+		// administrator whose own account was created by its creator or someone in that chain (indirect self-approval).
+		if (active && !account.active()) {
+			java.util.Optional<Long> creator = directory.creatorOf(userId);
+			if (creator.isPresent() && (directory.createdBy(userId, actor.id()) || creator.get() == actor.id()
+					|| directory.createdBy(actor.id(), creator.get()))) {
+				throw new ApiProblemException(HttpStatus.FORBIDDEN, "four-eyes",
+						"You created this account, or its creator created yours. Another administrator must activate it.");
+			}
+		}
 		if (!active && store.isGlobalAdminTarget(userId)) {
 			int remaining = store.countActiveGlobalAdminsForUpdate();
 			if (remaining <= 1) {
@@ -132,6 +150,11 @@ public class UserAdminService {
 				account.active() ? "ACTIVE" : "INACTIVE", active ? "ACTIVE" : "INACTIVE", null,
 				"{\"pendingApprovals\":" + open.pendingApprovals() + ",\"assignedBuying\":" + open.assignedBuying()
 						+ "}"));
+		// First activation of an account created through administration: the owner receives the set-up link now.
+		if (active && !account.active() && credentials.flags(userId).map(CredentialStore.CredentialFlags::mustChangePassword)
+			.orElse(false)) {
+			publishPasswordSetup(userId, "SETUP", actor, account.displayName(), account.companyId());
+		}
 		return new UserAdminViews.StatusResult(userId, active, open.pendingApprovals(), open.assignedBuying());
 	}
 
@@ -147,14 +170,22 @@ public class UserAdminService {
 		requireUserAdmin(actor);
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertSameGroup(actor, account);
+		// An account of another company does not exist for this administrator (F-7, ADR-007).
+		assertVisible(actor, account);
 		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
 					"Company administrators cannot manage global administrators.");
 		}
+		assertNotPeerAdministrator(actor, account);
 		UserAdminStore.RoleGrantRow grant = store.findGrant(grantId)
 			.filter(g -> g.userId() == userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "Role grant not found."));
+		// A supplier contact is an external person: removing the role would turn the account into an employee
+		// account without a recorded creator, outside the four-eyes rule (F-4). Revoke the contact from messaging.
+		if (Role.SUPPLIER_CONTACT.name().equals(grant.role())) {
+			throw new ApiProblemException(HttpStatus.CONFLICT, "supplier-contact-role",
+					"A supplier contact cannot become an employee account. Revoke the contact from messaging instead.");
+		}
 		if (Role.GLOBAL_ADMIN.name().equals(grant.role())) {
 			if (actor.id() == userId) {
 				throw new ApiProblemException(HttpStatus.CONFLICT, "cannot-remove-own-global-admin",
@@ -196,21 +227,40 @@ public class UserAdminService {
 
 	/**
 	 * Sets a temporary password and forces change at next sign-in. The clear-text value is never logged or returned.
+	 * <p>
+	 * Whoever chooses a password can sign in as its owner, so this is reserved for global administrators and never
+	 * applies to one's own account (audit S-4). Company administrators use the reset link, which shows the secret
+	 * only to the account owner.
 	 */
 	@Transactional
 	public void setTemporaryPassword(CurrentUser actor, long userId, String temporaryPassword) {
 		requireUserAdmin(actor);
+		if (!actor.isGlobalAdmin()) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
+					"Only a global administrator can set a temporary password. Send a reset link instead.");
+		}
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
 		assertCanManage(actor, account);
-		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(userId)) {
-			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
-					"Company administrators cannot reset a global administrator password.");
+		if (actor.id() == userId) {
+			throw new ApiProblemException(HttpStatus.CONFLICT, "cannot-set-own-password",
+					"Change your own password from your profile.");
 		}
-		if (!StringUtils.hasText(temporaryPassword) || temporaryPassword.length() < 12) {
-			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "weak-password",
-					"Temporary passwords must be at least 12 characters.");
+		// Whoever chooses a password can act as its owner. Never on an account not yet activated, nor on one this
+		// administrator created (directly or through an account they created): the owner's set-up link is the only
+		// first credential (review of F-1, finding 4).
+		if (!account.active() || directory.createdBy(userId, actor.id())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "use-reset-link",
+					"Send this account a set-up or reset link instead.");
 		}
+		// For an account that approves, buys, receives or administers, only the reset link sent to the owner is
+		// allowed (F-3, ADR-016 direction).
+		if (store.listGrants(userId).stream().map(g -> Role.parse(g.role()).orElse(null)).anyMatch(
+				r -> r != null && r.requiresFourEyes())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "use-reset-link",
+					"This account holds a sensitive role. Send a password reset link instead.");
+		}
+		passwordPolicy.validate(temporaryPassword);
 		credentials.savePasswordHash(userId, encoder.encode(temporaryPassword), true);
 		store.bumpCredentialsVersion(userId);
 		auditLog.record(new AuditRecord(actor.id(), actor.email(), account.companyId(), "USER_ACCOUNT",
@@ -240,16 +290,39 @@ public class UserAdminService {
 	private void addGrantInternal(CurrentUser actor, long userId, UserAdminViews.GrantRequest grant, boolean audit) {
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertSameGroup(actor, account);
+		// Before anything else: an account of another company does not exist for this administrator. A grant
+		// would otherwise sign that user out and return their details (review RR-7, ADR-007).
+		assertVisible(actor, account);
 		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
 					"Company administrators cannot manage global administrators.");
 		}
+		assertNotPeerAdministrator(actor, account);
 		Role role = Role.parse(grant.role() == null ? "" : grant.role().trim().toUpperCase(Locale.ROOT))
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-role", "Unsupported role."));
+		// Nobody decides their own rights. A company administrator changes none of their own roles (R-2); a global
+		// administrator gives themselves no sensitive role: another global administrator must (RR-3).
+		if (actor.id() == userId && (!actor.isGlobalAdmin() || role.requiresFourEyes())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "self-grant",
+					"You cannot change your own roles. Ask a global administrator.");
+		}
+		// Four eyes, permanent and for every administrator (RR-3): whoever created an account never gives it a
+		// sensitive role (approval, buying, ordering, receiving). Another administrator, or a global administrator
+		// for a company with a single administrator, makes that grant; the grant itself is the second decision.
+		// F-2: the same for ADMIN and GLOBAL_ADMIN, so nobody creates a second identity and makes it an administrator.
+		if (role.requiresFourEyes() && directory.createdBy(userId, actor.id())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "four-eyes",
+					"You created this account. Another administrator must give it this role.");
+		}
 		if (role == Role.SUPPLIER_CONTACT) {
 			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-role",
 					"Supplier contacts are invited from messaging, not user administration.");
+		}
+		// An external contact's account never holds an internal role: with one it could approve through an
+		// e-mail link although the portal filter keeps it out of the application (review RR-5).
+		if (directory.isSupplierContact(userId)) {
+			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-role",
+					"A supplier contact account cannot hold an internal role.");
 		}
 		if (!actor.isGlobalAdmin()) {
 			if (COMPANY_ADMIN_FORBIDDEN.contains(role) || role == Role.GLOBAL_ADMIN || role == Role.ADMIN) {
@@ -320,9 +393,36 @@ public class UserAdminService {
 		if (!actor.isGlobalAdmin() && !actor.canAdminCompany(account.companyId())) {
 			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
 		}
+		assertNotPeerAdministrator(actor, account);
 		if (!actor.isGlobalAdmin() && hasGrantsOutsideAdminScope(actor, account.id())) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "out-of-scope-grants",
 					"This account has role grants outside your authorised companies. A global administrator must perform account-wide security changes.");
+		}
+	}
+
+	/**
+	 * A company administrator has no power over a peer: resetting, deactivating, signing out, or adding and removing
+	 * the roles of another administrator would let one take over, weaken or lock out the other (audit S-4, review
+	 * R-3). Every role change also ends the target's sessions. Administrators are managed by global administrators.
+	 */
+	private void assertNotPeerAdministrator(CurrentUser actor, UserAdminStore.AccountRow account) {
+		if (!actor.isGlobalAdmin() && actor.id() != account.id()
+				&& store.listGrants(account.id()).stream().anyMatch(g -> Role.ADMIN.name().equals(g.role()))) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "peer-administrator",
+					"Company administrators cannot manage another administrator. Ask a global administrator.");
+		}
+	}
+
+	/**
+	 * The account is visible to the administrator: same group, and for a company administrator a home company or a
+	 * role grant in one of their companies. Otherwise 404, as if the account did not exist (ADR-007).
+	 */
+	private void assertVisible(CurrentUser actor, UserAdminStore.AccountRow account) {
+		assertSameGroup(actor, account);
+		if (!actor.isGlobalAdmin() && !actor.canAdminCompany(account.companyId()) && !store.listGrants(account.id())
+			.stream()
+			.anyMatch(g -> g.companyId() != null && actor.canAdminCompany(g.companyId()))) {
+			throw new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found.");
 		}
 	}
 
@@ -363,10 +463,12 @@ public class UserAdminService {
 	}
 
 	private static String normalizeEmail(String email) {
-		if (!StringUtils.hasText(email) || !email.contains("@")) {
+		String value = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+		// One address, no spaces, quotes, brackets or control characters; a dot in the domain (audit S-13).
+		if (value.length() > 254 || !EMAIL.matcher(value).matches()) {
 			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-email", "A valid e-mail is required.");
 		}
-		return email.trim().toLowerCase(Locale.ROOT);
+		return value;
 	}
 
 	private static String requireName(String name) {

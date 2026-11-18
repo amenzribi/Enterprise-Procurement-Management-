@@ -56,6 +56,42 @@ class PurchasingIntegrationTests extends SqlServerTestSupport {
 		signedIn("requester.tn@demo.local").get("/api/v1/suppliers").expectStatus(403);
 	}
 
+	/** F-5: whoever asked for the purchase does not buy it, even when they also hold the buyer role. */
+	@Test
+	void theRequesterIsNeverTheBuyerOfTheirOwnRequest() {
+		long samiId = userId("requester.tn@demo.local");
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = approve(submit(sami, request("F5 own purchase")));
+		// Bought directly by the requester's own plant, where the requester also holds BUYER (fixture): the only
+		// configuration in which the requester is otherwise an eligible buyer.
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/purchase-mode", "{\"version\":"
+				+ ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue()
+				+ ",\"purchaseMode\":\"DIRECT\"}").expectStatus(200);
+		long buying = jdbc.queryForObject("SELECT buying_company_id FROM purchase_request WHERE id = ?", Long.class, id);
+		assertThat(buying).isEqualTo(companyId("DEMO-TN-PLT"));
+		long mehdiId = userId("purchasing.manager@demo.local");
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'BUYER', ?)", samiId, buying);
+		// and a purchasing manager of that plant, who may assign its buyers.
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'PURCHASING_MANAGER', ?)", mehdiId, buying);
+		try {
+			mehdi = signedIn("purchasing.manager@demo.local");
+			int version = ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue();
+			assertThat(mehdi.post("/api/v1/purchasing/requests/" + id + "/assign",
+					"{\"version\":" + version + ",\"buyerUserId\":" + samiId + "}").expectStatus(422).body())
+				.contains("buyer-is-requester");
+			assertThat(jdbc.queryForObject("SELECT assigned_buyer_user_id FROM purchase_request WHERE id = ?", Long.class,
+					id)).isNull();
+			// The refusal changed nothing: the request still waits for a buyer (normal assignment: tests above).
+			assertThat((String) mehdi.get("/api/v1/requests/" + id).json("$.status")).isEqualTo("IN_PURCHASING_REVIEW");
+		}
+		finally {
+			jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'BUYER' AND company_id = ?", samiId, buying);
+			jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'PURCHASING_MANAGER' AND company_id = ?",
+					mehdiId, buying);
+		}
+	}
+
 	@Test
 	void purchaseModeDoesNotChangeChargedCompanyAndCrossGroupOrgIs404() {
 		ApiClient sami = signedIn("requester.tn@demo.local");

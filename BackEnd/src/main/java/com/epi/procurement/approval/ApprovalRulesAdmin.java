@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.epi.procurement.audit.AuditLog;
+import com.epi.procurement.audit.AuditRecord;
 import com.epi.procurement.identity.CurrentUser;
 import com.epi.procurement.identity.UserDirectory;
 import com.epi.procurement.organization.ExchangeRates;
@@ -51,9 +53,13 @@ class ApprovalRulesAdmin {
 
 	private final com.epi.procurement.platform.persistence.TransactionLocks locks;
 
+	private final AuditLog auditLog;
+
 	ApprovalRulesAdmin(ApprovalStore store, OrganizationDirectory organization, UserDirectory users, ExchangeRates rates,
-			ObjectProvider<Clock> clock, com.epi.procurement.platform.persistence.TransactionLocks locks) {
+			ObjectProvider<Clock> clock, com.epi.procurement.platform.persistence.TransactionLocks locks,
+			AuditLog auditLog) {
 		this.locks = locks;
+		this.auditLog = auditLog;
 		this.store = store;
 		this.organization = organization;
 		this.users = users;
@@ -93,7 +99,9 @@ class ApprovalRulesAdmin {
 		List<ApprovalStore.Stage> stages = validate(admin, input);
 		long id = store.insertRule(admin.groupId(), input.companyId(), null, 1, input.name().strip(), input.categoryId(),
 				input.purchaseType(), min(input), input.maxAmount(), admin.id(), clock.instant(), stages);
-		return view(store.rule(id).orElseThrow());
+		ApprovalStore.Rule created = store.rule(id).orElseThrow();
+		audit(admin, created, "APPROVAL_RULE_CREATED", null, null);
+		return view(created);
 	}
 
 	@Transactional
@@ -108,7 +116,9 @@ class ApprovalRulesAdmin {
 		if ("DRAFT".equals(current.status()) && !store.ruleUsed(id)) {
 			store.updateDraftRule(id, effective.name().strip(), effective.categoryId(), effective.purchaseType(),
 					min(effective), effective.maxAmount(), stages);
-			return view(store.rule(id).orElseThrow());
+			ApprovalStore.Rule updated = store.rule(id).orElseThrow();
+			audit(admin, updated, "APPROVAL_RULE_UPDATED", current.status(), current);
+			return view(updated);
 		}
 		int nextVersion = store.ruleVersions(current.ruleKey())
 			.stream()
@@ -118,7 +128,9 @@ class ApprovalRulesAdmin {
 		long newId = store.insertRule(admin.groupId(), current.companyId(), current.ruleKey(), nextVersion,
 				effective.name().strip(), effective.categoryId(), effective.purchaseType(), min(effective),
 				effective.maxAmount(), admin.id(), clock.instant(), stages);
-		return view(store.rule(newId).orElseThrow());
+		ApprovalStore.Rule version = store.rule(newId).orElseThrow();
+		audit(admin, version, "APPROVAL_RULE_VERSION_CREATED", null, current);
+		return view(version);
 	}
 
 	@Transactional
@@ -138,16 +150,21 @@ class ApprovalRulesAdmin {
 					"This rule overlaps another active rule of the same company, category and purchase type.");
 		}
 		store.activateRule(id, rule.ruleKey(), clock.instant());
-		return view(store.rule(id).orElseThrow());
+		ApprovalStore.Rule active = store.rule(id).orElseThrow();
+		audit(admin, active, "APPROVAL_RULE_ACTIVATED", rule.status(), null);
+		return view(active);
 	}
 
 	@Transactional
 	ApprovalViews.Rule retire(CurrentUser admin, long id) {
-		if (!"ACTIVE".equals(ruleOfGroup(admin, id).status())) {
+		ApprovalStore.Rule rule = ruleOfGroup(admin, id);
+		if (!"ACTIVE".equals(rule.status())) {
 			throw ApiProblemException.conflict("invalid-state", "Only an active rule version can be retired.");
 		}
 		store.retireRule(id);
-		return view(store.rule(id).orElseThrow());
+		ApprovalStore.Rule retired = store.rule(id).orElseThrow();
+		audit(admin, retired, "APPROVAL_RULE_RETIRED", rule.status(), null);
+		return view(retired);
 	}
 
 	@Transactional(readOnly = true)
@@ -193,7 +210,64 @@ class ApprovalRulesAdmin {
 		}
 		long id = rates.add(admin.groupId(), input.baseCurrency(), input.quoteCurrency(), input.rate(), input.rateDate(),
 				input.source().strip(), admin.id(), clock.instant());
+		// A rate applies to the whole group, so the event goes to the global chain (no company).
+		auditLog.record(new AuditRecord(admin.id(), admin.displayName(), null, "EXCHANGE_RATE", Long.toString(id),
+				"EXCHANGE_RATE_ADDED", null, null, null,
+				"{\"base\":\"" + input.baseCurrency() + "\",\"quote\":\"" + input.quoteCurrency() + "\",\"rate\":\""
+						+ input.rate().toPlainString() + "\",\"rateDate\":\"" + input.rateDate() + "\",\"source\":"
+						+ AuditRecord.jsonString(input.source().strip()) + "}"));
 		return rates(admin).stream().filter(r -> r.id() == id).findFirst().orElseThrow();
+	}
+
+	/**
+	 * One audit event per rule change, in the transaction of the change (ADR-006, audit S-6). The payload holds the
+	 * values that decide who approves, after the change and, for an edit, before it.
+	 */
+	private void audit(CurrentUser admin, ApprovalStore.Rule rule, String action, String fromStatus,
+			ApprovalStore.Rule before) {
+		auditLog.record(new AuditRecord(admin.id(), admin.displayName(), rule.companyId(), "APPROVAL_RULE",
+				Long.toString(rule.id()), action, fromStatus, rule.status(), null,
+				"{\"ruleKey\":" + rule.ruleKey() + ",\"version\":" + rule.versionNo() + ",\"after\":" + json(rule)
+						+ (before == null ? "" : ",\"before\":" + json(before)) + "}"));
+	}
+
+	private static String json(ApprovalStore.Rule rule) {
+		StringBuilder json = new StringBuilder("{\"id\":").append(rule.id())
+			.append(",\"name\":")
+			.append(AuditRecord.jsonString(rule.name()))
+			.append(",\"categoryId\":")
+			.append(rule.categoryId())
+			.append(",\"purchaseType\":")
+			.append(AuditRecord.jsonString(rule.purchaseType()))
+			.append(",\"minAmount\":")
+			.append(amount(rule.minAmount()))
+			.append(",\"maxAmount\":")
+			.append(amount(rule.maxAmount()))
+			.append(",\"stages\":[");
+		for (int i = 0; i < rule.stages().size(); i++) {
+			ApprovalStore.Stage stage = rule.stages().get(i);
+			json.append(i == 0 ? "" : ",")
+				.append("{\"stageNo\":")
+				.append(stage.stageNo())
+				.append(",\"approverType\":")
+				.append(AuditRecord.jsonString(stage.approverType()))
+				.append(",\"approverUserId\":")
+				.append(stage.approverUserId())
+				.append(",\"policy\":")
+				.append(AuditRecord.jsonString(stage.policy()))
+				.append(",\"slaHours\":")
+				.append(stage.slaHours())
+				.append(",\"escalationRole\":")
+				.append(AuditRecord.jsonString(stage.escalationRole()))
+				.append(",\"minAmount\":")
+				.append(amount(stage.minAmount()))
+				.append('}');
+		}
+		return json.append("]}").toString();
+	}
+
+	private static String amount(java.math.BigDecimal value) {
+		return value == null ? "null" : "\"" + value.toPlainString() + "\"";
 	}
 
 	private ApprovalStore.Rule ruleOfGroup(CurrentUser admin, long id) {
@@ -258,11 +332,28 @@ class ApprovalRulesAdmin {
 					errors.add(FieldViolation.of(path + "approverType", "invalid-value"));
 				}
 				else if ("NAMED_USER".equals(stage.approverType())) {
+					// An active internal employee of the group; never an external supplier contact (review RR-2).
 					boolean valid = stage.approverUserId() != null && users.findContact(stage.approverUserId())
 						.filter(c -> c.active() && c.groupId() == admin.groupId())
-						.isPresent();
+						.isPresent() && !users.isSupplierContact(stage.approverUserId());
 					if (!valid) {
 						errors.add(FieldViolation.of(path + "approverUserId", "invalid-value"));
+					}
+					// Whoever writes a rule cannot write themselves in as the approver, nor an account they created
+					// (review RR-1, RR-3: the same four-eyes rule as role grants, for every administrator).
+					else if (stage.approverUserId() == admin.id()) {
+						errors.add(FieldViolation.of(path + "approverUserId", "approver-is-administrator"));
+					}
+					// The named approver works for the rule's company: home company or a role granted there (F-6).
+					else if (input.companyId() != null && !users.loadCurrentUser(stage.approverUserId())
+						.map(u -> u.companyId() == input.companyId() || u.grants()
+							.stream()
+							.anyMatch(g -> g.companyId() != null && g.companyId().longValue() == input.companyId()))
+						.orElse(false)) {
+						errors.add(FieldViolation.of(path + "approverUserId", "not-in-company"));
+					}
+					else if (users.createdBy(stage.approverUserId(), admin.id())) {
+						errors.add(FieldViolation.of(path + "approverUserId", "approver-created-by-administrator"));
 					}
 				}
 				if (stage.policy() == null || !Set.of("ANY", "ALL").contains(stage.policy())) {

@@ -4,25 +4,43 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
  * Decides the content type from the bytes, never from the client (S2DR-11). Allowed: PDF, PNG, JPEG, GIF, WebP,
  * Office Open XML documents without macros (.docx, .xlsx, .pptx), plain text and CSV. Refused: SVG, HTML, scripts,
- * executables, macro-enabled and legacy binary Office formats, archives.
+ * executables, macro-enabled and legacy binary Office formats, archives, and any file whose extension does not
+ * match its detected type.
  */
 final class ContentSniffer {
 
 	private ContentSniffer() {
 	}
 
+	/**
+	 * Extensions under which each type detected from its signature may be stored (audit S-2). The user's file name
+	 * is returned on download, so a script named {@code invoice.bat} that starts with a PDF header must not pass
+	 * as a PDF.
+	 */
+	private static final Map<String, Set<String>> EXTENSIONS = Map.of("application/pdf", Set.of("pdf"), "image/png",
+			Set.of("png"), "image/jpeg", Set.of("jpg", "jpeg"), "image/gif", Set.of("gif"), "image/webp",
+			Set.of("webp"));
+
+	/** The content type, or empty when the content is not allowed or does not match the file's extension. */
 	static Optional<String> detect(String fileName, byte[] content) {
+		String extension = extension(fileName);
+		return bySignature(extension, content)
+			.filter(type -> !EXTENSIONS.containsKey(type) || EXTENSIONS.get(type).contains(extension));
+	}
+
+	private static Optional<String> bySignature(String extension, byte[] content) {
 		if (content.length == 0) {
 			return Optional.empty();
 		}
-		String extension = extension(fileName);
 		if (startsWith(content, "%PDF-".getBytes(StandardCharsets.US_ASCII))) {
 			return Optional.of("application/pdf");
 		}

@@ -19,4 +19,17 @@ class SqlServerErrorsTests {
 		assertThat(SqlServerErrors.isDeadlockVictim(new CannotAcquireLockException("no cause"))).isFalse();
 	}
 
+	@Test
+	void error1222IsALockTimeoutHoweverItIsWrapped() {
+		SQLException timeout = new SQLException("Lock request time out period exceeded.", "S00051", 1222);
+		assertThat(SqlServerErrors.isLockTimeout(timeout)).isTrue();
+		assertThat(SqlServerErrors.isLockTimeout(new IllegalStateException("outer", new RuntimeException(timeout))))
+			.isTrue();
+		SQLException first = new SQLException("statement", "S0001", 3621);
+		first.setNextException(timeout);
+		assertThat(SqlServerErrors.isLockTimeout(first)).isTrue();
+		assertThat(SqlServerErrors.isLockTimeout(new SQLException("deadlock", "40001", 1205))).isFalse();
+		assertThat(SqlServerErrors.isLockTimeout(new IllegalStateException("no sql"))).isFalse();
+	}
+
 }

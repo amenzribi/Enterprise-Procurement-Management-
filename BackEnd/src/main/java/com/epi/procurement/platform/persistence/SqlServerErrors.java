@@ -11,17 +11,29 @@ public final class SqlServerErrors {
 	/** "Transaction was deadlocked ... and has been chosen as the deadlock victim. Rerun the transaction." */
 	public static final int DEADLOCK_VICTIM = 1205;
 
+	/** "Lock request time out period exceeded." Raised when a statement waited longer than SET LOCK_TIMEOUT. */
+	public static final int LOCK_TIMEOUT = 1222;
+
 	private SqlServerErrors() {
+	}
+
+	/** The statement gave up waiting for a lock held by another transaction (audit DB-3). */
+	public static boolean isLockTimeout(Throwable error) {
+		return hasErrorCode(error, LOCK_TIMEOUT);
 	}
 
 	/**
 	 * Only a deadlock victim is safe and useful to retry in a new transaction; lock timeouts are not (S1CR-03).
 	 */
 	public static boolean isDeadlockVictim(Throwable error) {
+		return hasErrorCode(error, DEADLOCK_VICTIM);
+	}
+
+	private static boolean hasErrorCode(Throwable error, int code) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof SQLException sql) {
 				for (SQLException chained = sql; chained != null; chained = chained.getNextException()) {
-					if (chained.getErrorCode() == DEADLOCK_VICTIM) {
+					if (chained.getErrorCode() == code) {
 						return true;
 					}
 				}

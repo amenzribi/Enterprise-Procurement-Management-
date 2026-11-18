@@ -1,33 +1,22 @@
 package com.epi.procurement.document;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 /**
- * Antivirus port (spec §24, S2DR-11). Downloads are allowed only for files reported CLEAN. The development
- * implementation performs no scan and reports CLEAN, and says so in the log; production plugs the client's scanner
- * (e.g. ClamAV) behind this interface.
+ * Antivirus port (spec §24, S2DR-11, audit S-1). The application ships no implementation: a deployment plugs the
+ * client's scanner behind this interface as a Spring bean.
+ * <p>
+ * Without a scanner nothing is ever reported clean. An uploaded file is stored as {@code PENDING} and stays in
+ * quarantine (no download) unless {@code app.attachments.allow-unscanned-downloads=true}, which only the
+ * development profiles set. A scanner that throws refuses the upload: the check fails closed.
  */
 interface AttachmentScanner {
 
+	/**
+	 * @throws RuntimeException when the scan could not be completed; the upload is then refused
+	 */
 	ScanResult scan(String fileName, byte[] content);
 
 	enum ScanResult {
 		CLEAN, INFECTED
-	}
-
-	@Component
-	class NoOpScanner implements AttachmentScanner {
-
-		private static final Logger log = LoggerFactory.getLogger(NoOpScanner.class);
-
-		@Override
-		public ScanResult scan(String fileName, byte[] content) {
-			log.info("Attachment not scanned (no antivirus configured; development scanner reports CLEAN)");
-			return ScanResult.CLEAN;
-		}
-
 	}
 
 }

@@ -30,6 +30,14 @@ class ReceiptStore {
 			.findFirst();
 	}
 
+	/** Who issued the purchase order of a request, if it was issued (F-5: the issuer does not receive it). */
+	Optional<Long> poIssuer(long requestId) {
+		return jdbc.queryForList("SELECT issued_by_user_id FROM purchase_order WHERE request_id = ?", Long.class, requestId)
+			.stream()
+			.filter(java.util.Objects::nonNull)
+			.findFirst();
+	}
+
 	List<PoLineSnap> poLines(long poId) {
 		return jdbc.query("""
 				SELECT id, request_line_id, line_no, description, quantity, unit FROM purchase_order_line
@@ -239,7 +247,7 @@ class ReceiptStore {
 			rs.getLong("request_id"), rs.getLong("purchase_order_id"), rs.getString("invoice_number"),
 			rs.getBigDecimal("amount"), rs.getString("currency"), rs.getString("document_reference"),
 			rs.getBoolean("match_attested"), rs.getString("payment_status"), UtcTimes.instant(rs, "recorded_at"),
-			rs.getInt("version"));
+			rs.getInt("version"), rs.getLong("recorded_by_user_id"));
 
 	private static final RowMapper<ScoreRow> SCORE = (rs, i) -> new ScoreRow(rs.getLong("id"), rs.getInt("rating"));
 
@@ -276,7 +284,7 @@ class ReceiptStore {
 
 	record InvoiceRow(long id, long requestId, long purchaseOrderId, String invoiceNumber, BigDecimal amount,
 			String currency, String documentReference, boolean matchAttested, String paymentStatus, Instant recordedAt,
-			int version) {
+			int version, long recordedByUserId) {
 	}
 
 	record ScoreRow(long id, int rating) {

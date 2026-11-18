@@ -206,7 +206,8 @@ class LogisticsService {
 		}
 		RequestSnapshot after = requests.currentLocked(requestId);
 		audit(user, after, "SHIPMENT_CREATED", after.status(), null,
-				"{\"shipmentId\":" + shipmentId + ",\"number\":\"" + number + "\",\"kind\":\"" + kind + "\"}");
+				"{\"shipmentId\":" + shipmentId + ",\"number\":" + AuditRecord.jsonString(number) + ",\"kind\":"
+						+ AuditRecord.jsonString(String.valueOf(kind)) + "}");
 		notifyAuthors(after, "SHIPMENT_CREATED", user);
 		return toView(store.findShipment(shipmentId).orElseThrow(), LocalDate.ofInstant(now, ZoneOffset.UTC));
 	}
@@ -312,6 +313,11 @@ class LogisticsService {
 				&& store.assignmentAccepted(request.id(), user.id());
 		if (!manager && !acceptedBuyer) {
 			throw ApiProblemException.forbidden();
+		}
+		// Separation of duties (F-5): whoever asked for the purchase does not buy it, even as purchasing manager.
+		if (request.isAuthor(user.id())) {
+			throw new ApiProblemException(org.springframework.http.HttpStatus.FORBIDDEN, "buyer-is-requester",
+					"You cannot buy for your own request.");
 		}
 	}
 

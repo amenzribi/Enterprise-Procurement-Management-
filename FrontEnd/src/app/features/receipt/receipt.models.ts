@@ -71,4 +71,6 @@ export interface SupplierInvoice {
   documentReference: string | null;
   matchAttested: boolean;
   paymentStatus: string;
+  /** Who recorded the invoice: that person neither attests it nor authorises its payment (F-5). */
+  recordedByUserId?: number;
 }

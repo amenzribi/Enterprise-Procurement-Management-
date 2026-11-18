@@ -260,6 +260,13 @@
     "task-not-pending": "This decision has already been taken or reassigned.",
     "reason-required": "Give a reason.",
     "delegate-not-eligible": "This person cannot receive the approval.",
+    "delegate-is-administrator": "An administrator cannot name themselves as the delegate.",
+    "delegate-created-by-administrator": "You created this account. Another administrator must record this absence.",
+    "self-grant": "You cannot change your own roles. Ask a global administrator.",
+    "four-eyes": "You created this account. Another administrator must give it this role or reactivate it.",
+    "peer-administrator": "You cannot manage another administrator. Ask a global administrator.",
+    "cannot-set-own-password": "Change your own password from your profile.",
+    "scan-unavailable": "The file could not be checked for viruses. Try again later.",
     "absence-overlap": "This period overlaps another absence.",
     "link-invalid": "This link is no longer valid.",
     "file-too-large": "The file is larger than 20 MB.",
@@ -315,7 +322,14 @@
     "already-confirmed": "These service lines are already confirmed.",
     "discussion-not-participant": "This request has a discussion you are not part of. Ask one of its participants to add you.",
     "approver-changed": "The approver has changed since you opened this. Check who decides now, then send.",
-    "client-message-id-reused": "This message was already sent with a different text. Copy your text and send it again."
+    "client-message-id-reused": "This message was already sent with a different text. Copy your text and send it again.",
+    "use-reset-link": "This account holds a sensitive role. Send a password reset link instead.",
+    "supplier-contact-role": "A supplier contact cannot become an employee account. Revoke the contact from messaging instead.",
+    "buyer-is-requester": "The person who asked for this purchase cannot buy it.",
+    "buyer-cannot-receive": "The buyer of this order cannot record or confirm its receipt.",
+    "invoice-recorder": "Another person must attest or authorise payment of an invoice you recorded.",
+    "payment-needs-manager": "Only a purchasing manager of the buying company can authorise payment.",
+    "payment-not-independent": "The buyer of this order cannot authorise its payment."
   },
   "auth": {
     "signOut": "Sign out",
@@ -947,6 +961,8 @@
     "errors": {
       "absence-overlap": "This period overlaps another absence.",
       "delegate-not-eligible": "This person cannot approve in your place. Choose someone with the same approval role.",
+      "delegate-is-administrator": "An administrator cannot name themselves as the delegate.",
+      "delegate-created-by-administrator": "You created this account. Another administrator must record this absence.",
       "self-delegation": "You cannot delegate to yourself.",
       "invalid-period": "Check the dates of the absence.",
       "save-failed": "The absence could not be saved. Try again."
@@ -1009,7 +1025,9 @@
       "invalid-value": "A value is not valid. Check the steps.",
       "required": "Fill in the required fields.",
       "not-in-company": "The named approver must belong to this group.",
-      "save-failed": "The rule could not be saved. Check the fields and try again."
+      "save-failed": "The rule could not be saved. Check the fields and try again.",
+      "approver-is-administrator": "You cannot name yourself as the approver.",
+      "approver-created-by-administrator": "You created this account. Another administrator must name it as approver."
     },
     "approverUserHint": "Only users of this company are listed.",
     "used": "used by requests",
@@ -1055,6 +1073,7 @@
     "empty": "No attachment.",
     "version": "version {{version}}",
     "scanning": "virus check in progress",
+    "notScanned": "not virus-checked",
     "remove": "Remove {{name}}",
     "removeTitle": "Remove this file?",
     "removeMessage": "“{{name}}” will be removed from the request.",
@@ -1451,7 +1470,8 @@
       "serviceHint": "Confirm that the service lines on this order were performed. Goods lines still need their receipts.",
       "serviceComment": "Comment",
       "serviceAccept": "Accept services",
-      "serviceAcceptedToast": "Services accepted"
+      "serviceAcceptedToast": "Services accepted",
+      "invoiceSecondPerson": "Another person attests the match, and a purchasing manager other than you authorises payment."
     },
     "status": {
       "RECORDED": "Recorded",
@@ -1597,7 +1617,8 @@
     "roleCombinations": "Approver roles may be combined with REQUESTER. BUYER and PURCHASING_MANAGER may be combined. GLOBAL_ADMIN should not be used as an “all roles” account. SUPPLIER_CONTACT is invited from messaging, not here.",
     "tempPassword": "Set temporary password",
     "tempPasswordHint": "At least 12 characters. The user must change it at first sign-in. The value is never stored in clear text or shown again.",
-    "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it."
+    "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it.",
+    "createdPendingActivation": "Account created. Another administrator must activate it; its owner then receives the set-up link."
   },
   "requestAdmin": {
     "title": "Request administration",

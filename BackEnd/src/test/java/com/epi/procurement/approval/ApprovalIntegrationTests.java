@@ -633,6 +633,16 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 				"application/octet-stream", pdf, null).expectStatus(201);
 		assertThat((String) uploaded.json("$.fileName")).isEqualTo("ورقة.pdf");
 		assertThat((String) uploaded.json("$.contentType")).isEqualTo("application/pdf");
+		// No antivirus in the test profile: the file is recorded as not scanned, never as clean (audit S-1).
+		assertThat((String) uploaded.json("$.scanStatus")).isEqualTo("PENDING");
+		assertThat((Boolean) uploaded.json("$.downloadable")).isTrue();
+		// A script behind a PDF header, under a name Windows would run (audit S-2).
+		for (String name : new String[] { "invoice.bat", "invoice.pdf.cmd", "invoice" }) {
+			assertThat(sami.upload("/api/v1/requests/" + id + "/attachments", name, "application/pdf",
+					"%PDF-1.7\r\n@echo off\r\ncalc.exe\r\n".getBytes(StandardCharsets.US_ASCII), null)
+				.expectStatus(415)
+				.code()).as(name).isEqualTo("file-type-not-allowed");
+		}
 		assertThat(sami.upload("/api/v1/requests/" + id + "/attachments", "invoice.pdf", "application/pdf",
 				new byte[] { 'M', 'Z', 0, 0, 1 }, null).expectStatus(415).code()).isEqualTo("file-type-not-allowed");
 		assertThat(sami.upload("/api/v1/requests/" + id + "/attachments", "logo.txt", "text/plain",

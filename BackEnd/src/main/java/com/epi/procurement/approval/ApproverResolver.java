@@ -72,7 +72,8 @@ class ApproverResolver {
 			return false;
 		}
 		if ("NAMED_USER".equals(approverType)) {
-			return Objects.equals(namedUserId, userId) || holdsApproverRoleIn(userId, request.requestingCompanyId());
+			return !users.isSupplierContact(userId)
+					&& (Objects.equals(namedUserId, userId) || holdsApproverRoleIn(userId, request.requestingCompanyId()));
 		}
 		return holders(approverType, namedUserId, request).contains(userId);
 	}
@@ -107,6 +108,22 @@ class ApproverResolver {
 		return users.holdersOfRole(Role.valueOf(approverType), companyId).stream().anyMatch(h -> h.userId() == userId);
 	}
 
+	boolean createdBy(long userId, long creatorId) {
+		return users.createdBy(userId, creatorId);
+	}
+
+	private boolean administers(long userId, long companyId) {
+		return users.loadCurrentUser(userId).map(u -> u.canAdminCompany(companyId)).orElse(false);
+	}
+
+	/** Home company, or any role granted in that company. */
+	private boolean belongsToCompany(long userId, long companyId) {
+		return users.loadCurrentUser(userId)
+			.map(u -> u.companyId() == companyId
+					|| u.grants().stream().anyMatch(g -> g.companyId() != null && g.companyId() == companyId))
+			.orElse(false);
+	}
+
 	boolean holdsApproverRoleIn(long userId, long companyId) {
 		for (Role role : APPROVER_ROLES) {
 			if (users.holdersOfRole(role, companyId).stream().anyMatch(h -> h.userId() == userId)) {
@@ -136,10 +153,16 @@ class ApproverResolver {
 			long delegate = absence.get().delegateUserId();
 			// The delegate holds the same approver role in the same company (any department), unless an
 			// administrator explicitly allowed the delegation.
+			// With the override the delegate must still belong to the company of this request: an administrator
+			// of another company of the absent person cannot redirect this company's approvals (review RR-8).
+			// ... and the administrator who recorded the override must administer that company (F-9).
 			boolean eligible = !request.isAuthor(delegate) && (absence.get().adminOverride()
-					|| holdsStageRole(delegate, approverType, request.requestingCompanyId()));
+					? belongsToCompany(delegate, request.requestingCompanyId())
+							&& administers(absence.get().createdBy(), request.requestingCompanyId())
+					: holdsStageRole(delegate, approverType, request.requestingCompanyId()));
 			Optional<UserDirectory.UserContact> contact = users.findContact(delegate);
-			if (!visited.add(delegate) || !eligible || contact.isEmpty() || !contact.get().active()) {
+			if (!visited.add(delegate) || !eligible || contact.isEmpty() || !contact.get().active()
+					|| users.isSupplierContact(delegate)) {
 				break;
 			}
 			current = delegate;
@@ -151,8 +174,9 @@ class ApproverResolver {
 		Set<Long> result = new LinkedHashSet<>();
 		if ("NAMED_USER".equals(type)) {
 			if (namedUserId != null) {
+				// A supplier contact named in an older rule is not an approver (review RR-2).
 				users.findContact(namedUserId)
-					.filter(c -> c.active() && c.groupId() == request.groupId())
+					.filter(c -> c.active() && c.groupId() == request.groupId() && !users.isSupplierContact(c.id()))
 					.ifPresent(c -> result.add(c.id()));
 			}
 			return result;

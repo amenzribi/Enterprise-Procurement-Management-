@@ -79,6 +79,17 @@ class InternalMessageStream {
 		this.users = users;
 	}
 
+	/** Open live streams, for monitoring (audit A-2): each one holds a server thread-free connection and a slot. */
+	@org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+	void registerMetrics(org.springframework.boot.context.event.ApplicationReadyEvent ready) {
+		ready.getApplicationContext()
+			.getBeanProvider(io.micrometer.core.instrument.MeterRegistry.class)
+			.ifAvailable(meters -> io.micrometer.core.instrument.Gauge
+				.builder("procurement.messaging.streams.open", open, AtomicInteger::get)
+				.description("Open internal-messaging event streams")
+				.register(meters));
+	}
+
 	private record Connection(String id, long userId, SseEmitter emitter, HttpSession session) {
 	}
 

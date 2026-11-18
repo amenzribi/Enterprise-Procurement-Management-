@@ -83,7 +83,7 @@ interface MailTransport {
 		private static final Logger log = LoggerFactory.getLogger(MailTransportConfiguration.class);
 
 		@Bean
-		MailTransport mailTransport(@Value("${app.mail.mode:file}") String mode,
+		MailTransport mailTransport(@Value("${app.mail.mode:}") String mode,
 				@Value("${app.mail.directory:storage/mail}") String directory,
 				@Value("${app.mail.from:no-reply@procurement.local}") String from,
 				org.springframework.beans.factory.ObjectProvider<JavaMailSender> sender) {
@@ -102,7 +102,7 @@ interface MailTransport {
 						throw new IllegalStateException("Mail transport configured to fail");
 					};
 				}
-				default -> {
+				case "file" -> {
 					Path dir = Path.of(directory).toAbsolutePath();
 					log.info("E-mails are written as .eml files to {} (app.mail.mode=file)", dir);
 					DateTimeFormatter stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
@@ -117,6 +117,8 @@ interface MailTransport {
 						}
 					};
 				}
+				default -> throw new IllegalStateException("app.mail.mode (MAIL_MODE) must be smtp or file, not '"
+						+ mode + "'");
 			}
 		}
 

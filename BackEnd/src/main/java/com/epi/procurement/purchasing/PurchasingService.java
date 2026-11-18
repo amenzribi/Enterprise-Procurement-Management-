@@ -187,6 +187,10 @@ class PurchasingService {
 			.noneMatch(u -> u.id() == buyerUserId)) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("buyerUserId", "not-eligible")));
 		}
+		// Separation of duties (F-5): whoever asked for the purchase does not buy it.
+		if (request.isAuthor(buyerUserId)) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("buyerUserId", "buyer-is-requester")));
+		}
 		Instant now = clock.instant();
 		if (StringUtils.hasText(purchaseMode)) {
 			applyMode(user, request, purchaseMode, now);
@@ -211,6 +215,10 @@ class PurchasingService {
 			.orElseThrow(() -> ApiProblemException.conflict("invalid-state", "No assignment is waiting."));
 		if (current.buyerUserId() != user.id()) {
 			throw ApiProblemException.forbidden();
+		}
+		// An assignment made before the rule existed cannot be accepted by the requester either (F-5).
+		if (request.isAuthor(user.id())) {
+			throw ApiProblemException.conflict("buyer-is-requester", "You cannot buy for your own request.");
 		}
 		if (!"ASSIGNED".equals(current.status())) {
 			throw ApiProblemException.conflict("invalid-state", "No assignment is waiting.");

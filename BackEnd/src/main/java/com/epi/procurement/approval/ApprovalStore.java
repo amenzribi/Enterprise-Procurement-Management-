@@ -428,8 +428,8 @@ class ApprovalStore {
 		return count != null && count > 0;
 	}
 
-	void cancelAbsence(long id, Instant now) {
-		jdbc.update("UPDATE user_absence SET cancelled_at = ? WHERE id = ? AND cancelled_at IS NULL", db(now), id);
+	int cancelAbsence(long id, Instant now) {
+		return jdbc.update("UPDATE user_absence SET cancelled_at = ? WHERE id = ? AND cancelled_at IS NULL", db(now), id);
 	}
 
 	private static final String ABSENCE_COLUMNS = """

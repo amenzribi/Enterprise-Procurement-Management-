@@ -53,7 +53,9 @@ public class SupplierService {
 		args.add(user.companyId());
 		if (StringUtils.hasText(q)) {
 			where.append(" AND (LOWER(s.code) LIKE ? OR LOWER(s.legal_name) LIKE ?)");
-			String like = "%" + q.strip().toLowerCase(Locale.ROOT) + "%";
+			// The user's % and _ are literal characters, not wildcards (audit S-24).
+			String like = "%"
+					+ q.strip().toLowerCase(Locale.ROOT).replace("[", "[[]").replace("%", "[%]").replace("_", "[_]") + "%";
 			args.add(like);
 			args.add(like);
 		}
@@ -105,7 +107,7 @@ public class SupplierService {
 				blankToNull(body.taxId()), blankToNull(body.erpCode()), blankToNull(body.email()),
 				blankToNull(body.city()), UtcTimes.db(now), UtcTimes.db(now));
 		auditLog.record(new AuditRecord(user.id(), user.displayName(), user.companyId(), "Supplier", Long.toString(id),
-				"SUPPLIER_CREATED", null, null, null, "{\"code\":\"" + body.code().strip() + "\"}"));
+				"SUPPLIER_CREATED", null, null, null, "{\"code\":" + AuditRecord.jsonString(body.code().strip()) + "}"));
 		return get(user, id);
 	}
 

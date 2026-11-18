@@ -260,6 +260,13 @@
     "task-not-pending": "Cette décision a déjà été prise ou réaffectée.",
     "reason-required": "Indiquez un motif.",
     "delegate-not-eligible": "Cette personne ne peut pas recevoir la validation.",
+    "delegate-is-administrator": "Un administrateur ne peut pas se désigner lui-même comme délégué.",
+    "delegate-created-by-administrator": "Vous avez créé ce compte. Un autre administrateur doit enregistrer cette absence.",
+    "self-grant": "Vous ne pouvez pas modifier vos propres rôles. Adressez-vous à un administrateur global.",
+    "four-eyes": "Vous avez créé ce compte. Un autre administrateur doit lui attribuer ce rôle ou le réactiver.",
+    "peer-administrator": "Vous ne pouvez pas gérer un autre administrateur. Adressez-vous à un administrateur global.",
+    "cannot-set-own-password": "Modifiez votre propre mot de passe depuis votre profil.",
+    "scan-unavailable": "Le fichier n'a pas pu être analysé par l'antivirus. Réessayez plus tard.",
     "absence-overlap": "Cette période chevauche une autre absence.",
     "link-invalid": "Ce lien n’est plus valide.",
     "file-too-large": "Le fichier dépasse 20 Mo.",
@@ -315,7 +322,14 @@
     "already-confirmed": "Ces lignes de service sont déjà confirmées.",
     "discussion-not-participant": "Cette demande a une discussion dont vous ne faites pas partie. Demandez à l’un de ses participants de vous ajouter.",
     "approver-changed": "Le validateur a changé depuis l’ouverture. Vérifiez qui décide maintenant, puis envoyez.",
-    "client-message-id-reused": "Ce message a déjà été envoyé avec un autre texte. Copiez votre texte et renvoyez-le."
+    "client-message-id-reused": "Ce message a déjà été envoyé avec un autre texte. Copiez votre texte et renvoyez-le.",
+    "use-reset-link": "Ce compte détient un rôle sensible. Envoyez plutôt un lien de réinitialisation du mot de passe.",
+    "supplier-contact-role": "Un contact fournisseur ne peut pas devenir un compte d'employé. Révoquez plutôt le contact depuis la messagerie.",
+    "buyer-is-requester": "La personne qui a demandé cet achat ne peut pas l'acheter.",
+    "buyer-cannot-receive": "L'acheteur de cette commande ne peut ni enregistrer ni confirmer sa réception.",
+    "invoice-recorder": "Une autre personne doit attester ou autoriser le paiement d'une facture que vous avez enregistrée.",
+    "payment-needs-manager": "Seul un responsable des achats de la société acheteuse peut autoriser le paiement.",
+    "payment-not-independent": "L'acheteur de cette commande ne peut pas en autoriser le paiement."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -947,6 +961,8 @@
     "errors": {
       "absence-overlap": "Cette période chevauche une autre absence.",
       "delegate-not-eligible": "Cette personne ne peut pas valider à votre place. Choisissez quelqu’un ayant le même rôle de validation.",
+      "delegate-is-administrator": "Un administrateur ne peut pas se désigner lui-même comme délégué.",
+      "delegate-created-by-administrator": "Vous avez créé ce compte. Un autre administrateur doit enregistrer cette absence.",
       "self-delegation": "Vous ne pouvez pas vous déléguer à vous-même.",
       "invalid-period": "Vérifiez les dates de l’absence.",
       "save-failed": "L’absence n’a pas pu être enregistrée. Réessayez."
@@ -1009,7 +1025,9 @@
       "invalid-value": "Une valeur n’est pas valide. Vérifiez les étapes.",
       "required": "Remplissez les champs obligatoires.",
       "not-in-company": "Le valideur désigné doit appartenir à ce groupe.",
-      "save-failed": "La règle n’a pas pu être enregistrée. Vérifiez les champs et réessayez."
+      "save-failed": "La règle n’a pas pu être enregistrée. Vérifiez les champs et réessayez.",
+      "approver-is-administrator": "Vous ne pouvez pas vous désigner comme valideur.",
+      "approver-created-by-administrator": "Vous avez créé ce compte. Un autre administrateur doit le désigner comme valideur."
     },
     "approverUserHint": "Seuls les utilisateurs de cette société sont proposés.",
     "used": "utilisée par des demandes",
@@ -1055,6 +1073,7 @@
     "empty": "Aucune pièce jointe.",
     "version": "version {{version}}",
     "scanning": "analyse antivirus en cours",
+    "notScanned": "non analysé par l'antivirus",
     "remove": "Supprimer {{name}}",
     "removeTitle": "Supprimer ce fichier ?",
     "removeMessage": "« {{name}} » sera retiré de la demande.",
@@ -1451,7 +1470,8 @@
       "serviceHint": "Confirmez que les lignes de service de cette commande ont été réalisées. Les marchandises doivent toujours être réceptionnées.",
       "serviceComment": "Commentaire",
       "serviceAccept": "Accepter les services",
-      "serviceAcceptedToast": "Services acceptés"
+      "serviceAcceptedToast": "Services acceptés",
+      "invoiceSecondPerson": "Une autre personne atteste le rapprochement, et un responsable des achats autre que vous autorise le paiement."
     },
     "status": {
       "RECORDED": "Enregistrée",
@@ -1597,7 +1617,8 @@
     "roleCombinations": "Les rôles d’approbation peuvent être combinés avec REQUESTER. BUYER et PURCHASING_MANAGER peuvent être combinés. GLOBAL_ADMIN ne doit pas servir de compte « tous les rôles ». SUPPLIER_CONTACT s’invite depuis la messagerie, pas ici.",
     "tempPassword": "Définir un mot de passe temporaire",
     "tempPasswordHint": "Au moins 12 caractères. L’utilisateur doit le changer à la première connexion. La valeur n’est jamais stockée en clair ni réaffichée.",
-    "tempPasswordDone": "Mot de passe temporaire défini. Demandez à l’utilisateur de se connecter et de le changer."
+    "tempPasswordDone": "Mot de passe temporaire défini. Demandez à l’utilisateur de se connecter et de le changer.",
+    "createdPendingActivation": "Compte créé. Un autre administrateur doit l'activer ; son titulaire reçoit alors le lien d'activation."
   },
   "requestAdmin": {
     "title": "Administration des demandes",

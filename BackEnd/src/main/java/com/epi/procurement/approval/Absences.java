@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.epi.procurement.audit.AuditLog;
+import com.epi.procurement.audit.AuditRecord;
 import com.epi.procurement.identity.CurrentUser;
 import com.epi.procurement.identity.Role;
 import com.epi.procurement.identity.RoleGrant;
@@ -25,6 +27,17 @@ import com.epi.procurement.platform.web.ValidationFailedException;
  * Absence delegation (S2-AC-06): tasks created during the period go to the delegate, marked "on behalf of". The
  * delegate must hold one of the absent user's approver roles in the same company, unless an administrator records
  * the absence with {@code adminOverride}. Self-delegation and overlapping periods are refused.
+ * <p>
+ * Limits (audit S-5, S-7, review R-1):
+ * <ul>
+ * <li>a delegate is always an active internal employee, never a supplier contact;</li>
+ * <li>an administrator cannot name themselves delegate;</li>
+ * <li>nobody names as delegate an account they created (four eyes, review RR-3);</li>
+ * <li>with the override the delegate must still belong to one of the absent person's companies: home company or a
+ * role in that company;</li>
+ * <li>a company administrator lists only the absences of the companies they administer.</li>
+ * </ul> Every absence recorded or
+ * cancelled writes an audit event in the same transaction (audit S-6).
  */
 @Service
 class Absences {
@@ -35,9 +48,12 @@ class Absences {
 
 	private final Clock clock;
 
-	Absences(ApprovalStore store, UserDirectory users, ObjectProvider<Clock> clock) {
+	private final AuditLog auditLog;
+
+	Absences(ApprovalStore store, UserDirectory users, AuditLog auditLog, ObjectProvider<Clock> clock) {
 		this.store = store;
 		this.users = users;
+		this.auditLog = auditLog;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
 	}
 
@@ -53,7 +69,8 @@ class Absences {
 			requireSameGroup(admin, userId);
 			return list(userId);
 		}
-		return views(store.absencesOfUsers(users.userIdsOfGroup(admin.groupId())));
+		return views(store.absencesOfUsers(admin.isGlobalAdmin() ? users.userIdsOfGroup(admin.groupId())
+				: users.userIdsOfCompanies(admin.adminCompanyIds())));
 	}
 
 	@Transactional
@@ -84,6 +101,10 @@ class Absences {
 		if (input.delegateUserId() == userId) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("delegateUserId", "delegate-not-eligible")));
 		}
+		// An administrator must not route another person's approvals to themselves.
+		if (asAdmin && input.delegateUserId() == actor.id()) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("delegateUserId", "delegate-is-administrator")));
+		}
 		if (!input.endsAt().isAfter(input.startsAt())) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("endsAt", "invalid-value")));
 		}
@@ -92,8 +113,17 @@ class Absences {
 			.filter(d -> d.groupId() == absent.groupId())
 			.orElseThrow(() -> new ValidationFailedException(
 					List.of(FieldViolation.of("delegateUserId", "delegate-not-eligible"))));
+		// An approval is an internal decision: a supplier contact is an external person with an account.
+		if (delegate.hasRole(Role.SUPPLIER_CONTACT)) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("delegateUserId", "delegate-not-eligible")));
+		}
+		// Four eyes: an account the person recording the absence created is not an independent delegate (RR-3).
+		if (users.createdBy(delegate.id(), actor.id())) {
+			throw new ValidationFailedException(
+					List.of(FieldViolation.of("delegateUserId", "delegate-created-by-administrator")));
+		}
 		boolean override = asAdmin && Boolean.TRUE.equals(input.adminOverride());
-		if (!override && !sharesApproverRole(absent, delegate)) {
+		if (override ? !belongsToACompanyOf(absent, delegate) : !sharesApproverRole(absent, delegate)) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("delegateUserId", "delegate-not-eligible")));
 		}
 		if (store.overlaps(userId, input.startsAt(), input.endsAt())) {
@@ -102,20 +132,35 @@ class Absences {
 		}
 		long id = store.insertAbsence(userId, delegate.id(), input.startsAt(), input.endsAt(),
 				StringUtils.hasText(input.reason()) ? input.reason().strip() : null, override, actor.id(), clock.instant());
+		auditLog.record(new AuditRecord(actor.id(), actor.displayName(), absent.companyId(), "USER_ABSENCE",
+				Long.toString(id), "ABSENCE_CREATED", null, null, null,
+				"{\"userId\":" + userId + ",\"delegateUserId\":" + delegate.id() + ",\"startsAt\":\"" + input.startsAt()
+						+ "\",\"endsAt\":\"" + input.endsAt() + "\",\"adminOverride\":" + override + ",\"byAdministrator\":"
+						+ asAdmin + "}"));
 		return views(List.of(store.absence(id).orElseThrow())).get(0);
 	}
 
 	@Transactional
 	void cancel(CurrentUser actor, long absenceId, boolean asAdmin) {
+		if (asAdmin) {
+			// Before the lookup: a non-administrator must not learn which absence ids exist.
+			requireAdmin(actor);
+		}
 		ApprovalStore.Absence absence = store.absence(absenceId).orElseThrow(ApiProblemException::notFound);
 		if (asAdmin) {
-			requireAdmin(actor);
 			requireSameGroup(actor, absence.userId());
 		}
 		else if (absence.userId() != actor.id()) {
 			throw ApiProblemException.notFound();
 		}
-		store.cancelAbsence(absenceId, clock.instant());
+		if (store.cancelAbsence(absenceId, clock.instant()) == 0) {
+			return;
+		}
+		Long companyId = users.findContact(absence.userId()).map(UserDirectory.UserContact::companyId).orElse(null);
+		auditLog.record(new AuditRecord(actor.id(), actor.displayName(), companyId, "USER_ABSENCE",
+				Long.toString(absenceId), "ABSENCE_CANCELLED", null, null, null,
+				"{\"userId\":" + absence.userId() + ",\"delegateUserId\":" + absence.delegateUserId()
+						+ ",\"byAdministrator\":" + asAdmin + "}"));
 	}
 
 	/**
@@ -144,6 +189,23 @@ class Absences {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * With the administrator override the delegate need not hold the approver role, but must still be someone of the
+	 * absent person's own companies: home company, or a role granted in one of those companies. A role without a
+	 * company (group-wide roles, and the grant every supplier contact holds) does not qualify.
+	 */
+	private static boolean belongsToACompanyOf(CurrentUser absent, CurrentUser delegate) {
+		Set<Long> companies = new HashSet<>();
+		companies.add(absent.companyId());
+		absent.grants().forEach(g -> {
+			if (g.companyId() != null) {
+				companies.add(g.companyId());
+			}
+		});
+		return companies.contains(delegate.companyId())
+				|| delegate.grants().stream().anyMatch(g -> g.companyId() != null && companies.contains(g.companyId()));
 	}
 
 	private List<ApprovalViews.Absence> views(List<ApprovalStore.Absence> absences) {

@@ -218,7 +218,7 @@ class MessagingService {
 				.orElseThrow(() -> new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid-company",
 						"Cannot place the contact account."));
 			userId = store.insertSupplierContactUser(email, displayName, home.companyId(), home.siteId(),
-					home.departmentId(), actor.preferredLanguage() == null ? "en" : actor.preferredLanguage());
+					home.departmentId(), actor.preferredLanguage() == null ? "en" : actor.preferredLanguage(), actor.id());
 			credentials.savePasswordHash(userId, passwordEncoder.encode(randomUnusableSecret()), true);
 			store.grantSupplierContactRole(userId);
 			events.publishEvent(new PasswordSetupRequested(userId, "SETUP", actor.id(), actor.email(),

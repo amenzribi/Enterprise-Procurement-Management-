@@ -66,7 +66,12 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	 */
 	@ExceptionHandler(PessimisticLockingFailureException.class)
 	ResponseEntity<ProblemDetail> handleLockFailure(PessimisticLockingFailureException ex) {
-		log.warn("Lock failure: {}", ex.getClass().getSimpleName());
+		// The request id and user are in the log context (RequestIdFilter); the SQL Server error number tells a
+		// deadlock victim (1205) from a lock timeout (1222). Never the statement or its parameter values.
+		int code = SqlServerErrors.errorCode(ex);
+		log.warn("Lock failure: {} (SQL Server error {}{})", ex.getClass().getSimpleName(), code,
+				code == SqlServerErrors.DEADLOCK_VICTIM ? ", deadlock victim"
+						: code == SqlServerErrors.LOCK_TIMEOUT ? ", lock timeout" : "");
 		return busy();
 	}
 

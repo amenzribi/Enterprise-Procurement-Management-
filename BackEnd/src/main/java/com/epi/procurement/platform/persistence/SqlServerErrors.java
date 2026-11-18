@@ -29,6 +29,22 @@ public final class SqlServerErrors {
 		return hasErrorCode(error, DEADLOCK_VICTIM);
 	}
 
+	/**
+	 * The first SQL Server native error number in the cause chain, or 0 when there is none. For diagnostics: it names
+	 * the failure (1205 deadlock victim, 1222 lock timeout) without exposing statements or parameter values.
+	 */
+	public static int errorCode(Throwable error) {
+		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+			if (cause instanceof SQLException sql && sql.getErrorCode() != 0) {
+				return sql.getErrorCode();
+			}
+			if (cause.getCause() == cause) {
+				break;
+			}
+		}
+		return 0;
+	}
+
 	private static boolean hasErrorCode(Throwable error, int code) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof SQLException sql) {

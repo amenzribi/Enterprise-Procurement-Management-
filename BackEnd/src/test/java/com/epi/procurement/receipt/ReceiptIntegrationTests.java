@@ -901,6 +901,73 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		}
 	}
 
+	/**
+	 * CI stabilisation (deadlock seen 2026-11-18): the receipt view reads a shipment and then its DELIVERED milestone,
+	 * while recording a milestone used to write the milestone and then the shipment. Concurrent, the two locked the rows
+	 * in opposite order and SQL Server killed the read (503). The view must stay available while milestones change.
+	 */
+	@Test
+	void theReceiptViewNeverDeadlocksWithAMilestoneUpdate() throws Exception {
+		long id = delivered("Milestone and receipt view");
+		ApiClient ines = signedIn("buyer@demo.local");
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long shipmentId = jdbc.queryForObject("SELECT id FROM shipment WHERE request_id = ?", Long.class, id);
+		long milestoneId = jdbc.queryForObject(
+				"SELECT id FROM shipment_milestone WHERE shipment_id = ? AND code = 'DELIVERED'", Long.class, shipmentId);
+		int milestonesBefore = jdbc.queryForObject("SELECT COUNT(*) FROM shipment_milestone WHERE shipment_id = ?",
+				Integer.class, shipmentId);
+		String actual = jdbc.queryForObject("SELECT CONVERT(VARCHAR(10), actual_date, 23) FROM shipment_milestone WHERE id = ?",
+				String.class, milestoneId);
+		int updates = 60;
+		var pool = Executors.newFixedThreadPool(3);
+		var done = new java.util.concurrent.atomic.AtomicBoolean(false);
+		try {
+			java.util.concurrent.Future<List<Integer>> writer = pool.submit(() -> {
+				List<Integer> statuses = new ArrayList<>();
+				try {
+					for (int i = 0; i < updates; i++) {
+						int version = jdbc.queryForObject("SELECT version FROM shipment WHERE id = ?", Integer.class, shipmentId);
+						statuses.add(ines.put("/api/v1/logistics/shipments/" + shipmentId + "/milestones/" + milestoneId,
+								"{\"version\":" + version + ",\"actualDate\":\"" + actual + "\",\"note\":\"Re-checked " + i + "\"}")
+							.status());
+					}
+				}
+				finally {
+					done.set(true);
+				}
+				return statuses;
+			});
+			java.util.function.Function<ApiClient, Callable<List<Integer>>> reader = who -> () -> {
+				List<Integer> statuses = new ArrayList<>();
+				while (!done.get()) {
+					statuses.add(who.get("/api/v1/receipts/requests/" + id).status());
+				}
+				return statuses;
+			};
+			java.util.concurrent.Future<List<Integer>> readerA = pool.submit(reader.apply(omar));
+			java.util.concurrent.Future<List<Integer>> readerB = pool.submit(reader.apply(sami));
+			List<Integer> written = writer.get();
+			List<Integer> read = new ArrayList<>(readerA.get());
+			read.addAll(readerB.get());
+			assertThat(written).as("milestone updates").hasSize(updates).containsOnly(200);
+			assertThat(read).as("receipt views while milestones change").isNotEmpty().containsOnly(200);
+		}
+		finally {
+			pool.shutdownNow();
+		}
+		// Nothing duplicated or lost: same milestones, the delivery still recorded, no receipt created.
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM shipment_milestone WHERE shipment_id = ?", Integer.class,
+				shipmentId)).isEqualTo(milestonesBefore);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM shipment_milestone WHERE id = ? AND actual_date IS NOT NULL",
+				Integer.class, milestoneId)).isEqualTo(1);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM goods_receipt WHERE request_id = ?", Integer.class, id)).isZero();
+		assertThat((String) samiStatus(id)).isEqualTo("DELIVERED");
+		assertThat(jdbc.queryForObject("""
+				SELECT COUNT(*) FROM audit_event WHERE entity_type = 'PURCHASE_REQUEST' AND entity_id = ?
+				AND action = 'SHIPMENT_MILESTONE_UPDATED'""", Integer.class, Long.toString(id))).isEqualTo(updates + 1);
+	}
+
 	/** The match attested by the purchasing manager, who did not record the invoice (F-5). */
 	private void attestByManager(long id) {
 		ApiClient mehdi = signedIn("purchasing.manager@demo.local");

@@ -1,6 +1,7 @@
 package com.epi.procurement.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -12,11 +13,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -139,6 +142,44 @@ class SignInServiceTests {
 		}
 		assertThat(service.signIn("victim@example.com", "correct-password", ADDRESS)).isEmpty();
 		assertThat(service.signIn("victim@example.com", "correct-password", "10.0.0.9")).isPresent();
+	}
+
+	// ---- CI stabilisation (2026-11-18): a deadlock on the sign-in audit append
+
+	private static CannotAcquireLockException sqlServerError(int code) {
+		return new CannotAcquireLockException("lock failure", new SQLException("SQL Server error " + code, "40001", code));
+	}
+
+	@Test
+	void aDeadlockedSignInAuditIsAppendedAgainOnce() {
+		account("user@example.com", true, false);
+		given(auditLog.record(any())).willThrow(sqlServerError(1205)).willReturn(42L);
+
+		assertThat(service(false).signIn("user@example.com", "correct-password", ADDRESS))
+			.contains(new AuthenticatedUser(7L, "user@example.com"));
+		// The first append was rolled back by SQL Server; exactly one more is made, and the password is checked once.
+		verify(auditLog, times(2)).record(argThat(r -> r.action().equals("SIGNED_IN")));
+		verify(encoder, times(1)).matches(eq("correct-password"), anyString());
+	}
+
+	@Test
+	void aLockTimeoutOnTheSignInAuditIsNotRetriedAndFailsTheSignIn() {
+		account("user@example.com", true, false);
+		given(auditLog.record(any())).willThrow(sqlServerError(1222));
+
+		assertThatThrownBy(() -> service(false).signIn("user@example.com", "correct-password", ADDRESS))
+			.isInstanceOf(CannotAcquireLockException.class);
+		verify(auditLog, times(1)).record(any());
+	}
+
+	@Test
+	void repeatedDeadlocksFailTheSignInAfterABoundedNumberOfAttempts() {
+		account("user@example.com", true, false);
+		given(auditLog.record(any())).willThrow(sqlServerError(1205));
+
+		assertThatThrownBy(() -> service(false).signIn("user@example.com", "correct-password", ADDRESS))
+			.isInstanceOf(CannotAcquireLockException.class);
+		verify(auditLog, times(SignInService.AUDIT_ATTEMPTS)).record(any());
 	}
 
 }

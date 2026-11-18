@@ -58,6 +58,16 @@ jobs:
           DB_USERNAME: sa
         run: sh ./mvnw -B -ntp verify -Pdb-it
 
+      # On failure, keep SQL Server's own deadlock reports (system_health): they name the statements and locks
+      # involved. They hold parameterised statement text and lock resources, never parameter values or passwords.
+      - name: SQL Server deadlock reports
+        if: failure()
+        run: |
+          mkdir -p target/sqlserver-diagnostics
+          docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$DB_PASSWORD" -C -I -y 0 \
+            -Q "SET NOCOUNT ON; SELECT CAST(event_data AS XML) FROM sys.fn_xe_file_target_read_file('system_health*.xel', NULL, NULL, NULL) WHERE object_name = 'xml_deadlock_report'" \
+            > target/sqlserver-diagnostics/deadlock-reports.xml || true
+
       - name: Test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -66,6 +76,7 @@ jobs:
           path: |
             BackEnd/target/surefire-reports
             BackEnd/target/authorization-matrix-actual.txt
+            BackEnd/target/sqlserver-diagnostics
           if-no-files-found: ignore
 
       - name: Application jar

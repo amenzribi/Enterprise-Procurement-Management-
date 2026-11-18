@@ -230,20 +230,21 @@ class LogisticsService {
 			throw new ValidationFailedException(List.of(FieldViolation.of("actualDate", "note-required")));
 		}
 		String note = body != null && StringUtils.hasText(body.note()) ? body.note().strip() : milestone.note();
-		store.updateMilestone(milestoneId, planned, actual, note);
 		Instant now = clock.instant();
 		LocalDate today = LocalDate.ofInstant(now, ZoneOffset.UTC);
+		// Lock order: the shipment row before its milestones, the order in which the receipt view reads them. Writing
+		// the milestone first let a concurrent reader hold the shipment while waiting for the milestone, and SQL Server
+		// killed one of the two (deadlock seen 2026-11-18). The new shipment status depends only on the milestones'
+		// dates, with this milestone's new date taken into account, so it can be written first.
+		boolean allDone = actual != null && store.milestones(shipmentId).stream()
+			.allMatch(m -> m.id() == milestoneId ? actual != null : m.actualDate() != null);
+		store.bumpShipment(shipmentId, allDone ? "DELIVERED" : "IN_PROGRESS");
+		store.updateMilestone(milestoneId, planned, actual, note);
 		if (actual != null) {
 			RequestStatus mapped = STATUS_MAP.get(milestone.code());
 			if (mapped != null) {
 				requests.enterShipmentStatus(request.id(), mapped, user.id(), now, "milestone-" + milestone.code());
 			}
-			boolean allDone = store.milestones(shipmentId).stream()
-				.allMatch(m -> m.id() == milestoneId ? actual != null : m.actualDate() != null);
-			store.bumpShipment(shipmentId, allDone ? "DELIVERED" : "IN_PROGRESS");
-		}
-		else {
-			store.bumpShipment(shipmentId, "IN_PROGRESS");
 		}
 		if (planned != null && actual == null && planned.isBefore(today)) {
 			notifyAuthors(requests.currentLocked(request.id()), "SHIPMENT_DELAY", user);

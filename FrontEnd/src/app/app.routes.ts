@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { anyPermissionGuard, authGuard, guestGuard, homeRedirectGuard, permissionGuard } from './core/auth/auth.guards';
+import { anyPermissionGuard, authGuard, employeeGuard, guestGuard, homeRedirectGuard, permissionGuard } from './core/auth/auth.guards';
 import { unsavedChangesGuard } from './features/requests/unsaved-changes.guard';
 import { findPlannedItem } from './layout/navigation';
 import { Shell } from './layout/shell/shell';
@@ -103,6 +103,19 @@ export const routes: Routes = [
         path: 'requests/:id',
         title: 'requests.detail.title',
         loadComponent: () => import('./features/requests/request-detail').then((m) => m.RequestDetailPage),
+      },
+      {
+        // Internal employee messaging (docs/architecture/internal-messaging.md).
+        path: 'conversations',
+        title: 'internalMessaging.inbox.title',
+        canActivate: [employeeGuard],
+        loadComponent: () => import('./features/internal-messaging/inbox-page').then((m) => m.MessagesInboxPage),
+      },
+      {
+        path: 'conversations/:id',
+        title: 'internalMessaging.inbox.title',
+        canActivate: [employeeGuard],
+        loadComponent: () => import('./features/internal-messaging/inbox-page').then((m) => m.MessagesInboxPage),
       },
       {
         path: 'approvals',

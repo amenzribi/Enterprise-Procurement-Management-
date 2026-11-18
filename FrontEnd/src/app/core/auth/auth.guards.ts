@@ -38,6 +38,10 @@ export function permissionGuard(permission: Permission): CanActivateFn {
     hasPermission(inject(AuthService).me(), permission) ? true : inject(Router).createUrlTree(['/not-found']);
 }
 
+/** Internal employee pages: every signed-in user except supplier contacts, who keep the supplier portal. */
+export const employeeGuard: CanActivateFn = () =>
+  hasPermission(inject(AuthService).me(), 'MESSAGING_SUPPLIER') ? inject(Router).createUrlTree(['/not-found']) : true;
+
 /** Passes when the signed-in user holds any of the listed permissions. */
 export function anyPermissionGuard(...permissions: Permission[]): CanActivateFn {
   return () => {

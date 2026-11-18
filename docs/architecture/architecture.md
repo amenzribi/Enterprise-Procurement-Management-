@@ -41,6 +41,9 @@ Java 21 (ADR-008); Java 25 rejected (ADR-010).
   their batch id.
 - Time: `Instant` in UTC; per-company time zone for display and SLA calendars.
 - Async work (notifications, ERP exports): transactional outbox table polled by a scheduler (ADR-003).
+- Live updates: internal messaging pushes ids-only events over Server-Sent Events (`SseEmitter`, session cookie)
+  after commit; clients resynchronise from the database on every (re)connection. Single node: see
+  [internal-messaging.md](internal-messaging.md) before running several backend nodes.
 
 ## 3. Data
 
@@ -66,6 +69,9 @@ Java 21 (ADR-008); Java 25 rejected (ADR-010).
 - Authorisation = role × scope (company, department, country, category), applied by a central scoped-query
   component (ADR-007). Out-of-scope resource → 404; in scope but action not permitted → 403.
 - Supplier prices, budgets and strategic data are field-level restricted (§20).
+- Messaging: supplier conversations (ADR-011) and internal employee messaging
+  ([internal-messaging.md](internal-messaging.md)) are separate tables and endpoints. Internal conversations are
+  readable by participants only (no administrator override); request discussions also require current request access.
 - TLS in transit; SQL Server TDE and encrypted file store at rest (client infrastructure).
 
 ## 6. Quality gates

@@ -26,6 +26,8 @@ import { ApprovalTracker } from '../approvals/approval-tracker';
 import { ApprovalView } from '../approvals/approval.models';
 import { ApprovalsApi } from '../approvals/approvals.api';
 import { openSubmitPreview } from '../approvals/submit-preview-dialog';
+import { openMessageApprover } from '../internal-messaging/message-approver-dialog';
+import { RequestDiscussion } from '../internal-messaging/request-discussion';
 import { DashboardsApi } from '../dashboards/dashboards.api';
 import { Attachments } from '../documents/attachments';
 import { formatMoney } from './money';
@@ -44,7 +46,7 @@ export { elapsedText } from '../../shared/relative-time';
 @Component({
   selector: 'app-request-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LineClassification, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RouterLink, Skeleton, SourcingActions, StageRing, StatusBadge, TranslatePipe],
+  imports: [ApprovalActions, ApprovalTracker, Attachments, Button, DatePipe, EmptyState, ErrorState, Icon, LineClassification, LogisticsActions, OrderingActions, PurchasingActions, ReceiptActions, RequestDiscussion, RouterLink, Skeleton, SourcingActions, StageRing, StatusBadge, TranslatePipe],
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
 })
@@ -230,6 +232,14 @@ export class RequestDetailPage {
   protected readonly trackerTotal = TRACKER_STEPS.length;
   protected readonly trackerStep = computed(() => trackerIndex(this.userStatus()));
   protected readonly ringTone = computed(() => ringToneOf(this.userStatus()));
+
+  /** Opens the composer addressed to the request's current approver; nothing is sent until the user presses Send. */
+  protected messageApprover(): void {
+    const r = this.request();
+    if (r) {
+      openMessageApprover(this.dialog, { requestId: r.id, number: r.number ?? null, title: r.title });
+    }
+  }
 
   protected tone(): ReturnType<typeof userStatusTone> {
     return userStatusTone(this.userStatus());

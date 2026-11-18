@@ -16,8 +16,10 @@ export interface NavItem {
   plannedSprint?: number;
   /** Shown only to users holding this permission (the server enforces access regardless). */
   permission?: Permission;
-  /** Shows the number of decisions waiting for the user (S2-AC-08). */
-  badge?: 'approvals' | 'purchasing';
+  /** Hidden from users holding this permission (internal pages are not shown to supplier contacts). */
+  hiddenFor?: Permission;
+  /** Shows the number of decisions waiting for the user (S2-AC-08), or of unread messages. */
+  badge?: 'approvals' | 'purchasing' | 'messages';
 }
 
 export interface NavGroup {
@@ -30,6 +32,7 @@ export const NAVIGATION: NavGroup[] = [
     key: 'workspace',
     items: [
       { key: 'overview', icon: 'house', route: '/overview' },
+      { key: 'conversations', icon: 'messages', route: '/conversations', badge: 'messages', hiddenFor: 'MESSAGING_SUPPLIER' },
       { key: 'systemStatus', icon: 'activity', route: '/system-status' },
     ],
   },

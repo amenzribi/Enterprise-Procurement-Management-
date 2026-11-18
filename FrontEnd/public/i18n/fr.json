@@ -55,7 +55,8 @@
       "import": "Import des données",
       "users": "Utilisateurs",
       "requestAdmin": "Administration des demandes",
-      "changePassword": "Changer le mot de passe"
+      "changePassword": "Changer le mot de passe",
+      "conversations": "Messages"
     },
     "plannedSprint": "Sprint {{sprint}}",
     "pendingCount": "{{count}} en attente de votre décision"
@@ -234,7 +235,8 @@
     "search": "Rechercher",
     "reset": "Réinitialiser",
     "previous": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "close": "Fermer"
   },
   "errors": {
     "network-error": "Le serveur est injoignable. Vérifiez votre connexion puis réessayez.",
@@ -310,7 +312,10 @@
     "no-goods-lines": "Cette commande n’a aucune marchandise à expédier.",
     "classification-unconfirmed": "Les achats doivent confirmer les lignes de service avant l’attribution.",
     "own-classification": "Une autre personne doit décider de la classification de votre propre demande.",
-    "already-confirmed": "Ces lignes de service sont déjà confirmées."
+    "already-confirmed": "Ces lignes de service sont déjà confirmées.",
+    "discussion-not-participant": "Cette demande a une discussion dont vous ne faites pas partie. Demandez à l’un de ses participants de vous ajouter.",
+    "approver-changed": "Le validateur a changé depuis l’ouverture. Vérifiez qui décide maintenant, puis envoyez.",
+    "client-message-id-reused": "Ce message a déjà été envoyé avec un autre texte. Copiez votre texte et renvoyez-le."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -1782,5 +1787,118 @@
   "theme": {
     "toDark": "Passer au thème sombre",
     "toLight": "Passer au thème clair"
+  },
+  "internalMessaging": {
+    "inbox": {
+      "title": "Messages",
+      "listLabel": "Conversations",
+      "threadLabel": "Conversation",
+      "new": "Nouveau message",
+      "search": "Rechercher une conversation",
+      "loadError": "Vos conversations n’ont pas pu être chargées.",
+      "noMessages": "Aucun message",
+      "unread": "{{count}} non lu(s)",
+      "back": "Conversations",
+      "emptyTitle": "Aucune conversation",
+      "emptyMessage": "Commencez-en une avec « Nouveau message », ou depuis une demande avec « Écrire au validateur ».",
+      "noMatch": "Aucune conversation ne correspond à cette recherche.",
+      "pickTitle": "Choisissez une conversation",
+      "pickMessage": "Ou commencez-en une avec un collègue de votre société."
+    },
+    "directory": {
+      "label": "Trouver un collègue",
+      "hint": "Collègues de votre société. Les messages restent entre vous deux.",
+      "name": "Nom",
+      "department": "Service",
+      "role": "Rôle",
+      "anyRole": "Tous les rôles",
+      "none": "Aucun collègue ne correspond à ces filtres."
+    },
+    "roles": {
+      "REQUESTER": "Demandeur",
+      "ENTER_ON_BEHALF": "Saisit pour d’autres",
+      "DEPARTMENT_MANAGER": "Responsable de service",
+      "BUDGET_APPROVER": "Validateur budget",
+      "MANAGEMENT_APPROVER": "Validateur direction",
+      "BUYER": "Acheteur",
+      "PURCHASING_MANAGER": "Responsable achats",
+      "RECEIVER": "Réceptionnaire",
+      "GROUP_MANAGEMENT": "Direction du groupe",
+      "ADMIN": "Administrateur de société",
+      "GLOBAL_ADMIN": "Administrateur global",
+      "AUDITOR": "Auditeur"
+    },
+    "thread": {
+      "loading": "Chargement de la conversation…",
+      "history": "Messages",
+      "older": "Afficher les messages précédents",
+      "empty": "Aucun message pour l’instant. Écrivez le premier.",
+      "sending": "Envoi…",
+      "sent": "Envoyé",
+      "retry": "Réessayer",
+      "discard": "Retirer",
+      "dismiss": "Fermer",
+      "notFound": "Cette conversation n’est pas disponible",
+      "notFoundHint": "Elle n’existe pas, ou vous n’y avez plus accès, ni à sa demande.",
+      "loadError": "Cette conversation n’a pas pu être chargée."
+    },
+    "composer": {
+      "label": "Message",
+      "placeholder": "Écrire un message",
+      "send": "Envoyer",
+      "shortcut": "Ctrl + Entrée pour envoyer",
+      "remaining": "{{count}} caractères restants",
+      "attachRequest": "Joindre une demande",
+      "findRequest": "Chercher une demande par référence ou titre",
+      "noRequests": "Aucune demande trouvée.",
+      "removeRequest": "Retirer la demande jointe",
+      "cardWithheld": "Envoyé sans la fiche de la demande : tous les participants ne peuvent pas la voir."
+    },
+    "card": {
+      "open": "Ouvrir la demande",
+      "unavailable": "Une demande que vous ne pouvez pas voir"
+    },
+    "system": {
+      "started": "{{actor}} a ouvert la discussion",
+      "added": "{{actor}} a ajouté {{person}}",
+      "preview": "Participants modifiés"
+    },
+    "discussion": {
+      "title": "Discussion",
+      "openFull": "Ouvrir dans Messages",
+      "participants": "{{count}} participants",
+      "add": "Ajouter un collègue",
+      "addHint": "Seuls les collègues qui voient déjà cette demande peuvent être ajoutés.",
+      "addSearch": "Rechercher un collègue",
+      "noCandidates": "Aucun autre collègue ne voit cette demande.",
+      "notParticipant": "Cette demande a une discussion. Demandez à l’un de ses participants de vous ajouter.",
+      "startHint": "Ouvrez une discussion avec les validateurs actuels. D’autres peuvent être ajoutés s’ils voient la demande.",
+      "start": "Ouvrir une discussion",
+      "loadError": "La discussion n’a pas pu être chargée."
+    },
+    "approver": {
+      "action": "Écrire au validateur",
+      "title": "Écrire au validateur",
+      "choose": "Envoyer à",
+      "to": "À",
+      "message": "Message",
+      "onBehalfOf": "pour le compte de {{name}}",
+      "suggestion": "Pourriez-vous examiner cette demande dès que vous aurez un moment ?",
+      "sent": "Envoyé à {{name}}. La demande s’ouvre depuis le message ; la décision se prend dans le circuit de validation.",
+      "openConversation": "Ouvrir la conversation",
+      "openInbox": "Ouvrir Messages",
+      "changed": "Le validateur a changé depuis l’ouverture. Vérifiez qui décide maintenant, puis envoyez.",
+      "state": {
+        "NOT_IN_APPROVAL": "Cette demande n’attend pas de validation.",
+        "NO_APPROVER": "Aucun validateur n’est affecté pour le moment. Le circuit en affecte un à l’étape suivante.",
+        "SELF_ONLY": "Vous êtes le validateur actuel de cette demande."
+      }
+    },
+    "errors": {
+      "not-eligible": "Ce collègue ne peut pas être ajouté : il appartient à une autre société ou son compte est inactif.",
+      "no-request-access": "Ce collègue ne voit pas la demande, il ne peut donc pas être ajouté.",
+      "discussion-exists": "Cette demande a déjà une discussion.",
+      "unexpected": "Une erreur est survenue. Réessayez."
+    }
   }
 }

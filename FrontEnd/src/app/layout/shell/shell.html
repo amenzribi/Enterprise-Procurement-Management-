@@ -56,6 +56,12 @@
                       <span class="visually-hidden">{{ 'nav.pendingCount' | translate: { count: approvalCount.count() } }}</span>
                     </span>
                   }
+                  @if (item.badge === 'messages' && messages.unread() > 0) {
+                    <span class="nav-badge tabular">
+                      {{ messages.unread() > 99 ? '99+' : messages.unread() }}
+                      <span class="visually-hidden">{{ 'internalMessaging.inbox.unread' | translate: { count: messages.unread() } }}</span>
+                    </span>
+                  }
                   @if (item.badge === 'purchasing' && purchasingCount.count() > 0) {
                     <span class="nav-badge tabular">
                       {{ purchasingCount.count() }}

@@ -93,6 +93,12 @@
         </dl>
 
         <div class="dossier-actions">
+          @if (r.status === 'IN_APPROVAL' && !approval()?.myTask) {
+            <button appButton variant="secondary" type="button" (click)="messageApprover()">
+              <app-icon name="messages" [size]="16" />
+              {{ 'internalMessaging.approver.action' | translate }}
+            </button>
+          }
           @if (actions().includes('SUBMIT')) {
             <button appButton type="button" [disabled]="submitting()" (click)="submit()">
               <app-icon name="send" [size]="16" />
@@ -144,6 +150,8 @@
       <div class="columns">
         <div class="main">
           <app-approval-tracker [userStatus]="userStatus()" [approval]="approval()" [locale]="locale()" [now]="now()" />
+
+          <app-request-discussion [requestId]="r.id" />
 
           <section class="panel" aria-labelledby="detail-lines">
             <h2 class="panel-title" id="detail-lines">{{ 'requests.form.sections.lines' | translate }}</h2>

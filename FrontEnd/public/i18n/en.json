@@ -331,7 +331,14 @@
     "buyer-cannot-receive": "The buyer of this order cannot record or confirm its receipt.",
     "invoice-recorder": "Another person must attest or authorise payment of an invoice you recorded.",
     "payment-needs-manager": "Only a purchasing manager of the buying company can authorise payment.",
-    "payment-not-independent": "The buyer of this order cannot authorise its payment."
+    "payment-not-independent": "The buyer of this order cannot authorise its payment.",
+    "email-change-pending": "A change of address is waiting for this account. Finish or cancel it first.",
+    "email-in-use": "This address is already used by another account.",
+    "self-email-change": "You cannot change your own address. Ask another global administrator.",
+    "supplier-contact-account": "A supplier contact's address is changed by inviting the contact again.",
+    "email-change-four-eyes": "Another global administrator, who did not request this change and did not create the requester, must approve it.",
+    "no-email-change": "No change of address is waiting for this account.",
+    "email-change-not-awaiting-approval": "This change of address does not need an approval."
   },
   "auth": {
     "signOut": "Sign out",
@@ -1677,7 +1684,25 @@
       "GLOBAL_ADMIN": "Installation administration (companies, users, passwords) plus controlled REQUEST_ADMIN for cross-company request search/archive/cancel/cleanup within the group. Does not become buyer, approver, supplier messenger or assistant user."
     },
     "roleCombinations": "Approver roles may be combined with REQUESTER. BUYER and PURCHASING_MANAGER may be combined. GLOBAL_ADMIN should not be used as an “all roles” account. SUPPLIER_CONTACT is invited from messaging, not here.",
-    "createdPendingActivation": "Account created. Another administrator must activate it; its owner then receives the set-up link."
+    "createdPendingActivation": "Account created. Another administrator must activate it; its owner then receives the set-up link.",
+    "emailChange": {
+      "title": "Correct the e-mail address",
+      "help": "The address changes only after its owner confirms from the new mailbox. Approver, buyer, receiver, purchasing manager and administrator accounts also need a second global administrator.",
+      "newEmail": "New address",
+      "reason": "Reason (5 to 500 characters)",
+      "submit": "Request the correction",
+      "reasonShown": "Reason: {{reason}}",
+      "approve": "Approve (second administrator)",
+      "cancel": "Cancel the correction",
+      "status": {
+        "PENDING_APPROVAL": "Waiting for a second global administrator before a link is sent to {{newEmail}}.",
+        "PENDING_VERIFICATION": "A confirmation link was sent to {{newEmail}}. Nothing changes until it is used."
+      },
+      "requested": "Correction requested. A confirmation link was sent to the new address.",
+      "requestedNeedsApproval": "Correction requested. Another global administrator must approve it.",
+      "approved": "Approved. A confirmation link was sent to the new address.",
+      "cancelled": "Correction cancelled."
+    }
   },
   "requestAdmin": {
     "title": "Request administration",
@@ -1980,5 +2005,13 @@
       "discussion-exists": "This request already has a discussion.",
       "unexpected": "Something went wrong. Try again."
     }
+  },
+  "emailChange": {
+    "title": "Confirm your new address",
+    "description": "A global administrator asked to use this mailbox for your procurement account.",
+    "submit": "Confirm this address",
+    "done": "Your address is changed. Sign in with the new address; your other sessions were ended.",
+    "invalid": "This link is not valid any more. Ask your administrator for a new one.",
+    "error": "The confirmation could not be completed. Try again in a moment."
   }
 }

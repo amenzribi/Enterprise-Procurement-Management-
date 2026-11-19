@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { TranslatePipe } from '@ngx-translate/core';
 import { toApiProblem } from '../../core/api/api-problem';
+import { hasPermission } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { NotificationService } from '../../core/notifications/notification.service';
 import { Button } from '../../shared/ui/button';
@@ -37,6 +38,18 @@ interface UserDetail extends UserListItem {
   roles: GrantView[];
   pendingApprovals: number;
   assignedBuying: number;
+}
+
+export interface EmailChangeView {
+  id: number;
+  status: 'PENDING_APPROVAL' | 'PENDING_VERIFICATION';
+  oldEmail: string;
+  newEmail: string;
+  reason: string;
+  requestedBy: number;
+  requestedAt: string;
+  approvedBy?: number | null;
+  tokenExpiresAt?: string | null;
 }
 
 interface CompanyRow {
@@ -203,6 +216,43 @@ const ASSIGNABLE = [
             </button>
           </div>
 
+          @if (canCorrectEmail()) {
+            <section class="email-change" aria-labelledby="email-change-heading">
+              <h3 id="email-change-heading">{{ 'usersAdmin.emailChange.title' | translate }}</h3>
+              @if (emailChange(); as change) {
+                <p role="status">
+                  {{ 'usersAdmin.emailChange.status.' + change.status | translate: { newEmail: change.newEmail } }}
+                </p>
+                <p class="meta">{{ 'usersAdmin.emailChange.reasonShown' | translate: { reason: change.reason } }}</p>
+                <div class="actions">
+                  @if (change.status === 'PENDING_APPROVAL') {
+                    <button appButton type="button" [disabled]="busy()" (click)="approveEmailChange(detail.id)">
+                      {{ 'usersAdmin.emailChange.approve' | translate }}
+                    </button>
+                  }
+                  <button appButton type="button" variant="secondary" [disabled]="busy()" (click)="cancelEmailChange(detail.id)">
+                    {{ 'usersAdmin.emailChange.cancel' | translate }}
+                  </button>
+                </div>
+              } @else {
+                <p class="meta">{{ 'usersAdmin.emailChange.help' | translate }}</p>
+                <form class="grant" [formGroup]="emailForm" (ngSubmit)="requestEmailChange(detail.id)">
+                  <label
+                    >{{ 'usersAdmin.emailChange.newEmail' | translate }}
+                    <input type="email" formControlName="newEmail" autocomplete="off" />
+                  </label>
+                  <label
+                    >{{ 'usersAdmin.emailChange.reason' | translate }}
+                    <input type="text" formControlName="reason" maxlength="500" />
+                  </label>
+                  <button appButton type="submit" [disabled]="emailForm.invalid || busy()">
+                    {{ 'usersAdmin.emailChange.submit' | translate }}
+                  </button>
+                </form>
+              }
+            </section>
+          }
+
           <h3>{{ 'usersAdmin.roles' | translate }}</h3>
           <ul class="roles">
             @for (role of detail.roles; track role.id) {
@@ -272,6 +322,16 @@ const ASSIGNABLE = [
       border: 1px solid var(--color-border, #d7dde5);
       border-radius: 0.5rem;
       font-size: 0.9rem;
+    }
+    .email-change {
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border: 1px solid var(--color-border, #d7dde5);
+      border-radius: 0.5rem;
+    }
+    .email-change h3 {
+      margin: 0;
     }
     .role-help ul {
       margin: 0.5rem 0;
@@ -389,6 +449,16 @@ export class UsersAdminPage implements OnInit {
     companyId: new FormControl<number | null>(null),
   });
 
+  /** E-mail correction (Sprint 2, ADR-016 step 5): global administrators only; the server decides every rule. */
+  readonly canCorrectEmail = computed(() => hasPermission(this.auth.me(), 'USER_ADMIN_GLOBAL'));
+  readonly emailChange = signal<EmailChangeView | null>(null);
+  readonly emailForm = new FormGroup({
+    newEmail: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+    reason: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(5), Validators.maxLength(500)],
+    }),
+  });
 
   ngOnInit(): void {
     this.load();
@@ -422,8 +492,77 @@ export class UsersAdminPage implements OnInit {
 
   select(id: number): void {
     this.http.get<UserDetail>(`${API}/${id}`).subscribe({
-      next: (detail) => this.selected.set(detail),
+      next: (detail) => {
+        this.selected.set(detail);
+        this.loadEmailChange(id);
+      },
       error: (err) => this.notifications.error(`errors.${toApiProblem(err).code}`),
+    });
+  }
+
+  loadEmailChange(id: number): void {
+    this.emailChange.set(null);
+    if (!this.canCorrectEmail()) {
+      return;
+    }
+    // 204 (no open change) arrives as a null body.
+    this.http.get<EmailChangeView | null>(`${API}/${id}/email-change`).subscribe({
+      next: (change) => this.emailChange.set(change ?? null),
+      error: () => this.emailChange.set(null),
+    });
+  }
+
+  requestEmailChange(id: number): void {
+    if (this.emailForm.invalid) {
+      return;
+    }
+    const value = this.emailForm.getRawValue();
+    this.busy.set(true);
+    this.http
+      .post<EmailChangeView>(`${API}/${id}/email-change`, { newEmail: value.newEmail.trim(), reason: value.reason.trim() })
+      .subscribe({
+        next: (change) => {
+          this.busy.set(false);
+          this.emailChange.set(change);
+          this.emailForm.reset();
+          this.notifications.success(
+            change.status === 'PENDING_APPROVAL' ? 'usersAdmin.emailChange.requestedNeedsApproval' : 'usersAdmin.emailChange.requested',
+          );
+        },
+        error: (err) => {
+          this.busy.set(false);
+          this.notifications.error(`errors.${toApiProblem(err).code}`);
+        },
+      });
+  }
+
+  approveEmailChange(id: number): void {
+    this.busy.set(true);
+    this.http.post<EmailChangeView>(`${API}/${id}/email-change/approve`, {}).subscribe({
+      next: (change) => {
+        this.busy.set(false);
+        this.emailChange.set(change);
+        this.notifications.success('usersAdmin.emailChange.approved');
+      },
+      error: (err) => {
+        this.busy.set(false);
+        this.notifications.error(`errors.${toApiProblem(err).code}`);
+      },
+    });
+  }
+
+  cancelEmailChange(id: number): void {
+    this.busy.set(true);
+    this.http.post(`${API}/${id}/email-change/cancel`, {}).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.emailChange.set(null);
+        this.notifications.success('usersAdmin.emailChange.cancelled');
+      },
+      error: (err) => {
+        this.busy.set(false);
+        this.notifications.error(`errors.${toApiProblem(err).code}`);
+      },
     });
   }
 

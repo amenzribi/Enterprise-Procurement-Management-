@@ -22,6 +22,7 @@ DELETE /api/v1/requests/{id}                                                    
 GET /api/v1/admin/absences                                                           | 401   | 403   | 403
 GET /api/v1/admin/accounts                                                           | 401   | 403   | 403
 GET /api/v1/admin/accounts/{id}                                                      | 401   | 403   | 403
+GET /api/v1/admin/accounts/{id}/email-change                                         | 401   | 403   | 403
 GET /api/v1/admin/approval-rules                                                     | 401   | 403   | 403
 GET /api/v1/admin/approval-rules/{id}                                                | 401   | 403   | 403
 GET /api/v1/admin/approval-rules/{id}/versions                                       | 401   | 403   | 403
@@ -101,6 +102,9 @@ GET /healthz                                                                    
 POST /api/v1/admin/absences                                                          | 401   | 403   | 403
 POST /api/v1/admin/accounts                                                          | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/active                                              | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/email-change                                        | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/email-change/approve                                | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/email-change/cancel                                 | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/password-reset                                      | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/revoke-sessions                                     | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/roles                                               | 401   | 403   | 403
@@ -132,6 +136,7 @@ POST /api/v1/approvals/tasks/{id}/question                                      
 POST /api/v1/approvals/tasks/{id}/reject                                             | 401   | 403   | 404
 POST /api/v1/approvals/tasks/{id}/return                                             | 401   | 403   | 404
 POST /api/v1/assistant/ask                                                           | 401   | 403   | 403
+POST /api/v1/auth/email-change/confirm                                               | 404   | 403   | 404    # public: protected by the token in the body (neutral 404)
 POST /api/v1/auth/login                                                              | 401   | 403   | 401    # public: 401 is "wrong credentials"; a signed-in supplier contact is outside the portal
 POST /api/v1/auth/logout                                                             | OK    | SKIP  | SKIP   # public; not called while signed in (it would end the session used by the test)
 POST /api/v1/auth/password                                                           | 401   | INPUT | INPUT  # own password; empty body refused

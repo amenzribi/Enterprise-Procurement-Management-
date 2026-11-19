@@ -331,7 +331,14 @@
     "buyer-cannot-receive": "L'acheteur de cette commande ne peut ni enregistrer ni confirmer sa réception.",
     "invoice-recorder": "Une autre personne doit attester ou autoriser le paiement d'une facture que vous avez enregistrée.",
     "payment-needs-manager": "Seul un responsable des achats de la société acheteuse peut autoriser le paiement.",
-    "payment-not-independent": "L'acheteur de cette commande ne peut pas en autoriser le paiement."
+    "payment-not-independent": "L'acheteur de cette commande ne peut pas en autoriser le paiement.",
+    "email-change-pending": "Un changement d'adresse est en attente pour ce compte. Terminez-le ou annulez-le d'abord.",
+    "email-in-use": "Cette adresse est déjà utilisée par un autre compte.",
+    "self-email-change": "Vous ne pouvez pas modifier votre propre adresse. Demandez à un autre administrateur global.",
+    "supplier-contact-account": "L'adresse d'un contact fournisseur se change en invitant de nouveau le contact.",
+    "email-change-four-eyes": "Un autre administrateur global, qui n'a ni demandé ce changement ni créé le demandeur, doit l'approuver.",
+    "no-email-change": "Aucun changement d'adresse n'est en attente pour ce compte.",
+    "email-change-not-awaiting-approval": "Ce changement d'adresse ne demande pas d'approbation."
   },
   "auth": {
     "signOut": "Se déconnecter",
@@ -1677,7 +1684,25 @@
       "GLOBAL_ADMIN": "Administration de l’installation (sociétés, utilisateurs, mots de passe) plus REQUEST_ADMIN contrôlé pour recherche/archivage/annulation/nettoyage des demandes dans le groupe. Ne devient pas acheteur, approbateur, messagerie fournisseur ni assistant."
     },
     "roleCombinations": "Les rôles d’approbation peuvent être combinés avec REQUESTER. BUYER et PURCHASING_MANAGER peuvent être combinés. GLOBAL_ADMIN ne doit pas servir de compte « tous les rôles ». SUPPLIER_CONTACT s’invite depuis la messagerie, pas ici.",
-    "createdPendingActivation": "Compte créé. Un autre administrateur doit l'activer ; son titulaire reçoit alors le lien d'activation."
+    "createdPendingActivation": "Compte créé. Un autre administrateur doit l'activer ; son titulaire reçoit alors le lien d'activation.",
+    "emailChange": {
+      "title": "Corriger l'adresse e-mail",
+      "help": "L'adresse ne change qu'après confirmation par son titulaire depuis la nouvelle boîte. Les comptes approbateur, acheteur, réceptionnaire, responsable achats et administrateur exigent aussi un second administrateur global.",
+      "newEmail": "Nouvelle adresse",
+      "reason": "Motif (5 à 500 caractères)",
+      "submit": "Demander la correction",
+      "reasonShown": "Motif : {{reason}}",
+      "approve": "Approuver (second administrateur)",
+      "cancel": "Annuler la correction",
+      "status": {
+        "PENDING_APPROVAL": "En attente d'un second administrateur global avant l'envoi d'un lien à {{newEmail}}.",
+        "PENDING_VERIFICATION": "Un lien de confirmation a été envoyé à {{newEmail}}. Rien ne change tant qu'il n'est pas utilisé."
+      },
+      "requested": "Correction demandée. Un lien de confirmation a été envoyé à la nouvelle adresse.",
+      "requestedNeedsApproval": "Correction demandée. Un autre administrateur global doit l'approuver.",
+      "approved": "Approuvée. Un lien de confirmation a été envoyé à la nouvelle adresse.",
+      "cancelled": "Correction annulée."
+    }
   },
   "requestAdmin": {
     "title": "Administration des demandes",
@@ -1980,5 +2005,13 @@
       "discussion-exists": "Cette demande a déjà une discussion.",
       "unexpected": "Une erreur est survenue. Réessayez."
     }
+  },
+  "emailChange": {
+    "title": "Confirmez votre nouvelle adresse",
+    "description": "Un administrateur global a demandé d'utiliser cette boîte pour votre compte achats.",
+    "submit": "Confirmer cette adresse",
+    "done": "Votre adresse est modifiée. Connectez-vous avec la nouvelle adresse ; vos autres sessions ont été fermées.",
+    "invalid": "Ce lien n'est plus valable. Demandez-en un nouveau à votre administrateur.",
+    "error": "La confirmation n'a pas pu aboutir. Réessayez dans un instant."
   }
 }

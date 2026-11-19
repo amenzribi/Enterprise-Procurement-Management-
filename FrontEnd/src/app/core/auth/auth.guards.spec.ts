@@ -91,6 +91,8 @@ describe('safeReturnUrl', () => {
     '/forgot-password',
     '/p',
     '/p#token',
+    '/e',
+    '/e#token',
     '/requests\n/next',
     '',
     null,

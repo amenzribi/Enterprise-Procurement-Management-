@@ -36,6 +36,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/password-setup').then((m) => m.PasswordSetupPage),
   },
   {
+    // E-mail correction, proof of control of the new mailbox (Sprint 2): token in the URL fragment.
+    path: 'e',
+    title: 'emailChange.title',
+    loadComponent: () => import('./features/auth/email-change-confirm').then((m) => m.EmailChangeConfirmPage),
+  },
+  {
     // Everything else is the signed-in workspace (S1-AC-01, S1-AC-13).
     path: '',
     component: Shell,

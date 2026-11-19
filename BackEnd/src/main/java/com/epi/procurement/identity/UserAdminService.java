@@ -41,8 +41,12 @@ public class UserAdminService {
 
 	private final UserDirectory directory;
 
+	private final EmailChangeStore emailChanges;
+
 	UserAdminService(UserAdminStore store, CredentialStore credentials, PasswordEncoder encoder, AuditLog auditLog,
-			ApplicationEventPublisher events, PasswordPolicy passwordPolicy, UserDirectory directory) {
+			ApplicationEventPublisher events, PasswordPolicy passwordPolicy, UserDirectory directory,
+			EmailChangeStore emailChanges) {
+		this.emailChanges = emailChanges;
 		this.passwordPolicy = passwordPolicy;
 		this.directory = directory;
 		this.store = store;
@@ -121,6 +125,10 @@ public class UserAdminService {
 		UserAdminStore.AccountRow account = store.findAccount(userId)
 			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
 		assertCanManage(actor, account);
+		// A set-up link sent at activation would go to the address being replaced (ADR-016 step 5).
+		if (active && !account.active() && emailChanges.open(userId).isPresent()) {
+			throw emailChangePending();
+		}
 		if (actor.id() == userId && !active) {
 			throw new ApiProblemException(HttpStatus.CONFLICT, "cannot-deactivate-self",
 					"You cannot deactivate your own account.");
@@ -222,7 +230,16 @@ public class UserAdminService {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
 					"Company administrators cannot reset a global administrator password.");
 		}
+		// The reset link would go to the address being replaced (ADR-016 step 5).
+		if (emailChanges.open(userId).isPresent()) {
+			throw emailChangePending();
+		}
 		publishPasswordSetup(userId, "RESET", actor, account.displayName(), account.companyId());
+	}
+
+	private static ApiProblemException emailChangePending() {
+		return new ApiProblemException(HttpStatus.CONFLICT, "email-change-pending",
+				"A change of address is waiting for proof of control of the new mailbox. Complete or cancel it first.");
 	}
 
 	private void publishPasswordSetup(long userId, String purpose, CurrentUser actor, String displayName,
@@ -340,8 +357,8 @@ public class UserAdminService {
 		}
 	}
 
-	/** Home company + security actions (activate, password, sessions). */
-	private void assertCanManage(CurrentUser actor, UserAdminStore.AccountRow account) {
+	/** Home company + security actions (activate, password, sessions, e-mail correction). */
+	void assertCanManage(CurrentUser actor, UserAdminStore.AccountRow account) {
 		assertSameGroup(actor, account);
 		if (!actor.isGlobalAdmin() && store.isGlobalAdminTarget(account.id())) {
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
@@ -419,7 +436,7 @@ public class UserAdminService {
 		}
 	}
 
-	private static String normalizeEmail(String email) {
+	static String normalizeEmail(String email) {
 		String value = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
 		// One address, no spaces, quotes, brackets or control characters; a dot in the domain (audit S-13).
 		if (value.length() > 254 || !EMAIL.matcher(value).matches()) {

@@ -78,6 +78,28 @@ public class Notifications {
 	}
 
 	/**
+	 * Enqueues an e-mail to an address that is not (or no longer) the account's (Sprint 2, e-mail correction): the
+	 * proof-of-control link goes to the NEW address, the security notice to the OLD one. Language from the account,
+	 * whether or not it is active; no in-app notification. In the current transaction.
+	 */
+	public void enqueueToAddress(Notice notice, String email) {
+		Optional<UserDirectory.UserContact> contact = users.findContact(notice.recipientUserId());
+		if (contact.isEmpty() || email == null || email.isBlank()) {
+			return;
+		}
+		UserDirectory.UserContact recipient = contact.get();
+		NotificationTemplates.Rendered rendered = templates.render(notice, Locale.forLanguageTag(recipient.preferredLanguage()));
+		Instant now = clock.instant();
+		Long id = jdbc.queryForObject("SELECT NEXT VALUE FOR seq_notification_outbox", Long.class);
+		jdbc.update("""
+				INSERT INTO notification_outbox (id, kind, recipient_user_id, recipient_email, language, subject, body_html,
+				                                 body_text, message_id, status, next_attempt_at, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)""", id, notice.kind(), recipient.id(), email,
+				recipient.preferredLanguage(), rendered.subject(), rendered.html(), rendered.text(),
+				"<notification-" + id + "@" + messageIdDomain + ">", UtcTimes.db(now), UtcTimes.db(now));
+	}
+
+	/**
 	 * Enqueues in a separate transaction that commits even when the caller's transaction rolls back (e.g. telling
 	 * administrators that a submission failed because a stage has no eligible approver).
 	 */

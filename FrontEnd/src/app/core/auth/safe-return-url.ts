@@ -15,13 +15,14 @@ export function safeReturnUrl(candidate: string | null | undefined, fallback = '
     !hasControlCharacter(value) &&
     !/^\/+[a-z][a-z0-9+.-]*:/i.test(value);
   const pathOnly = value.split(/[?#]/, 1)[0] ?? value;
-  // Password setup uses `/p` or `/p#…` only — do not match `/purchasing`, `/portal`, etc.
+  // Password setup uses `/p` or `/p#…`, e-mail confirmation `/e` — do not match `/purchasing`, `/portal`, etc.
   const isAuthShellPath =
     pathOnly === '/sign-in' ||
     pathOnly.startsWith('/sign-in/') ||
     pathOnly === '/login' ||
     pathOnly === '/forgot-password' ||
-    pathOnly === '/p';
+    pathOnly === '/p' ||
+    pathOnly === '/e';
   if (!isInternalPath || isAuthShellPath) {
     return fallback;
   }

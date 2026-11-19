@@ -62,7 +62,9 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 			"POST /api/v1/auth/password-reset/redeem", "POST /api/v1/approval-links/summary",
 			"POST /api/v1/approval-links/approve", "POST /api/v1/quote-links/summary", "POST /api/v1/quote-links/submit",
 			// Status only for anonymous callers, as /actuator/health (Sprint 2, P1.4).
-			"GET /healthz");
+			"GET /healthz",
+			// The token in the body proves control of the new mailbox (Sprint 2, e-mail correction).
+			"POST /api/v1/auth/email-change/confirm");
 
 	/**
 	 * Query string and body for the endpoints that check their input before the caller: with valid input the answer

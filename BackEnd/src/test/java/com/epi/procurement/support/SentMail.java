@@ -23,14 +23,31 @@ public final class SentMail {
 
 	private static final Path DIRECTORY = Path.of("target/test-mail");
 
+	private static final Pattern FILE_NAME = Pattern.compile("(\\d{8}-\\d{6})-(\\d+)\\.eml");
+
 	private SentMail() {
+	}
+
+	private static String stamp(Path file) {
+		Matcher name = FILE_NAME.matcher(file.getFileName().toString());
+		return name.matches() ? name.group(1) : "";
+	}
+
+	private static long outboxId(Path file) {
+		Matcher name = FILE_NAME.matcher(file.getFileName().toString());
+		return name.matches() ? Long.parseLong(name.group(2)) : -1;
 	}
 
 	/** The body (all parts) of the newest e-mail to {@code address}. */
 	public static String newestTo(String address) throws Exception {
 		List<Path> files;
 		try (Stream<Path> list = Files.list(DIRECTORY)) {
-			files = list.sorted(Comparator.comparing(Path::toString).reversed()).toList();
+			// Newest first. File names are "<yyyyMMdd-HHmmss UTC>-<outbox id>.eml": the outbox id is compared as a
+			// number, so within one second "-120" comes after "-99" (a text sort put "-99" first and returned an
+			// older, already used link).
+			files = list.filter(file -> FILE_NAME.matcher(file.getFileName().toString()).matches())
+				.sorted(Comparator.comparing((Path file) -> stamp(file)).thenComparingLong(SentMail::outboxId).reversed())
+				.toList();
 		}
 		for (Path file : files) {
 			try (InputStream in = Files.newInputStream(file)) {

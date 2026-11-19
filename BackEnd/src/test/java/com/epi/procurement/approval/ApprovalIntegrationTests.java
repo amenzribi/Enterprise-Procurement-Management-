@@ -689,27 +689,49 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 
 	/**
 	 * The one-tap token of the approver's task e-mail for this request: tokens only exist in sent e-mails (S2CR-01),
-	 * so the outbox is sent and the .eml files are read.
+	 * so the outbox is sent and the .eml file is read.
+	 * <p>
+	 * The e-mail is identified by its outbox row (the newest one-tap e-mail to this approver about this request) and
+	 * read only from the file written for that row at or after it was sent. Request numbers and outbox ids restart
+	 * with each clean database while {@code target/test-mail} keeps earlier runs' files, so matching on recipient and
+	 * request number alone could pick another run's e-mail and a dead token (seen on 2026-11-19).
 	 */
 	private String linkToken(long approverId, long requestId) {
 		outbox.sendDue();
+		List<Map<String, Object>> rows = jdbc.queryForList("""
+				SELECT TOP (1) id, status, sent_at FROM notification_outbox
+				WHERE recipient_user_id = ? AND body_html LIKE ? AND body_html LIKE ?
+				ORDER BY id DESC""", approverId, "%/requests/" + requestId + "\"%", "%{{link:approval:%");
+		assertThat(rows).as("one-tap task e-mail queued for user %d about request %d", approverId, requestId).hasSize(1);
+		long outboxId = ((Number) rows.get(0).get("id")).longValue();
+		assertThat(rows.get(0).get("status")).as("status of task e-mail %d", outboxId).isEqualTo("SENT");
+		Instant sentAt = jdbc.queryForObject("SELECT sent_at FROM notification_outbox WHERE id = ?",
+				java.time.LocalDateTime.class, outboxId).toInstant(java.time.ZoneOffset.UTC);
 		String email = jdbc.queryForObject("SELECT email FROM user_account WHERE id = ?", String.class, approverId);
 		try (Stream<Path> files = Files.list(Path.of("target/test-mail"))) {
-			for (Path file : files.sorted(java.util.Comparator.comparing(Path::toString).reversed()).toList()) {
-				String content = htmlOf(file);
-				String raw = Files.readString(file, StandardCharsets.ISO_8859_1);
-				if (raw.contains("To: " + email) && content.contains("/requests/" + requestId + "\"")) {
-					Matcher matcher = LINK.matcher(content);
-					if (matcher.find()) {
-						return matcher.group(1);
-					}
-				}
-			}
+			Path file = files.filter(f -> f.getFileName().toString().endsWith("-" + outboxId + ".eml"))
+				.filter(f -> modifiedAt(f).isAfter(sentAt.minusSeconds(2)))
+				.max(java.util.Comparator.comparing(ApprovalIntegrationTests::modifiedAt))
+				.orElseThrow(() -> new AssertionError("No file for task e-mail " + outboxId + " sent at " + sentAt));
+			assertThat(Files.readString(file, StandardCharsets.ISO_8859_1)).contains("To: " + email);
+			String content = htmlOf(file);
+			assertThat(content).contains("/requests/" + requestId + "\"");
+			Matcher matcher = LINK.matcher(content);
+			assertThat(matcher.find()).as("one-tap link in task e-mail %d", outboxId).isTrue();
+			return matcher.group(1);
 		}
 		catch (java.io.IOException ex) {
 			throw new IllegalStateException(ex);
 		}
-		throw new AssertionError("No task e-mail with a one-tap link for user " + approverId);
+	}
+
+	private static Instant modifiedAt(Path file) {
+		try {
+			return Files.getLastModifiedTime(file).toInstant();
+		}
+		catch (java.io.IOException ex) {
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	private Map<String, Object> request(String title, String currency, Number unitPrice, String categoryCode) {

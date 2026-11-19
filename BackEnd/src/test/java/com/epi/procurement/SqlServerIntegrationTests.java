@@ -350,7 +350,10 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 	 */
 	@Test
 	void auditAppendsWorkWithATriggerOnTheTable() {
-		jdbc.execute("CREATE TRIGGER trg_test_audit_noop ON audit_event AFTER INSERT AS SET NOCOUNT ON;");
+		// Fixture DDL as the schema owner (ADR-015: the runtime identity cannot create triggers); the append itself
+		// runs as the application, under the runtime identity. A trigger left by an aborted run is removed first.
+		ownerJdbc().execute("DROP TRIGGER IF EXISTS trg_test_audit_noop");
+		ownerJdbc().execute("CREATE TRIGGER trg_test_audit_noop ON audit_event AFTER INSERT AS SET NOCOUNT ON;");
 		try {
 			long id = auditLog.record(new AuditRecord(null, "Integration test", null, "TEST", "7", "PING", null, null,
 					null, null));
@@ -358,7 +361,7 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 				.isEqualTo(1);
 		}
 		finally {
-			jdbc.execute("DROP TRIGGER trg_test_audit_noop");
+			ownerJdbc().execute("DROP TRIGGER IF EXISTS trg_test_audit_noop");
 		}
 		assertThat(auditLog.verifyChain("global").valid()).isTrue();
 	}
@@ -416,13 +419,39 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 			locks.lockExclusively("s1cr09-resource");
 			status.setRollbackOnly();
 		});
-		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys.dm_tran_locks WHERE resource_type = 'APPLICATION' "
-				+ "AND resource_description LIKE '%s1cr09%'", Integer.class)).isZero();
+		// Nobody holds the lock any more, seen from an independent session (APPLOCK_TEST needs no server permission;
+		// sys.dm_tran_locks would need VIEW SERVER PERFORMANCE STATE, which neither database identity has).
+		assertThat(lockGrantableFromAnotherSession("s1cr09-resource")).isTrue();
 		for (int i = 0; i < 5; i++) {
 			assertThat(jdbc.queryForObject("SELECT @@TRANCOUNT", Integer.class)).isZero();
 		}
-		// A third transaction gets the lock immediately.
+		// Control: while a transaction holds the lock, the same check sees it held.
+		tx.executeWithoutResult(status -> {
+			locks.lockExclusively("s1cr09-resource");
+			assertThat(lockGrantableFromAnotherSession("s1cr09-resource")).isFalse();
+		});
+		assertThat(lockGrantableFromAnotherSession("s1cr09-resource")).isTrue();
+		// A further transaction gets the lock immediately.
 		tx.executeWithoutResult(status -> locks.lockExclusively("s1cr09-resource"));
+	}
+
+	/**
+	 * True when no session holds the application lock: tested on a connection of its own (not the one bound to a
+	 * running transaction), with a session-owned test that takes no lock.
+	 */
+	private boolean lockGrantableFromAnotherSession(String resource) {
+		try (java.sql.Connection connection = jdbc.getDataSource().getConnection();
+				java.sql.PreparedStatement test = connection
+					.prepareStatement("SELECT APPLOCK_TEST('public', ?, 'Exclusive', 'Session')")) {
+			test.setString(1, resource);
+			try (java.sql.ResultSet result = test.executeQuery()) {
+				result.next();
+				return result.getInt(1) == 1;
+			}
+		}
+		catch (java.sql.SQLException ex) {
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	/**

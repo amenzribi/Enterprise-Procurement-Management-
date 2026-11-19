@@ -111,7 +111,10 @@ class RequestSubmissionIntegrationTests extends SqlServerTestSupport {
 		CurrentUser requester = requester();
 		RequestViews.Detail draft = service.create(requester, completePayload("Atomic", futureDate()));
 		long counterBefore = counter();
-		jdbc.execute("""
+		// Fixture DDL as the schema owner (ADR-015: the runtime identity cannot create triggers); the submission runs
+		// as the application, under the runtime identity. A trigger left by an aborted run is removed first.
+		ownerJdbc().execute("DROP TRIGGER IF EXISTS trg_test_fail_submission");
+		ownerJdbc().execute("""
 				CREATE TRIGGER trg_test_fail_submission ON audit_event AFTER INSERT AS
 				IF EXISTS (SELECT 1 FROM inserted WHERE action = 'SUBMITTED' AND entity_id = '%d')
 				    THROW 52000, 'Forced audit failure (test)', 1;""".formatted(draft.id()));
@@ -120,7 +123,7 @@ class RequestSubmissionIntegrationTests extends SqlServerTestSupport {
 				.isInstanceOf(DataAccessException.class);
 		}
 		finally {
-			jdbc.execute("DROP TRIGGER trg_test_fail_submission");
+			ownerJdbc().execute("DROP TRIGGER IF EXISTS trg_test_fail_submission");
 		}
 
 		RequestViews.Detail after = service.get(requester, draft.id());

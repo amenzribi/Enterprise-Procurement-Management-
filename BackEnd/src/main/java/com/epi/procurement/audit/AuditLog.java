@@ -54,14 +54,15 @@ public class AuditLog {
 	public long record(AuditRecord record) {
 		String chainKey = AuditHasher.chainKey(record.companyId());
 		ChainHead head = lockHead(chainKey);
-		if (head == null) {
-			// First event of this chain: created under an application lock (see TransactionLocks), then locked
-			// like any existing row.
-			createHeadIfMissing(chainKey);
-			head = lockHead(chainKey);
-			if (head == null) {
+		// First event of this chain: created under an application lock (see TransactionLocks), then locked like any
+		// existing row. lockHead waits for a first writer that has not committed yet; if that writer rolled back, the
+		// head is gone and is created again (bounded).
+		for (int attempt = 1; head == null; attempt++) {
+			if (attempt > 3) {
 				throw new IllegalStateException("Audit chain head could not be created: " + chainKey);
 			}
+			createHeadIfMissing(chainKey);
+			head = lockHead(chainKey);
 		}
 
 		long chainSeq = head.lastSeq() + 1;
@@ -260,8 +261,13 @@ public class AuditLog {
 
 	private void createHeadIfMissing(String chainKey) {
 		locks.lockExclusively("audit-chain-head:" + chainKey);
+		// The existence check reads uncommitted rows (Sprint 2 stabilisation): a first writer's head, not yet committed,
+		// is seen, so the next writer releases the lock at once instead of waiting for it while holding the lock (503
+		// for the writers behind), and never inserts a second head under READ_COMMITTED_SNAPSHOT. The chain itself is
+		// read with UPDLOCK in lockHead, which waits for committed data.
 		jdbc.update("INSERT INTO audit_chain_head (chain_key, last_seq, last_hash) SELECT ?, 0, NULL "
-				+ "WHERE NOT EXISTS (SELECT 1 FROM audit_chain_head WHERE chain_key = ?)", chainKey, chainKey);
+				+ "WHERE NOT EXISTS (SELECT 1 FROM audit_chain_head WITH (READUNCOMMITTED) WHERE chain_key = ?)", chainKey,
+				chainKey);
 		locks.release("audit-chain-head:" + chainKey);
 	}
 

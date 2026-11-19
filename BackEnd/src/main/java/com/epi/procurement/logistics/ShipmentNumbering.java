@@ -27,12 +27,14 @@ class ShipmentNumbering {
 	@Transactional(propagation = Propagation.MANDATORY)
 	String next(long companyId, String companyCode, int year) {
 		Long value = increment(companyId, year);
-		if (value == null) {
-			createCounterIfMissing(companyId, year);
-			value = increment(companyId, year);
-			if (value == null) {
+		// First number of a year: create the row, then increment it. The increment waits for a first writer that has
+		// not committed yet; if that writer rolled back, the row is gone and is created again (bounded).
+		for (int attempt = 1; value == null; attempt++) {
+			if (attempt > 3) {
 				throw new IllegalStateException("Document counter could not be created for company " + companyId);
 			}
+			createCounterIfMissing(companyId, year);
+			value = increment(companyId, year);
 		}
 		return "%s-SH-%d-%06d".formatted(companyCode, year, value);
 	}
@@ -49,8 +51,13 @@ class ShipmentNumbering {
 	private void createCounterIfMissing(long companyId, int year) {
 		String resource = "document-counter:" + companyId + ":" + year + ":" + KIND;
 		locks.lockExclusively(resource);
+		// The existence check reads uncommitted rows (Sprint 2 stabilisation): a first writer's new row, not yet
+		// committed, is seen, so the next writer neither waits for it while holding the application lock (which made
+		// the writers behind it answer 503) nor, under READ_COMMITTED_SNAPSHOT, misses it and inserts a duplicate. It
+		// waits on the row itself in increment(), like every later writer. Inserters are serialised by the lock.
 		jdbc.update("INSERT INTO document_counter (company_id, year, kind, next_value) SELECT ?, ?, ?, 1 "
-				+ "WHERE NOT EXISTS (SELECT 1 FROM document_counter WHERE company_id = ? AND year = ? AND kind = ?)",
+				+ "WHERE NOT EXISTS (SELECT 1 FROM document_counter WITH (READUNCOMMITTED) "
+				+ "WHERE company_id = ? AND year = ? AND kind = ?)",
 				companyId, year, KIND, companyId, year, KIND);
 		locks.release(resource);
 	}

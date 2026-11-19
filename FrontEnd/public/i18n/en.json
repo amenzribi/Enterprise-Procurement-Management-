@@ -55,6 +55,7 @@
       "import": "Master-data import",
       "users": "Users",
       "requestAdmin": "Request administration",
+      "auditCenter": "Audit Center",
       "changePassword": "Change password",
       "conversations": "Messages"
     },
@@ -267,6 +268,7 @@
     "peer-administrator": "You cannot manage another administrator. Ask a global administrator.",
     "cannot-set-own-password": "Change your own password from your profile.",
     "scan-unavailable": "The file could not be checked for viruses. Try again later.",
+    "verification-running": "A verification is already running. Wait for its result.",
     "absence-overlap": "This period overlaps another absence.",
     "link-invalid": "This link is no longer valid.",
     "file-too-large": "The file is larger than 20 MB.",
@@ -1063,6 +1065,66 @@
     "pair": "Pair",
     "saved": "Rate added"
   },
+  "auditCenter": {
+    "title": "Audit Center",
+    "description": "The whole audit trail of every company, read-only. Each search, export and verification is itself recorded in the trail.",
+    "filters": {
+      "title": "Filters",
+      "from": "From (UTC date)",
+      "to": "To (UTC date, included)",
+      "company": "Company",
+      "anyCompany": "Every company and group-wide events",
+      "actor": "Performed by",
+      "anyActor": "Anyone",
+      "action": "Action code",
+      "entityType": "Record type",
+      "entityId": "Record id",
+      "hint": "Codes are exact, in capital letters, for example USER_ACTIVATED or PURCHASE_REQUEST.",
+      "search": "Search",
+      "reset": "Clear filters"
+    },
+    "errors": {
+      "code": "Action and record type codes contain only capital letters, digits and underscores."
+    },
+    "export": "Export CSV",
+    "exportHint": "The export contains the events matching the applied filters, newest first, up to 50,000 rows. It is recorded in the trail.",
+    "events": "Events",
+    "loadError": "The audit trail could not be loaded.",
+    "empty": {
+      "title": "No event",
+      "message": "No audit event matches these filters."
+    },
+    "columns": {
+      "when": "When",
+      "company": "Company",
+      "actor": "Performed by",
+      "action": "Action",
+      "entity": "Record",
+      "details": "Details",
+      "chain": "Chain position",
+      "status": "Status change",
+      "comment": "Comment",
+      "payload": "Recorded details"
+    },
+    "groupWide": "Group-wide",
+    "show": "Show",
+    "hide": "Hide",
+    "more": "Show more",
+    "loading": "Loading…",
+    "verification": {
+      "title": "Chain verification",
+      "start": "Verify the audit trail",
+      "outcome": {
+        "NONE": "No verification since the application started.",
+        "RUNNING": "Verification in progress: {{chains}} of {{total}} chains, {{events}} events checked.",
+        "VALID": "Every chain is intact: {{chains}} chains, {{events}} events checked.",
+        "INVALID": "A chain has been altered.",
+        "ERROR": "The verification could not complete. Try again; if it fails again, contact the administrator of the installation."
+      },
+      "invalidAt": "Chain {{chain}}, first altered event {{event}}.",
+      "lastRun": "Last run by {{by}}, finished {{at}}."
+    }
+  },
   "attachments": {
     "title": "Attachments",
     "uploading": "Uploading…",
@@ -1615,9 +1677,6 @@
       "GLOBAL_ADMIN": "Installation administration (companies, users, passwords) plus controlled REQUEST_ADMIN for cross-company request search/archive/cancel/cleanup within the group. Does not become buyer, approver, supplier messenger or assistant user."
     },
     "roleCombinations": "Approver roles may be combined with REQUESTER. BUYER and PURCHASING_MANAGER may be combined. GLOBAL_ADMIN should not be used as an “all roles” account. SUPPLIER_CONTACT is invited from messaging, not here.",
-    "tempPassword": "Set temporary password",
-    "tempPasswordHint": "At least 12 characters. The user must change it at first sign-in. The value is never stored in clear text or shown again.",
-    "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it.",
     "createdPendingActivation": "Account created. Another administrator must activate it; its owner then receives the set-up link."
   },
   "requestAdmin": {

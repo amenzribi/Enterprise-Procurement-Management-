@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -202,19 +202,6 @@ const ASSIGNABLE = [
               {{ 'usersAdmin.revokeSessions' | translate }}
             </button>
           </div>
-          @if (canSetTemporaryPassword()) {
-          <form class="temp" [formGroup]="tempPassword" (ngSubmit)="setTempPassword(detail.id)">
-            <h3>{{ 'usersAdmin.tempPassword' | translate }}</h3>
-            <p class="meta">{{ 'usersAdmin.tempPasswordHint' | translate }}</p>
-            <label
-              >{{ 'usersAdmin.tempPassword' | translate }}
-              <input type="password" formControlName="temporaryPassword" autocomplete="new-password" />
-            </label>
-            <button appButton type="submit" [disabled]="tempPassword.invalid || busy()">
-              {{ 'usersAdmin.tempPassword' | translate }}
-            </button>
-          </form>
-          }
 
           <h3>{{ 'usersAdmin.roles' | translate }}</h3>
           <ul class="roles">
@@ -378,7 +365,6 @@ export class UsersAdminPage implements OnInit {
    * The server reserves administrator-chosen passwords for global administrators (audit S-4); company
    * administrators send a reset link. No permission carries this distinction, hence the role.
    */
-  readonly canSetTemporaryPassword = computed(() => this.auth.me()?.roles.includes('GLOBAL_ADMIN') ?? false);
 
   readonly assignable = ASSIGNABLE;
   readonly state = signal<'loading' | 'ready' | 'error'>('loading');
@@ -403,12 +389,6 @@ export class UsersAdminPage implements OnInit {
     companyId: new FormControl<number | null>(null),
   });
 
-  readonly tempPassword = new FormGroup({
-    temporaryPassword: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.minLength(12)],
-    }),
-  });
 
   ngOnInit(): void {
     this.load();
@@ -514,24 +494,6 @@ export class UsersAdminPage implements OnInit {
     });
   }
 
-  setTempPassword(id: number): void {
-    if (this.tempPassword.invalid) {
-      return;
-    }
-    const temporaryPassword = this.tempPassword.controls.temporaryPassword.value;
-    this.busy.set(true);
-    this.http.post(`${API}/${id}/temporary-password`, { temporaryPassword }).subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.tempPassword.reset({ temporaryPassword: '' });
-        this.notifications.success('usersAdmin.tempPasswordDone');
-      },
-      error: (err) => {
-        this.busy.set(false);
-        this.notifications.error(`errors.${toApiProblem(err).code}`);
-      },
-    });
-  }
 
   revokeSessions(id: number): void {
     this.busy.set(true);

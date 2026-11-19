@@ -23,7 +23,11 @@ class PasswordResetMailListener {
 		Long createdBy = event.actorUserId() == null ? 0L : event.actorUserId();
 		String placeholder = NoticeLinkResolver.placeholder(PasswordResetLinkResolver.KIND, event.userId(),
 				event.purpose(), createdBy);
-		notifications.enqueue(new Notice("PASSWORD_" + event.purpose(), event.userId(), null,
+		// ADR-016: the owner always learns who asked. A reset requested by an administrator says so; one the owner asked
+		// for on the sign-in page says that instead, and how to ignore it.
+		String kind = "RESET".equals(event.purpose()) && event.actorUserId() == null ? "PASSWORD_RESET_SELF"
+				: "PASSWORD_" + event.purpose();
+		notifications.enqueue(new Notice(kind, event.userId(), null,
 				Map.of("displayName", event.displayName()), List.of(),
 				List.of(new Notice.Action("mail.action.setPassword", placeholder)), "/sign-in"));
 	}

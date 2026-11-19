@@ -1,8 +1,8 @@
 # Continuous integration (audit D-1, A-9; Sprint 1). Builds and tests both halves on every push and pull request.
 # It never deploys: deployment to UAT is a separate, manually approved step that takes the artefacts produced here.
 #
-# Status: written in Sprint 1 and not yet executed (nothing was pushed during the sprint). The first run on a Linux
-# runner is also the first run of the backend suite on Linux; expect to adjust it. See docs/sprints/.
+# First green run: 44276571868 (2026-11-18). Since Sprint 2 the backend suite runs as the runtime database identity
+# (ADR-015), with Flyway as the migration identity.
 name: CI
 
 on:
@@ -52,11 +52,38 @@ jobs:
           docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b \
             -Q "CREATE DATABASE procurement_test COLLATE Latin1_General_100_CI_AS_SC_UTF8"
 
+      # ADR-015: two identities, as in UAT. The suite runs as the runtime identity (data only, no schema change,
+      # audit events insert-only); Flyway migrates as the migration identity. Passwords are generated here, masked,
+      # and exist for this job only.
+      - name: Create the migration and runtime identities
+        run: |
+          MIGRATION_PASSWORD="Ci-$(openssl rand -hex 16)-mM1"
+          RUNTIME_PASSWORD="Ci-$(openssl rand -hex 16)-rR1"
+          echo "::add-mask::$MIGRATION_PASSWORD"
+          echo "::add-mask::$RUNTIME_PASSWORD"
+          echo "MIGRATION_PASSWORD=$MIGRATION_PASSWORD" >> "$GITHUB_ENV"
+          echo "RUNTIME_PASSWORD=$RUNTIME_PASSWORD" >> "$GITHUB_ENV"
+          docker cp ../scripts/db/. sqlserver:/tmp/db/
+          docker exec -w /tmp/db sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$DB_PASSWORD" -C -b -I \
+            -d procurement_test -i create-application-logins.sql \
+            -v MigrationUser=procurement_migrate MigrationPassword="$MIGRATION_PASSWORD" \
+               RuntimeUser=procurement_app RuntimePassword="$RUNTIME_PASSWORD"
+
       - name: Build and test (unit, module structure, SQL Server integration)
         env:
           DB_TEST_URL: jdbc:sqlserver://localhost:1433;databaseName=procurement_test;encrypt=true;trustServerCertificate=true
-          DB_USERNAME: sa
-        run: sh ./mvnw -B -ntp verify -Pdb-it
+          DB_USERNAME: procurement_app
+          SPRING_FLYWAY_USER: procurement_migrate
+        run: DB_PASSWORD="$RUNTIME_PASSWORD" SPRING_FLYWAY_PASSWORD="$MIGRATION_PASSWORD" sh ./mvnw -B -ntp verify -Pdb-it
+
+      # ADR-015: grants again now that the tables exist (object-level denies need them, as after every release), then
+      # what the runtime identity can and cannot do, on the migrated test database (PASS or FAIL per line).
+      - name: Verify the runtime identity's permissions
+        run: |
+          docker exec -w /tmp/db sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$DB_PASSWORD" -C -b -I \
+            -d procurement_test -i grant-application-roles.sql -v MigrationUser=procurement_migrate RuntimeUser=procurement_app
+          docker exec -w /tmp/db sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$DB_PASSWORD" -C -b -I \
+            -d procurement_test -i verify-runtime-permissions.sql -v RuntimeUser=procurement_app
 
       # On failure, keep SQL Server's own deadlock reports (system_health): they name the statements and locks
       # involved. They hold parameterised statement text and lock resources, never parameter values or passwords.

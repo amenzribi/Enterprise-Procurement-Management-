@@ -79,11 +79,12 @@ class Attachments {
 			ObjectProvider<AttachmentScanner> scanner, UserDirectory users, AuditLog auditLog,
 			ObjectProvider<Clock> clock, com.epi.procurement.platform.persistence.TransactionLocks locks,
 			@Value("${app.attachments.max-file-bytes:20971520}") long maxFileBytes,
-			@Value("${app.attachments.allow-unscanned-downloads:false}") boolean allowUnscannedDownloads) {
+			@Value("${app.attachments.allow-unscanned-downloads:false}") boolean allowUnscannedDownloads,
+			ObjectProvider<io.micrometer.core.instrument.MeterRegistry> meters) {
 		this.jdbc = new JdbcTemplate(dataSource);
 		this.requests = requests;
 		this.storage = storage;
-		this.scans = new ScanPolicy(scanner.getIfAvailable(), allowUnscannedDownloads);
+		this.scans = new ScanPolicy(scanner.getIfAvailable(), allowUnscannedDownloads, meters.getIfAvailable());
 		this.users = users;
 		this.auditLog = auditLog;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);

@@ -49,6 +49,8 @@ class MeAssembler {
 		if (user.isGlobalAdmin()) {
 			permissions.add("USER_ADMIN");
 			permissions.add("USER_ADMIN_GLOBAL");
+			// Audit Center (Sprint 2): the whole trail of every company, global administrators only.
+			permissions.add("AUDIT_VIEW");
 			permissions.add("ORG_ADMIN");
 			permissions.add("SYSTEM_ADMIN");
 			// Installation-scoped request administration (search/archive/cancel/cleanup/correct/remove).

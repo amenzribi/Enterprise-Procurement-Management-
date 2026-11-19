@@ -22,6 +22,9 @@ class DeploymentConfigurationGuardTests {
 			.withProperty("app.public-base-url", "https://procurement.example.org")
 			.withProperty("app.mail.mode", "smtp")
 			.withProperty("app.security.cookie-secure", "true")
+			.withProperty("app.attachments.clamav.host", "127.0.0.1")
+			.withProperty("management.server.port", "9091")
+			.withProperty("management.server.address", "10.10.0.5")
 			.withProperty("spring.datasource.url", SERVER_DB);
 	}
 
@@ -180,12 +183,14 @@ class DeploymentConfigurationGuardTests {
 			.withProperty("springdoc.swagger-ui.enabled", "true")
 			.withProperty("spring.datasource.url", SERVER_DB);
 		List<String> problems = DeploymentConfigurationGuard.problems(env);
-		assertThat(problems).hasSize(5);
+		assertThat(problems).hasSize(7);
 		assertThat(String.join("\n", problems)).contains("cookies must be secure")
 			.contains("app.testing")
 			.contains("springdoc")
 			.contains("MAIL_MODE is not set")
-			.contains("APP_PUBLIC_BASE_URL");
+			.contains("APP_PUBLIC_BASE_URL")
+			.contains("APP_CLAMAV_HOST")
+			.contains("MANAGEMENT_SERVER_PORT");
 	}
 
 	@Test
@@ -209,6 +214,54 @@ class DeploymentConfigurationGuardTests {
 			.contains("test hook");
 		assertThat(DeploymentConfigurationGuard.problems(developer(LOCAL_DB, "dev").withProperty("app.mail.mode", "File")))
 			.hasSize(1);
+	}
+
+	// ---- ADR-013, owner decision 2026-11-18: antivirus fails closed in deployed environments
+
+	@Test
+	void uatAndLaterEnvironmentsRefuseToStartWithoutAnAntivirusScanner() {
+		for (String environment : new String[] { "uat", "staging", "preprod", "production" }) {
+			MockEnvironment noScanner = deployed(environment).withProperty("app.attachments.clamav.host", " ");
+			assertThat(DeploymentConfigurationGuard.problems(noScanner)).as(environment)
+				.anyMatch(problem -> problem.contains("APP_CLAMAV_HOST"));
+		}
+	}
+
+	@Test
+	void noDeployedEnvironmentMayServeUnscannedFiles() {
+		for (String environment : new String[] { "demo", "uat", "staging", "preprod", "production" }) {
+			MockEnvironment unscanned = deployed(environment).withProperty("app.attachments.allow-unscanned-downloads",
+					"true");
+			if ("demo".equals(environment)) {
+				unscanned.setActiveProfiles("demo");
+			}
+			assertThat(DeploymentConfigurationGuard.problems(unscanned)).as(environment)
+				.anyMatch(problem -> problem.contains("APP_ALLOW_UNSCANNED_DOWNLOADS"));
+		}
+	}
+
+	@Test
+	void aDemonstrationServerMayRunWithoutAScannerItsUploadsStayInQuarantine() {
+		MockEnvironment demo = deployed("demo").withProperty("app.attachments.clamav.host", "");
+		demo.setActiveProfiles("demo");
+		assertThat(DeploymentConfigurationGuard.problems(demo)).isEmpty();
+	}
+
+	// ---- ADR-018 monitoring: the management port listens on a private address only
+
+	@Test
+	void uatAndLaterEnvironmentsNeedAPrivateManagementPort() {
+		assertThat(DeploymentConfigurationGuard.problems(deployed("uat").withProperty("management.server.port", "")))
+			.anyMatch(problem -> problem.contains("MANAGEMENT_SERVER_PORT"));
+		for (String address : new String[] { "0.0.0.0", "", "::", "203.0.113.7", "uat.example.org", "172.32.0.1" }) {
+			assertThat(DeploymentConfigurationGuard
+				.problems(deployed("production").withProperty("management.server.address", address))).as(address)
+				.anyMatch(problem -> problem.contains("MANAGEMENT_SERVER_ADDRESS"));
+		}
+		for (String address : new String[] { "127.0.0.1", "10.1.2.3", "172.16.0.9", "192.168.1.20", "::1" }) {
+			assertThat(DeploymentConfigurationGuard
+				.problems(deployed("uat").withProperty("management.server.address", address))).as(address).isEmpty();
+		}
 	}
 
 	@Test

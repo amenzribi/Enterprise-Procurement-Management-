@@ -6,5 +6,9 @@
   "/actuator": {
     "target": "http://localhost:8081",
     "secure": false
+  },
+  "/healthz": {
+    "target": "http://localhost:8081",
+    "secure": false
   }
 }

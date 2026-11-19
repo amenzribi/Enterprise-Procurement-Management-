@@ -33,8 +33,10 @@ GRANT UPDATE ON SCHEMA::dbo TO [$(RuntimeUser)];
 DENY ALTER, TAKE OWNERSHIP ON SCHEMA::dbo TO [$(RuntimeUser)];
 DENY ALTER ANY DATABASE DDL TRIGGER, ALTER ANY SCHEMA, CREATE TABLE, CREATE PROCEDURE, CREATE FUNCTION, CREATE VIEW
     TO [$(RuntimeUser)];
--- Audit events are append-only for the application, with or without the trigger.
-DENY UPDATE, DELETE ON OBJECT::dbo.audit_event TO [$(RuntimeUser)];
+-- Audit events are append-only for the application, with or without the trigger. Object-level rules need the
+-- object: on an empty database they are skipped, so run this script again after the migrations (every release).
+IF OBJECT_ID('dbo.audit_event') IS NOT NULL
+    DENY UPDATE, DELETE ON OBJECT::dbo.audit_event TO [$(RuntimeUser)];
 -- The migration history belongs to the migration principal.
 IF OBJECT_ID('dbo.flyway_schema_history') IS NOT NULL
     DENY INSERT, UPDATE, DELETE ON OBJECT::dbo.flyway_schema_history TO [$(RuntimeUser)];

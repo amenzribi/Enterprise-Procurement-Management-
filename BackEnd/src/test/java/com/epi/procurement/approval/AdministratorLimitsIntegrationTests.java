@@ -27,36 +27,24 @@ class AdministratorLimitsIntegrationTests extends SqlServerTestSupport {
 
 	// ---- S-4: passwords and peer administrators
 
+	/**
+	 * ADR-016 (Sprint 2): nobody chooses another person's password, not even a global administrator. The temporary
+	 * password endpoint no longer exists; the set-up or reset link, sent to the owner's mailbox, is the only way.
+	 */
 	@Test
-	void aCompanyAdministratorCannotChooseAnyonesPassword() {
-		ApiClient admin = signedIn("admin@demo.local");
+	void nobodyChoosesAnotherPersonsPasswordOnlyTheOwnersLinkRemains() {
 		long sami = userId("requester.tn@demo.local");
 		String hashBefore = passwordHash(sami);
-
-		assertThat(admin.post("/api/v1/admin/accounts/" + sami + "/temporary-password",
-				"{\"temporaryPassword\":\"Chosen-By-Admin-2026\"}").expectStatus(403).code()).isEqualTo("forbidden");
-
+		for (String who : new String[] { "admin@demo.local", "global.admin@demo.local" }) {
+			ApiClient administrator = signedIn(who);
+			administrator.post("/api/v1/admin/accounts/" + sami + "/temporary-password",
+					"{\"temporaryPassword\":\"Chosen-By-Admin-2026\"}").expectStatus(404);
+		}
 		assertThat(passwordHash(sami)).isEqualTo(hashBefore);
 		assertThat(auditCount("USER_ACCOUNT", Long.toString(sami), "TEMPORARY_PASSWORD_SET")).isZero();
 		// The reset link remains available: the secret goes to the account owner only.
-		admin.post("/api/v1/admin/accounts/" + sami + "/password-reset", null).expectStatus(202);
+		signedIn("admin@demo.local").post("/api/v1/admin/accounts/" + sami + "/password-reset", null).expectStatus(202);
 		signedIn("requester.tn@demo.local");
-	}
-
-	@Test
-	void aGlobalAdministratorsTemporaryPasswordMustMeetThePolicyAndIsNeverTheirOwn() {
-		ApiClient global = signedIn("global.admin@demo.local");
-		// Created by the company administrator: nobody chooses a password for an account they created (finding 4).
-		long target = createUserAs(signedIn("admin@demo.local"), "s1.temp");
-
-		assertThat(global.post("/api/v1/admin/accounts/" + target + "/temporary-password",
-				"{\"temporaryPassword\":\"aaaaaaaaaaaaaaaa\"}").expectStatus(400).code()).isEqualTo("password-too-weak");
-		assertThat(global.post("/api/v1/admin/accounts/" + userId("global.admin@demo.local") + "/temporary-password",
-				"{\"temporaryPassword\":\"Chosen-By-Admin-2026\"}").expectStatus(409).code())
-			.isEqualTo("cannot-set-own-password");
-		global.post("/api/v1/admin/accounts/" + target + "/temporary-password",
-				"{\"temporaryPassword\":\"Chosen-By-Admin-2026\"}").expectStatus(204);
-		assertThat(auditCount("USER_ACCOUNT", Long.toString(target), "TEMPORARY_PASSWORD_SET")).isEqualTo(1);
 	}
 
 	@Test
@@ -325,25 +313,6 @@ class AdministratorLimitsIntegrationTests extends SqlServerTestSupport {
 	// ---- Fourth review (F-1, F-2): creation chain, first credential, audited grants
 
 	@Test
-	void aTemporaryPasswordIsNeverTheFirstCredentialNorChosenByTheCreator() {
-		ApiClient global = signedIn("global.admin@demo.local");
-		String email = "s1.first." + java.util.UUID.randomUUID().toString().substring(0, 8) + "@demo.local";
-		long account = global.post("/api/v1/admin/accounts", """
-				{"email":"%s","displayName":"First Credential","companyId":%d,"preferredLanguage":"en","roles":[]}
-				""".formatted(email, companyId("DEMO-TN-PLT"))).expectStatus(201).id();
-		String hash = passwordHash(account);
-		String body = "{\"temporaryPassword\":\"Chosen-By-Global-2026\"}";
-		assertThat(global.post("/api/v1/admin/accounts/" + account + "/temporary-password", body).expectStatus(403).code())
-			.as("inactive").isEqualTo("use-reset-link");
-		signedIn("admin@demo.local").post("/api/v1/admin/accounts/" + account + "/active", "{\"active\":true}")
-			.expectStatus(200);
-		assertThat(global.post("/api/v1/admin/accounts/" + account + "/temporary-password", body).expectStatus(403).code())
-			.as("creator").isEqualTo("use-reset-link");
-		assertThat(passwordHash(account)).isEqualTo(hash);
-		assertThat(auditCount("USER_ACCOUNT", Long.toString(account), "TEMPORARY_PASSWORD_SET")).isZero();
-	}
-
-	@Test
 	void theWholeCreationChainCountsAsTheCreator() {
 		// The global administrator created B; B created C (set directly: B holds no administration role here).
 		long b = createUserAs(signedIn("global.admin@demo.local"), "s1.chain.b");
@@ -593,24 +562,6 @@ class AdministratorLimitsIntegrationTests extends SqlServerTestSupport {
 		assertThat(jdbc.queryForList("SELECT role FROM user_role WHERE user_id = ? ORDER BY role", String.class, puppet))
 			.containsExactly("BUYER", "PURCHASING_MANAGER", "RECEIVER");
 		global.post("/api/v1/admin/accounts/" + puppet + "/active", "{\"active\":false}").expectStatus(200);
-	}
-
-	@Test
-	void noChosenPasswordForAnAccountThatApprovesBuysReceivesOrAdministers() {
-		ApiClient global = signedIn("global.admin@demo.local");
-		String hash = jdbc.queryForObject("SELECT password_hash FROM user_credential WHERE user_id = ?", String.class,
-				userId("budget.tn@demo.local"));
-		for (String email : new String[] { "budget.tn@demo.local", "buyer@demo.local", "receiver.tn@demo.local",
-				"admin@demo.local" }) {
-			assertThat(global.post("/api/v1/admin/accounts/" + userId(email) + "/temporary-password",
-					"{\"temporaryPassword\":\"Chosen-By-Global-2026\"}").expectStatus(403).code()).as(email)
-				.isEqualTo("use-reset-link");
-		}
-		assertThat(jdbc.queryForObject("SELECT password_hash FROM user_credential WHERE user_id = ?", String.class,
-				userId("budget.tn@demo.local"))).isEqualTo(hash);
-		// The reset link remains, for every account.
-		global.post("/api/v1/admin/accounts/" + userId("budget.tn@demo.local") + "/password-reset", null)
-			.expectStatus(202);
 	}
 
 	@Test

@@ -22,49 +22,32 @@ async function openUser(page: Page, displayName: string): Promise<void> {
   await expect(page.getByRole('button', { name: t('en', 'usersAdmin.resetPassword') })).toBeVisible();
 }
 
-test('a company administrator sends reset links but cannot choose a password; a global administrator can', async ({ page, browser }) => {
+test('nobody chooses another person\'s password: administrators send the owner a reset link (ADR-016)', async ({ page, browser }) => {
   test.setTimeout(180_000);
-  await signIn(page, USERS.admin, 'en');
-  await openUser(page, 'Sami Ben Ali (Demo)');
-  // The form is not offered, and the server refuses the call made without it.
-  await expect(page.getByRole('heading', { name: t('en', 'usersAdmin.tempPassword') })).toHaveCount(0);
-  await expect(page.locator('input[formcontrolname="temporaryPassword"]')).toHaveCount(0);
-  const users = await (await page.request.get('/api/v1/admin/accounts?size=100')).json();
-  const sami = users.find((user: { email: string }) => user.email === USERS.requesterTn);
-  expect(sami, 'requester.tn in the administrator list').toBeTruthy();
-  const refused = await post(page, `/api/v1/admin/accounts/${sami.id}/temporary-password`, { temporaryPassword: 'Chosen-By-Admin-2026' });
-  expect(refused.status()).toBe(403);
+  const users = [USERS.admin, USERS.globalAdmin];
+  let samiId = 0;
+  for (const [index, who] of users.entries()) {
+    const admin = index === 0 ? page : await newUserPage(browser);
+    await signIn(admin, who, 'en');
+    await openUser(admin, 'Sami Ben Ali (Demo)');
+    // No password form for anyone; the reset link is the only action on the owner's password.
+    await expect(admin.locator('input[type="password"]')).toHaveCount(0);
+    await expect(admin.getByRole('button', { name: t('en', 'usersAdmin.resetPassword') })).toBeVisible();
+    if (!samiId) {
+      const list = await (await admin.request.get('/api/v1/admin/accounts?size=100')).json();
+      samiId = list.find((user: { email: string }) => user.email === USERS.requesterTn).id;
+    }
+    // The endpoint that let an administrator choose a password no longer exists.
+    const refused = await post(admin, `/api/v1/admin/accounts/${samiId}/temporary-password`, { temporaryPassword: 'Chosen-By-Admin-2026' });
+    expect(refused.status(), who).toBe(404);
+    if (index > 0) {
+      await admin.context().close();
+    }
+  }
   // The account still opens with its own password.
   const samiPage = await newUserPage(browser);
   await signIn(samiPage, USERS.requesterTn, 'en');
   await samiPage.context().close();
-
-  const global = await newUserPage(browser);
-  await signIn(global, USERS.globalAdmin, 'en');
-  // A throwaway account, so no demo account's password changes. The company administrator creates it and the global
-  // administrator activates it: nobody chooses a password for an account they created or one not yet active (F-1).
-  const email = `s1.e2e.${Date.now()}@demo.local`;
-  const created = await post(page, '/api/v1/admin/accounts', {
-    email,
-    displayName: `S1 E2E ${Date.now()}`,
-    companyId: sami.companyId,
-    preferredLanguage: 'en',
-    active: true,
-    roles: [],
-  });
-  expect(created.status(), await created.text()).toBe(201);
-  const account = await created.json();
-  expect((await post(global, `/api/v1/admin/accounts/${account.id}/temporary-password`, { temporaryPassword: 'Chosen-By-Global-2026' })).status()).toBe(403);
-  expect((await post(global, `/api/v1/admin/accounts/${account.id}/active`, { active: true })).status()).toBe(200);
-  await openUser(global, account.displayName);
-  await expect(global.getByRole('heading', { name: t('en', 'usersAdmin.tempPassword') })).toBeVisible();
-  // The password policy applies to what an administrator chooses.
-  expect((await post(global, `/api/v1/admin/accounts/${account.id}/temporary-password`, { temporaryPassword: 'aaaaaaaaaaaaaaaa' })).status()).toBe(400);
-  await global.locator('input[formcontrolname="temporaryPassword"]').fill('Chosen-By-Global-2026');
-  const saved = global.waitForResponse((response) => response.url().includes('/temporary-password') && response.request().method() === 'POST');
-  await global.locator('form.temp button[type="submit"]').click();
-  expect((await saved).status()).toBe(204);
-  await global.context().close();
 });
 
 test('an attachment must match its type, is shown as not virus-checked, and stays invisible to another company', async ({ page, browser }) => {

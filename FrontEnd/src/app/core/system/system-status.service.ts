@@ -32,7 +32,7 @@ export interface SystemStatus {
   };
 }
 
-/** Response of `GET /actuator/health` (components only, no details). */
+/** Response of `GET /healthz` (components only, no details): served on the application port in every environment. */
 export interface HealthReport {
   status: string;
   components?: Record<string, { status: string }>;
@@ -78,7 +78,7 @@ export class SystemStatusService {
     );
     // Actuator answers 503 with a body when a component is DOWN; we only need the component list.
     const health$ = this.http
-      .get<HealthReport>('/actuator/health')
+      .get<HealthReport>('/healthz')
       .pipe(catchError((error) => of((error?.error?.status ? error.error : null) as HealthReport | null)));
 
     return forkJoin([status$, health$]).pipe(map(([result, health]) => ({ ...result, health })));

@@ -70,6 +70,19 @@ class ObservabilityIntegrationTests extends SqlServerTestSupport {
 		assertThat(backlog.doubleValue()).isGreaterThanOrEqualTo(0);
 	}
 
+	/** Sprint 2, P1.4: /healthz answers like the actuator's health, also when the actuator moves to its own port. */
+	@Test
+	@SuppressWarnings("unchecked")
+	void healthzGivesTheSameAnswerAsTheActuator() {
+		assertThat(client().get("/healthz").expectStatus(200).body())
+			.isEqualTo(client().get("/actuator/health").expectStatus(200).body())
+			.isEqualTo("{\"status\":\"UP\"}");
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		java.util.Map<String, Object> components = sami.get("/healthz").expectStatus(200).json("$.components");
+		assertThat(components).containsKey("db");
+		assertThat((java.util.Map<String, Object>) components.get("db")).containsOnlyKeys("status");
+	}
+
 	@Test
 	void healthAnswersAnonymousCallersWithTheStatusOnlyAndNothingElseIsExposed() {
 		assertThat(client().get("/actuator/health").expectStatus(200).body()).isEqualTo("{\"status\":\"UP\"}");

@@ -43,7 +43,7 @@ describe('SystemStatusPage', () => {
 
   async function respond(statusBody: SystemStatusResponse | null, healthBody: HealthReport | null = health) {
     const statusRequest = http.expectOne('/api/v1/system/status');
-    const healthRequest = http.expectOne('/actuator/health');
+    const healthRequest = http.expectOne('/healthz');
     if (statusBody) {
       statusRequest.flush(statusBody);
     } else {
@@ -65,7 +65,7 @@ describe('SystemStatusPage', () => {
     expect(query('app-skeleton')).not.toBeNull();
 
     http.expectOne('/api/v1/system/status');
-    http.expectOne('/actuator/health');
+    http.expectOne('/healthz');
   });
 
   it('keeps skeletons and notes out of description lists', async () => {

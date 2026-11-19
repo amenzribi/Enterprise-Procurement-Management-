@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 import com.epi.procurement.platform.web.ApiProblemException;
 
 /**
@@ -24,12 +26,20 @@ final class ScanPolicy {
 
 	private final boolean allowUnscannedDownloads;
 
+	private final MeterRegistry meters;
+
+	ScanPolicy(AttachmentScanner scanner, boolean allowUnscannedDownloads) {
+		this(scanner, allowUnscannedDownloads, null);
+	}
+
 	/**
 	 * @param scanner null when the deployment has no antivirus adapter
+	 * @param meters null without metrics; otherwise {@code procurement.attachments.scans} counts each outcome
 	 */
-	ScanPolicy(AttachmentScanner scanner, boolean allowUnscannedDownloads) {
+	ScanPolicy(AttachmentScanner scanner, boolean allowUnscannedDownloads, MeterRegistry meters) {
 		this.scanner = scanner;
 		this.allowUnscannedDownloads = allowUnscannedDownloads;
+		this.meters = meters;
 		if (scanner == null) {
 			log.warn("No antivirus scanner is configured: uploaded files are stored as PENDING and {}",
 					allowUnscannedDownloads
@@ -41,6 +51,7 @@ final class ScanPolicy {
 	/** The status to store for an upload, or an exception that refuses it. */
 	String statusFor(String fileName, byte[] content) {
 		if (scanner == null) {
+			count("unscanned");
 			return "PENDING";
 		}
 		AttachmentScanner.ScanResult result;
@@ -48,16 +59,25 @@ final class ScanPolicy {
 			result = scanner.scan(fileName, content);
 		}
 		catch (RuntimeException ex) {
+			count("failed");
 			log.error("Antivirus scan failed; the upload is refused", ex);
 			throw new ApiProblemException(HttpStatus.SERVICE_UNAVAILABLE, "scan-unavailable",
 					"The file could not be checked for viruses. Try again later.");
 		}
 		if (result != AttachmentScanner.ScanResult.CLEAN) {
+			count("infected");
 			log.warn("Antivirus rejected an upload ({} bytes)", content.length);
 			throw new ApiProblemException(HttpStatus.UNPROCESSABLE_CONTENT, "file-infected",
 					"The file was rejected by the antivirus.");
 		}
+		count("clean");
 		return "CLEAN";
+	}
+
+	private void count(String outcome) {
+		if (meters != null) {
+			meters.counter("procurement.attachments.scans", "outcome", outcome).increment();
+		}
 	}
 
 	boolean downloadable(String scanStatus) {

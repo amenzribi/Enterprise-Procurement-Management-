@@ -114,6 +114,13 @@ app:
     # Without an antivirus adapter, uploaded files are stored as PENDING. They can be downloaded only when this is
     # true; outside development that is a risk the owner must accept in writing (audit S-1).
     allow-unscanned-downloads: ${APP_ALLOW_UNSCANNED_DOWNLOADS:false}
+    # ClamAV (ADR-013): clamd on the application host, loopback only. Mandatory in uat, staging, preprod and
+    # production (startup is refused without it); any scanner error refuses the upload (fail-closed).
+    clamav:
+      host: ${APP_CLAMAV_HOST:}
+      port: ${APP_CLAMAV_PORT:3310}
+      connect-timeout: PT2S
+      read-timeout: PT30S
   approval:
     # One-tap approval link lifetime (S2-AC-07).
     link-ttl: PT72H
@@ -145,12 +152,16 @@ management:
     web:
       exposure:
         # metrics: timings per endpoint, connection pool, JVM, outbox backlog, open streams (audit A-2, D-5).
-        # Everything except health and info is restricted to global administrators (SecurityConfiguration).
-        include: health,info,metrics
+        # prometheus: the same metrics for the monitoring agent (Sprint 2, P1.4).
+        # Everything except health and info is restricted to global administrators (SecurityConfiguration), except
+        # prometheus on a separate management port (MANAGEMENT_SERVER_PORT, private address; ADR-018).
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       # Anonymous callers get only {"status":"UP"|"DOWN"}; administrators see the components (S1-AC-13).
       show-components: when-authorized
+      # /healthz (HealthzController) gives the same answer on the application port, also when the actuator moves
+      # to the management port.
       show-details: when-authorized
       roles: ADMIN
       # Kubernetes liveness/readiness groups are not used yet (single node, ADR-003); enable them with the first

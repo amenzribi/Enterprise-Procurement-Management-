@@ -152,11 +152,17 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 			.toInstant(ZoneOffset.UTC);
 		assertThat(Duration.between(before, stored).abs()).isLessThan(Duration.ofMinutes(1));
 
-		assertThatThrownBy(() -> jdbc.update("UPDATE audit_event SET comment = 'tampered' WHERE id = ?", first))
+		// The application's own connection can never change history (in CI, the runtime identity is denied outright).
+		assertThatThrownBy(() -> jdbc.update("UPDATE audit_event SET comment = 'tampered' WHERE id = ?", first));
+		assertThatThrownBy(() -> jdbc.update("DELETE FROM audit_event WHERE id = ?", first));
+		assertThatThrownBy(() -> jdbc.execute("TRUNCATE TABLE audit_event"));
+		// Even the schema owner is stopped by the append-only trigger and the foreign key.
+		JdbcTemplate owner = ownerJdbc();
+		assertThatThrownBy(() -> owner.update("UPDATE audit_event SET comment = 'tampered' WHERE id = ?", first))
 			.hasMessageContaining("append-only");
-		assertThatThrownBy(() -> jdbc.update("DELETE FROM audit_event WHERE id = ?", first))
+		assertThatThrownBy(() -> owner.update("DELETE FROM audit_event WHERE id = ?", first))
 			.hasMessageContaining("append-only");
-		assertThatThrownBy(() -> jdbc.execute("TRUNCATE TABLE audit_event")).hasMessageContaining("FOREIGN KEY");
+		assertThatThrownBy(() -> owner.execute("TRUNCATE TABLE audit_event")).hasMessageContaining("FOREIGN KEY");
 		assertThat(auditLog.verifyChain("company:" + companyId).valid()).isTrue();
 	}
 
@@ -251,12 +257,13 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 				new AuditRecord(null, "Integration test", companyId, "TEST", "2", "APPROVE", "DRAFT", "APPROVED", "ok", null));
 		auditLog.record(new AuditRecord(null, "Integration test", companyId, "TEST", "2", "CLOSE", "APPROVED", "CLOSED", null, null));
 
-		jdbc.execute("DISABLE TRIGGER trg_audit_event_append_only ON audit_event");
+		JdbcTemplate owner = ownerJdbc();
+		owner.execute("DISABLE TRIGGER trg_audit_event_append_only ON audit_event");
 		try {
-			jdbc.update("UPDATE audit_event SET comment = 'changed' WHERE id = ?", target);
+			owner.update("UPDATE audit_event SET comment = 'changed' WHERE id = ?", target);
 		}
 		finally {
-			jdbc.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
+			owner.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
 		}
 
 		try {
@@ -266,12 +273,12 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 		}
 		finally {
 			// The database is shared by all integration tests: restore the original content.
-			jdbc.execute("DISABLE TRIGGER trg_audit_event_append_only ON audit_event");
+			owner.execute("DISABLE TRIGGER trg_audit_event_append_only ON audit_event");
 			try {
-				jdbc.update("UPDATE audit_event SET comment = 'ok' WHERE id = ?", target);
+				owner.update("UPDATE audit_event SET comment = 'ok' WHERE id = ?", target);
 			}
 			finally {
-				jdbc.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
+				owner.execute("ENABLE TRIGGER trg_audit_event_append_only ON audit_event");
 			}
 		}
 		assertThat(auditLog.verifyChain("company:" + companyId).valid()).isTrue();
@@ -434,9 +441,10 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 				Long.class, chainKey, hiddenSeq - 1);
 		byte[] previousHash = jdbc.queryForObject("SELECT hash FROM audit_event WHERE id = ?", byte[].class, previous);
 
-		jdbc.execute("DISABLE TRIGGER trg_audit_chain_head_forward_only ON audit_chain_head");
+		JdbcTemplate owner = ownerJdbc();
+		owner.execute("DISABLE TRIGGER trg_audit_chain_head_forward_only ON audit_chain_head");
 		try {
-			jdbc.update("UPDATE audit_chain_head SET last_seq = ?, last_hash = ?, last_event_id = ? WHERE chain_key = ?",
+			owner.update("UPDATE audit_chain_head SET last_seq = ?, last_hash = ?, last_event_id = ? WHERE chain_key = ?",
 					hiddenSeq - 1, previousHash, previous, chainKey);
 			AuditChainVerification verification = auditLog.verifyChain(chainKey);
 			assertThat(verification.valid()).isFalse();
@@ -444,9 +452,9 @@ class SqlServerIntegrationTests extends SqlServerTestSupport {
 		}
 		finally {
 			byte[] hiddenHash = jdbc.queryForObject("SELECT hash FROM audit_event WHERE id = ?", byte[].class, hidden);
-			jdbc.update("UPDATE audit_chain_head SET last_seq = ?, last_hash = ?, last_event_id = ? WHERE chain_key = ?",
+			owner.update("UPDATE audit_chain_head SET last_seq = ?, last_hash = ?, last_event_id = ? WHERE chain_key = ?",
 					hiddenSeq, hiddenHash, hidden, chainKey);
-			jdbc.execute("ENABLE TRIGGER trg_audit_chain_head_forward_only ON audit_chain_head");
+			owner.execute("ENABLE TRIGGER trg_audit_chain_head_forward_only ON audit_chain_head");
 		}
 		assertThat(auditLog.verifyChain(chainKey).valid()).isTrue();
 	}

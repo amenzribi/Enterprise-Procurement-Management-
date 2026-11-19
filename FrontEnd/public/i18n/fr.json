@@ -55,6 +55,7 @@
       "import": "Import des données",
       "users": "Utilisateurs",
       "requestAdmin": "Administration des demandes",
+      "auditCenter": "Centre d'audit",
       "changePassword": "Changer le mot de passe",
       "conversations": "Messages"
     },
@@ -267,6 +268,7 @@
     "peer-administrator": "Vous ne pouvez pas gérer un autre administrateur. Adressez-vous à un administrateur global.",
     "cannot-set-own-password": "Modifiez votre propre mot de passe depuis votre profil.",
     "scan-unavailable": "Le fichier n'a pas pu être analysé par l'antivirus. Réessayez plus tard.",
+    "verification-running": "Une vérification est déjà en cours. Attendez son résultat.",
     "absence-overlap": "Cette période chevauche une autre absence.",
     "link-invalid": "Ce lien n’est plus valide.",
     "file-too-large": "Le fichier dépasse 20 Mo.",
@@ -1063,6 +1065,66 @@
     "pair": "Paire",
     "saved": "Taux ajouté"
   },
+  "auditCenter": {
+    "title": "Centre d'audit",
+    "description": "La piste d'audit complète de toutes les sociétés, en lecture seule. Chaque recherche, export et vérification est lui-même enregistré dans la piste.",
+    "filters": {
+      "title": "Filtres",
+      "from": "Du (date UTC)",
+      "to": "Au (date UTC, incluse)",
+      "company": "Société",
+      "anyCompany": "Toutes les sociétés et les événements du groupe",
+      "actor": "Effectué par",
+      "anyActor": "N'importe qui",
+      "action": "Code d'action",
+      "entityType": "Type d'enregistrement",
+      "entityId": "Identifiant de l'enregistrement",
+      "hint": "Les codes sont exacts, en majuscules, par exemple USER_ACTIVATED ou PURCHASE_REQUEST.",
+      "search": "Rechercher",
+      "reset": "Effacer les filtres"
+    },
+    "errors": {
+      "code": "Les codes d'action et de type ne contiennent que des majuscules, des chiffres et des tirets bas."
+    },
+    "export": "Exporter en CSV",
+    "exportHint": "L'export contient les événements correspondant aux filtres appliqués, du plus récent au plus ancien, jusqu'à 50 000 lignes. Il est enregistré dans la piste.",
+    "events": "Événements",
+    "loadError": "La piste d'audit n'a pas pu être chargée.",
+    "empty": {
+      "title": "Aucun événement",
+      "message": "Aucun événement d'audit ne correspond à ces filtres."
+    },
+    "columns": {
+      "when": "Quand",
+      "company": "Société",
+      "actor": "Effectué par",
+      "action": "Action",
+      "entity": "Enregistrement",
+      "details": "Détails",
+      "chain": "Position dans la chaîne",
+      "status": "Changement de statut",
+      "comment": "Commentaire",
+      "payload": "Détails enregistrés"
+    },
+    "groupWide": "Groupe",
+    "show": "Afficher",
+    "hide": "Masquer",
+    "more": "Afficher plus",
+    "loading": "Chargement…",
+    "verification": {
+      "title": "Vérification des chaînes",
+      "start": "Vérifier la piste d'audit",
+      "outcome": {
+        "NONE": "Aucune vérification depuis le démarrage de l'application.",
+        "RUNNING": "Vérification en cours : {{chains}} chaînes sur {{total}}, {{events}} événements vérifiés.",
+        "VALID": "Toutes les chaînes sont intactes : {{chains}} chaînes, {{events}} événements vérifiés.",
+        "INVALID": "Une chaîne a été modifiée.",
+        "ERROR": "La vérification n'a pas pu aboutir. Réessayez ; en cas de nouvel échec, contactez l'administrateur de l'installation."
+      },
+      "invalidAt": "Chaîne {{chain}}, premier événement modifié {{event}}.",
+      "lastRun": "Dernière exécution par {{by}}, terminée le {{at}}."
+    }
+  },
   "attachments": {
     "title": "Pièces jointes",
     "uploading": "Envoi…",
@@ -1615,9 +1677,6 @@
       "GLOBAL_ADMIN": "Administration de l’installation (sociétés, utilisateurs, mots de passe) plus REQUEST_ADMIN contrôlé pour recherche/archivage/annulation/nettoyage des demandes dans le groupe. Ne devient pas acheteur, approbateur, messagerie fournisseur ni assistant."
     },
     "roleCombinations": "Les rôles d’approbation peuvent être combinés avec REQUESTER. BUYER et PURCHASING_MANAGER peuvent être combinés. GLOBAL_ADMIN ne doit pas servir de compte « tous les rôles ». SUPPLIER_CONTACT s’invite depuis la messagerie, pas ici.",
-    "tempPassword": "Définir un mot de passe temporaire",
-    "tempPasswordHint": "Au moins 12 caractères. L’utilisateur doit le changer à la première connexion. La valeur n’est jamais stockée en clair ni réaffichée.",
-    "tempPasswordDone": "Mot de passe temporaire défini. Demandez à l’utilisateur de se connecter et de le changer.",
     "createdPendingActivation": "Compte créé. Un autre administrateur doit l'activer ; son titulaire reçoit alors le lien d'activation."
   },
   "requestAdmin": {

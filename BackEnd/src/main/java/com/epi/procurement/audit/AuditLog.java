@@ -13,6 +13,7 @@ import javax.sql.DataSource;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -144,31 +145,78 @@ public class AuditLog {
 			return new AuditChainVerification(false, 0, null);
 		}
 		ChainState state = new ChainState();
-		jdbc.query("""
-				SELECT id, chain_seq, occurred_at, actor_user_id, actor_label, company_id, entity_type, entity_id,
-				       action, from_status, to_status, comment, payload_json, previous_hash, hash
-				FROM audit_event WHERE chain_key = ? AND chain_seq <= ? ORDER BY chain_seq""", rs -> {
-			if (state.firstInvalid != null) {
-				return;
+		jdbc.query(VERIFY_ROWS + " WHERE chain_key = ? AND chain_seq <= ? ORDER BY chain_seq",
+				(RowCallbackHandler) rs -> checkRow(rs, chainKey, state), chainKey, head.lastSeq());
+		return finish(chainKey, head, state);
+	}
+
+	/**
+	 * Same verification as {@link #verifyChain(String)}, read in batches of {@code batchSize} events, each its own
+	 * short statement outside any transaction, so a long chain never holds a transaction open (the database limit is
+	 * 30 s per transaction). Verifies up to the head read at the start; events appended meanwhile are left for the
+	 * next run. {@code progress} receives the number of events checked after each batch.
+	 */
+	public AuditChainVerification verifyChainInBatches(String chainKey, int batchSize,
+			java.util.function.LongConsumer progress) {
+		ChainHead head = jdbc.query("SELECT last_seq, last_hash FROM audit_chain_head WHERE chain_key = ?",
+				rs -> rs.next() ? new ChainHead(rs.getLong(1), rs.getBytes(2)) : null, chainKey);
+		if (head == null) {
+			return new AuditChainVerification(false, 0, null);
+		}
+		ChainState state = new ChainState();
+		long after = 0;
+		while (state.firstInvalid == null && after < head.lastSeq()) {
+			long checkedBefore = state.checked;
+			long[] lastSeq = { after };
+			jdbc.query(VERIFY_ROWS + " WHERE chain_key = ? AND chain_seq > ? AND chain_seq <= ? ORDER BY chain_seq "
+					+ "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY", (RowCallbackHandler) rs -> {
+						checkRow(rs, chainKey, state);
+						lastSeq[0] = rs.getLong("chain_seq");
+					}, chainKey, after, head.lastSeq(), batchSize);
+			if (state.checked == checkedBefore) {
+				break;
 			}
-			state.checked++;
-			long chainSeq = rs.getLong("chain_seq");
-			Instant occurredAt = rs.getObject("occurred_at", LocalDateTime.class).toInstant(ZoneOffset.UTC);
-			AuditRecord record = new AuditRecord(rs.getObject("actor_user_id", Long.class), rs.getString("actor_label"),
-					rs.getObject("company_id", Long.class), rs.getString("entity_type"), rs.getString("entity_id"),
-					rs.getString("action"), rs.getString("from_status"), rs.getString("to_status"),
-					rs.getString("comment"), rs.getString("payload_json"));
-			byte[] previousHash = rs.getBytes("previous_hash");
-			byte[] hash = rs.getBytes("hash");
-			boolean inSequence = chainSeq == state.checked;
-			boolean linked = Arrays.equals(previousHash, state.lastHash);
-			boolean intact = Arrays.equals(hash,
-					AuditHasher.hash(chainKey, chainSeq, previousHash, occurredAt, record));
-			if (!inSequence || !linked || !intact) {
-				state.firstInvalid = rs.getLong("id");
-			}
-			state.lastHash = hash;
-		}, chainKey, head.lastSeq());
+			after = lastSeq[0];
+			progress.accept(state.checked);
+		}
+		return finish(chainKey, head, state);
+	}
+
+	/** Every chain known to the trail: those with a head, and any whose events exist without one. */
+	public List<String> chainKeys() {
+		return jdbc.queryForList(
+				"SELECT chain_key FROM audit_chain_head UNION SELECT chain_key FROM audit_event ORDER BY chain_key",
+				String.class);
+	}
+
+	private static final String VERIFY_ROWS = """
+			SELECT id, chain_seq, occurred_at, actor_user_id, actor_label, company_id, entity_type, entity_id,
+			       action, from_status, to_status, comment, payload_json, previous_hash, hash
+			FROM audit_event""";
+
+	private static void checkRow(java.sql.ResultSet rs, String chainKey, ChainState state) throws java.sql.SQLException {
+		if (state.firstInvalid != null) {
+			return;
+		}
+		state.checked++;
+		long chainSeq = rs.getLong("chain_seq");
+		Instant occurredAt = rs.getObject("occurred_at", LocalDateTime.class).toInstant(ZoneOffset.UTC);
+		AuditRecord record = new AuditRecord(rs.getObject("actor_user_id", Long.class), rs.getString("actor_label"),
+				rs.getObject("company_id", Long.class), rs.getString("entity_type"), rs.getString("entity_id"),
+				rs.getString("action"), rs.getString("from_status"), rs.getString("to_status"), rs.getString("comment"),
+				rs.getString("payload_json"));
+		byte[] previousHash = rs.getBytes("previous_hash");
+		byte[] hash = rs.getBytes("hash");
+		boolean inSequence = chainSeq == state.checked;
+		boolean linked = Arrays.equals(previousHash, state.lastHash);
+		boolean intact = Arrays.equals(hash, AuditHasher.hash(chainKey, chainSeq, previousHash, occurredAt, record));
+		if (!inSequence || !linked || !intact) {
+			state.firstInvalid = rs.getLong("id");
+		}
+		state.lastHash = hash;
+	}
+
+	private AuditChainVerification finish(String chainKey, ChainHead head, ChainState state) {
 		if (state.firstInvalid == null) {
 			if (head.lastSeq() != state.checked || !Arrays.equals(head.lastHash(), state.lastHash)) {
 				// Events were removed from the end of the chain (or the head was altered).

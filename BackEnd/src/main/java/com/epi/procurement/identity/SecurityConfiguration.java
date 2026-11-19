@@ -81,14 +81,33 @@ class SecurityConfiguration {
 				// Supplier quote link (S4-AC-03): token in the body authenticates the single action.
 				.requestMatchers(HttpMethod.POST, "/api/v1/quote-links/summary", "/api/v1/quote-links/submit")
 				.permitAll()
-				.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+				.requestMatchers(HttpMethod.GET, "/actuator/health", "/healthz").permitAll()
+				// The monitoring agent scrapes Prometheus on the management port, which listens on a private address
+				// only (MANAGEMENT_SERVER_PORT, ADR-018); on the application port it stays for global administrators.
+				.requestMatchers(request -> isManagementPort(request, environment) && "/actuator/prometheus".equals(request.getRequestURI()))
+				.permitAll()
+				.requestMatchers("/actuator/prometheus").hasRole(Role.GLOBAL_ADMIN.name())
 				// Metrics describe the whole installation, not one company: global administrators only (audit A-2).
 				.requestMatchers("/actuator/metrics", "/actuator/metrics/**").hasRole(Role.GLOBAL_ADMIN.name())
+				// Audit Center (Sprint 2): the whole trail of every company, global administrators only (the service
+				// checks again).
+				.requestMatchers("/api/v1/admin/audit/**").hasRole(Role.GLOBAL_ADMIN.name())
 				.requestMatchers("/error").permitAll()
 				.requestMatchers(API_DOC_PATHS.toArray(String[]::new)).hasAnyRole(Role.ADMIN.name(),
 						Role.GLOBAL_ADMIN.name())
 				.anyRequest().authenticated());
 		return http.build();
+	}
+
+	/**
+	 * True when the request arrived on the separate management port (MANAGEMENT_SERVER_PORT), which Spring Boot
+	 * publishes as {@code local.management.port} once it listens. Never true when the actuator shares the
+	 * application port (development and tests).
+	 */
+	static boolean isManagementPort(jakarta.servlet.http.HttpServletRequest request, Environment environment) {
+		Integer management = environment.getProperty("local.management.port", Integer.class);
+		Integer server = environment.getProperty("local.server.port", Integer.class);
+		return management != null && management > 0 && !management.equals(server) && request.getLocalPort() == management;
 	}
 
 	@Bean

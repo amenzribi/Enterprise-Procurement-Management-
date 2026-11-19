@@ -151,11 +151,49 @@ class DeploymentConfigurationGuard {
 		else if ("failing".equals(mailMode)) {
 			problems.add("app.mail.mode=failing is a test hook and cannot be used in a deployed environment");
 		}
+		// Antivirus fails closed (ADR-013, owner decision 2026-11-18): never serve unscanned files in a deployed
+		// environment, and in uat and later environments never start without a scanner.
+		if (environment.getProperty("app.attachments.allow-unscanned-downloads", Boolean.class, false)) {
+			problems.add("APP_ALLOW_UNSCANNED_DOWNLOADS=true would serve files no antivirus has checked; it is refused in a "
+					+ "deployed environment");
+		}
+		if (DEPLOYED.contains(declared) && !StringUtils.hasText(text(environment, "app.attachments.clamav.host"))) {
+			problems.add("no antivirus scanner: set APP_CLAMAV_HOST (clamd on the application host) for APP_ENVIRONMENT="
+					+ declared);
+		}
+		// Monitoring (ADR-018): the actuator, Prometheus included, on its own port and a private address only.
+		if (DEPLOYED.contains(declared)) {
+			String managementPort = text(environment, "management.server.port");
+			String managementAddress = text(environment, "management.server.address").toLowerCase(Locale.ROOT);
+			if (!StringUtils.hasText(managementPort)) {
+				problems.add("no management port: set MANAGEMENT_SERVER_PORT (and MANAGEMENT_SERVER_ADDRESS to a private "
+						+ "address) so monitoring is not served on the public port");
+			}
+			else if (!privateAddress(managementAddress)) {
+				problems.add("MANAGEMENT_SERVER_ADDRESS must be a loopback or private address (it is '" + managementAddress
+						+ "'); the management port exposes metrics without signing in");
+			}
+		}
 		if (!publicUrl.startsWith("https://")) {
 			problems.add("APP_PUBLIC_BASE_URL must be the public HTTPS address of the application (it is '"
 					+ publicUrl + "')");
 		}
 		return problems;
+	}
+
+	/** Loopback or RFC 1918 private IPv4, or IPv6 loopback; never empty, a wildcard or a host name. */
+	static boolean privateAddress(String address) {
+		if (address.equals("127.0.0.1") || address.equals("::1") || address.equals("localhost")) {
+			return true;
+		}
+		Matcher ipv4 = Pattern.compile("(\\d{1,3})\\.(\\d{1,3})\\.\\d{1,3}\\.\\d{1,3}").matcher(address);
+		if (!ipv4.matches()) {
+			return false;
+		}
+		int first = Integer.parseInt(ipv4.group(1));
+		int second = Integer.parseInt(ipv4.group(2));
+		return first == 10 || first == 127 || (first == 172 && second >= 16 && second <= 31)
+				|| (first == 192 && second == 168);
 	}
 
 	/** The server name of a SQL Server JDBC URL, without instance or port; empty when it cannot be read. */

@@ -34,6 +34,17 @@ INSERT INTO @checks (expect_refused, label, stmt) VALUES
 
 DECLARE @seq INT = 1, @max INT = (SELECT MAX(seq) FROM @checks), @refused BIT, @label NVARCHAR(100), @stmt NVARCHAR(1000);
 
+-- Error 3701 means "does not exist or no permission": prove each probed object exists before trusting a refusal.
+IF OBJECT_ID('dbo.audit_event', 'U') IS NULL OR OBJECT_ID('dbo.idempotency_record', 'U') IS NULL
+    OR OBJECT_ID('dbo.flyway_schema_history', 'U') IS NULL OR OBJECT_ID('dbo.trg_audit_event_append_only', 'TR') IS NULL
+    OR OBJECT_ID('dbo.seq_attachment', 'SO') IS NULL
+BEGIN
+    SET @failed += 1;
+    PRINT 'FAIL  a probed object is missing: run the checks on a migrated database';
+END
+IF DATABASE_PRINCIPAL_ID('$(RuntimeUser)') IS NULL
+    THROW 50005, 'The runtime user does not exist in this database.', 1;
+
 EXECUTE AS USER = '$(RuntimeUser)';
 WHILE @seq <= @max
 BEGIN

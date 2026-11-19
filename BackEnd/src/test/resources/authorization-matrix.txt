@@ -11,6 +11,8 @@
 #
 # Adding an endpoint: decide who may call it, add its line, and add a test for the callers who may.
 # Reviewed 2026-11-15 (Sprint 1): 179 endpoints. No endpoint answers a foreign object with 2xx.
+# Sprint 2 (2026-11-18): Audit Center (global administrators only) and /healthz (status for anyone; component
+# statuses without details for signed-in employees, as /actuator/health; supplier contacts refused).
 
 DELETE /api/v1/admin/absences/{id}                                                   | 401   | 403   | 403
 DELETE /api/v1/admin/requests/{id}                                                   | 401   | 403   | 403
@@ -24,6 +26,10 @@ GET /api/v1/admin/approval-rules                                                
 GET /api/v1/admin/approval-rules/{id}                                                | 401   | 403   | 403
 GET /api/v1/admin/approval-rules/{id}/versions                                       | 401   | 403   | 403
 GET /api/v1/admin/approvals/awaiting-circuit                                         | 401   | 403   | 403
+GET /api/v1/admin/audit/events                                                       | 401   | 403   | 403
+GET /api/v1/admin/audit/events/export                                                | 401   | 403   | 403
+GET /api/v1/admin/audit/events/{id}                                                  | 401   | 403   | 403
+GET /api/v1/admin/audit/verifications/current                                        | 401   | 403   | 403
 GET /api/v1/admin/companies                                                          | 401   | 403   | 403
 GET /api/v1/admin/exchange-rates                                                     | 401   | 403   | 403
 GET /api/v1/admin/organization/companies                                             | 401   | 403   | 403
@@ -91,6 +97,7 @@ GET /api/v1/supplier-portal/conversations/{id}/messages                         
 GET /api/v1/suppliers                                                                | 401   | 403   | 403
 GET /api/v1/suppliers/{id}                                                           | 401   | 403   | 403
 GET /api/v1/system/status                                                            | 401   | 403   | OK     # any signed-in employee: status page (S1-AC-13)
+GET /healthz                                                                         | OK    | 403   | OK
 POST /api/v1/admin/absences                                                          | 401   | 403   | 403
 POST /api/v1/admin/accounts                                                          | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/active                                              | 401   | 403   | 403
@@ -98,10 +105,10 @@ POST /api/v1/admin/accounts/{id}/password-reset                                 
 POST /api/v1/admin/accounts/{id}/revoke-sessions                                     | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/roles                                               | 401   | 403   | 403
 POST /api/v1/admin/accounts/{id}/roles/{grantId}/remove                              | 401   | 403   | 403
-POST /api/v1/admin/accounts/{id}/temporary-password                                  | 401   | 403   | 403
 POST /api/v1/admin/approval-rules                                                    | 401   | 403   | 403
 POST /api/v1/admin/approval-rules/{id}/activate                                      | 401   | 403   | 403
 POST /api/v1/admin/approval-rules/{id}/retire                                        | 401   | 403   | 403
+POST /api/v1/admin/audit/verifications                                               | 401   | 403   | 403
 POST /api/v1/admin/exchange-rates                                                    | 401   | 403   | 403
 POST /api/v1/admin/organization/companies                                            | 401   | 403   | 403
 POST /api/v1/admin/organization/companies/{id}/cost-centres                          | 401   | 403   | 403

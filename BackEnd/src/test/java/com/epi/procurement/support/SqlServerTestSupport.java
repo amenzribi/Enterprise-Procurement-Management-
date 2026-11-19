@@ -58,6 +58,18 @@ public abstract class SqlServerTestSupport {
 		return jdbc.queryForObject("SELECT id FROM user_account WHERE email = ?", Long.class, email);
 	}
 
+	@Autowired
+	private org.flywaydb.core.Flyway flyway;
+
+	/**
+	 * The migration identity's connection (ADR-015): the schema owner, which may disable a trigger or edit an audit
+	 * event on purpose to prove that tampering is detected. Locally, with one Windows identity, it is the same
+	 * principal as {@link #jdbc}; in CI the application runs as the runtime identity, which can do neither.
+	 */
+	protected JdbcTemplate ownerJdbc() {
+		return new JdbcTemplate(flyway.getConfiguration().getDataSource());
+	}
+
 	protected long companyId(String code) {
 		return jdbc.queryForObject("SELECT id FROM company WHERE code = ?", Long.class, code);
 	}
@@ -70,9 +82,18 @@ public abstract class SqlServerTestSupport {
 			return new MutableClock();
 		}
 
+		/**
+		 * Cleans and migrates the shared test database when a context starts. A test class that needs its own context
+		 * (other properties) sets {@code test.database.clean=false}: cleaning again would reset the sequences under the
+		 * contexts already cached, whose Hibernate id blocks would then collide with new rows.
+		 */
 		@Bean
-		FlywayMigrationStrategy cleanThenMigrate() {
+		FlywayMigrationStrategy cleanThenMigrate(org.springframework.core.env.Environment environment) {
 			return flyway -> {
+				if (!environment.getProperty("test.database.clean", Boolean.class, true)) {
+					flyway.migrate();
+					return;
+				}
 				String database = new JdbcTemplate(flyway.getConfiguration().getDataSource())
 					.queryForObject("SELECT DB_NAME()", String.class);
 				if (database == null || !database.endsWith("_test")) {

@@ -194,6 +194,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/approval-rules').then((m) => m.ApprovalRulesPage),
       },
       {
+        path: 'admin/audit',
+        title: 'auditCenter.title',
+        canActivate: [permissionGuard('AUDIT_VIEW')],
+        loadComponent: () => import('./features/admin/audit-center').then((m) => m.AuditCenterPage),
+      },
+      {
         path: 'admin/exchange-rates',
         title: 'rates.title',
         canActivate: [permissionGuard('SYSTEM_ADMIN')],

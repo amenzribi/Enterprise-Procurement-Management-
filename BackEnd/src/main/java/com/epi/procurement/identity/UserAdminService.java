@@ -225,49 +225,6 @@ public class UserAdminService {
 		publishPasswordSetup(userId, "RESET", actor, account.displayName(), account.companyId());
 	}
 
-	/**
-	 * Sets a temporary password and forces change at next sign-in. The clear-text value is never logged or returned.
-	 * <p>
-	 * Whoever chooses a password can sign in as its owner, so this is reserved for global administrators and never
-	 * applies to one's own account (audit S-4). Company administrators use the reset link, which shows the secret
-	 * only to the account owner.
-	 */
-	@Transactional
-	public void setTemporaryPassword(CurrentUser actor, long userId, String temporaryPassword) {
-		requireUserAdmin(actor);
-		if (!actor.isGlobalAdmin()) {
-			throw new ApiProblemException(HttpStatus.FORBIDDEN, "forbidden",
-					"Only a global administrator can set a temporary password. Send a reset link instead.");
-		}
-		UserAdminStore.AccountRow account = store.findAccount(userId)
-			.orElseThrow(() -> new ApiProblemException(HttpStatus.NOT_FOUND, "not-found", "User not found."));
-		assertCanManage(actor, account);
-		if (actor.id() == userId) {
-			throw new ApiProblemException(HttpStatus.CONFLICT, "cannot-set-own-password",
-					"Change your own password from your profile.");
-		}
-		// Whoever chooses a password can act as its owner. Never on an account not yet activated, nor on one this
-		// administrator created (directly or through an account they created): the owner's set-up link is the only
-		// first credential (review of F-1, finding 4).
-		if (!account.active() || directory.createdBy(userId, actor.id())) {
-			throw new ApiProblemException(HttpStatus.FORBIDDEN, "use-reset-link",
-					"Send this account a set-up or reset link instead.");
-		}
-		// For an account that approves, buys, receives or administers, only the reset link sent to the owner is
-		// allowed (F-3, ADR-016 direction).
-		if (store.listGrants(userId).stream().map(g -> Role.parse(g.role()).orElse(null)).anyMatch(
-				r -> r != null && r.requiresFourEyes())) {
-			throw new ApiProblemException(HttpStatus.FORBIDDEN, "use-reset-link",
-					"This account holds a sensitive role. Send a password reset link instead.");
-		}
-		passwordPolicy.validate(temporaryPassword);
-		credentials.savePasswordHash(userId, encoder.encode(temporaryPassword), true);
-		store.bumpCredentialsVersion(userId);
-		auditLog.record(new AuditRecord(actor.id(), actor.email(), account.companyId(), "USER_ACCOUNT",
-				Long.toString(userId), "TEMPORARY_PASSWORD_SET", null, null, null,
-				"{\"mustChangePassword\":true}"));
-	}
-
 	private void publishPasswordSetup(long userId, String purpose, CurrentUser actor, String displayName,
 			long companyId) {
 		events.publishEvent(new PasswordSetupRequested(userId, purpose, actor.id(), actor.email(), companyId,

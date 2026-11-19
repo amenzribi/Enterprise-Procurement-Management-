@@ -88,16 +88,17 @@ class MessagingStore {
 		return id;
 	}
 
+	/**
+	 * Adds the participant once. Check and insert are one statement holding a key-range lock (UPDLOCK, HOLDLOCK), so
+	 * two simultaneous first reads no longer both insert (the second failed with a duplicate key: Sprint 2 browser run).
+	 */
 	void ensureParticipant(long conversationId, long userId, String kind) {
-		Integer n = jdbc.queryForObject(
-				"SELECT COUNT(*) FROM conversation_participant WHERE conversation_id = ? AND user_id = ?",
-				Integer.class, conversationId, userId);
-		if (n != null && n > 0) {
-			return;
-		}
 		jdbc.update("""
 				INSERT INTO conversation_participant (conversation_id, user_id, participant_kind)
-				VALUES (?, ?, ?)""", conversationId, userId, kind);
+				SELECT ?, ?, ?
+				WHERE NOT EXISTS (SELECT 1 FROM conversation_participant WITH (UPDLOCK, HOLDLOCK)
+				                  WHERE conversation_id = ? AND user_id = ?)""", conversationId, userId, kind,
+				conversationId, userId);
 	}
 
 	List<MessagingViews.ConversationSummary> listForBuyer(long buyingCompanyId, Long supplierId) {

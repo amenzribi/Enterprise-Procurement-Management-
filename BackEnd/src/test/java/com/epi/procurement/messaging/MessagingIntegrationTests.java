@@ -89,6 +89,47 @@ class MessagingIntegrationTests extends SqlServerTestSupport {
 				"supplier-portal-only");
 	}
 
+	/**
+	 * Sprint 2 browser run: the supplier page marked a conversation read twice at once; the second call failed with a
+	 * duplicate participant row (500). Concurrent first reads must all succeed and add one participant.
+	 */
+	@Test
+	void concurrentFirstReadsByTheSupplierAddOneParticipantWithoutError() throws Exception {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long requestId = accept(assign(approve(submit(sami, request("Messaging read race")))));
+		ApiClient ines = signedIn("buyer@demo.local");
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		long rfqId = ((Number) ines.post("/api/v1/sourcing/requests/" + requestId + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + skf + "]}").expectStatus(200).json("$.id")).longValue();
+		long conversationId = ((Number) ines.post("/api/v1/messaging/conversations",
+				"{\"contextType\":\"RFQ\",\"contextId\":" + rfqId + ",\"supplierId\":" + skf + "}")
+			.expectStatus(200)
+			.json("$.id")).longValue();
+		long messageId = ((Number) ines.post("/api/v1/messaging/conversations/" + conversationId + "/messages",
+				"{\"audience\":\"EXTERNAL\",\"bodyText\":\"Read me\",\"clientMessageId\":\"" + UUID.randomUUID() + "\"}")
+			.expectStatus(201)
+			.json("$.id")).longValue();
+
+		ApiClient contact = signedIn("contact.skf@demo.local");
+		long contactId = userId("contact.skf@demo.local");
+		java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(6);
+		try {
+			java.util.List<java.util.concurrent.Callable<Integer>> reads = new java.util.ArrayList<>();
+			for (int i = 0; i < 6; i++) {
+				reads.add(() -> contact.post("/api/v1/supplier-portal/conversations/" + conversationId + "/read",
+						"{\"messageId\":" + messageId + "}").status());
+			}
+			for (java.util.concurrent.Future<Integer> read : pool.invokeAll(reads)) {
+				assertThat(read.get()).isEqualTo(204);
+			}
+		}
+		finally {
+			pool.shutdownNow();
+		}
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM conversation_participant WHERE conversation_id = ? AND user_id = ?",
+				Integer.class, conversationId, contactId)).isEqualTo(1);
+	}
+
 	@Test
 	void inviteRejectsInternalAccountsAndUnknownSuppliers() {
 		ApiClient ines = signedIn("buyer@demo.local");

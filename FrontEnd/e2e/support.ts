@@ -177,6 +177,53 @@ export async function approvalLink(
 }
 
 /**
+ * Waits for the newest e-mail to `recipient` after `since` that carries a `/<prefix>#<token>` link (`p`: password
+ * set-up or reset, `e`: e-mail correction) and returns that path-and-fragment, ready for `page.goto`. The outbox is
+ * flushed through the test hook first. Fails if the e-mail still carries an unresolved `{{link:` placeholder.
+ */
+export async function mailedLink(
+  browser: Browser,
+  recipient: string,
+  prefix: 'p' | 'e',
+  since: number,
+  timeoutMs = 30_000,
+): Promise<string> {
+  await runBackgroundJobs(browser);
+  const pattern = new RegExp(`/${prefix}#([A-Za-z0-9_-]{20,512})`);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    let files: string[] = [];
+    try {
+      files = readdirSync(MAIL_DIR).filter((name) => name.endsWith('.eml'));
+    } catch {
+      // The folder appears with the first e-mail.
+    }
+    const candidates = files
+      .map((name) => join(MAIL_DIR, name))
+      .filter((path) => statSync(path).mtimeMs >= since - 1000)
+      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+    for (const path of candidates) {
+      const mail = readMail(path);
+      if (!mail.toLowerCase().includes(`to: ${recipient.toLowerCase()}`)) {
+        continue;
+      }
+      expect(mail, `unresolved link placeholder in the e-mail to ${recipient}`).not.toContain('{{link:');
+      const match = pattern.exec(mail);
+      if (match) {
+        return `/${prefix}#${match[1]}`;
+      }
+    }
+    await new Promise((done) => setTimeout(done, 1000));
+  }
+  throw new Error(`No /${prefix}# link in an e-mail to ${recipient} in ${MAIL_DIR}`);
+}
+
+/** The e-mail correction link sent to the NEW address (Sprint 2, ADR-016 step 5). */
+export function emailChangeLink(browser: Browser, recipient: string, since: number): Promise<string> {
+  return mailedLink(browser, recipient, 'e', since);
+}
+
+/**
  * Creates a request with one line (quantity × unit price, in the company currency) and submits it through the
  * approval preview. Returns its id and number.
  */

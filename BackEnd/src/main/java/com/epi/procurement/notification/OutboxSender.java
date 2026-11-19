@@ -42,7 +42,13 @@ public class OutboxSender {
 
 	static final int STALE_CLAIM_MINUTES = 5;
 
-	private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{link:([a-z]+)((?::[0-9]+)*)\\}\\}");
+	/**
+	 * One definition with {@link NoticeLinkResolver#placeholder}: kinds contain hyphens ({@code password-reset},
+	 * {@code email-change}) and arguments codes ({@code SETUP}). The earlier pattern accepted neither, so set-up, reset
+	 * and e-mail correction mails carried the raw placeholder instead of a link (found in Sprint 2).
+	 */
+	private static final Pattern PLACEHOLDER = Pattern.compile(
+			"\\{\\{link:(" + NoticeLinkResolver.KIND + ")((?::" + NoticeLinkResolver.ARG + ")*)\\}\\}");
 
 	private static final Logger log = LoggerFactory.getLogger(OutboxSender.class);
 

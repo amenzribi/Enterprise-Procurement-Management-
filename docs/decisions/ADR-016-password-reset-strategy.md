@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Direction approved** by the owner on 2026-11-16: reset links only (option A). Sprint 1 restricted temporary passwords to global administrators; their removal is **not implemented yet**. Plan: `ADR-013-to-017-implementation-plans.md` |
+| Status | **Direction approved** by the owner on 2026-11-16: reset links only (option A). Sprint 1 restricted temporary passwords to global administrators. **Implemented in Sprint 2, P1.5 (2026-11-18, not yet committed):** endpoint, form and translations removed (plan steps 2, 3, 6); the reset e-mail says whether an administrator or the owner asked, and the Arabic set-up and reset e-mails are readable again (step 4). Step 5 implemented in the Sprint 2 P1 stabilization (2026-11-18, not yet committed): a global administrator requests the correction, a second global administrator approves it for sensitive accounts, and only the owner of the new mailbox makes it effective through a single-use link (migration V26). Open: step 1 (e-mail delivery proven in UAT, decision D9). Plan: `ADR-013-to-017-implementation-plans.md` |
 | Date | 2026-11-16 |
 | Sprint | 1 (hardening) |
 | Audit | S-4, S-10 |

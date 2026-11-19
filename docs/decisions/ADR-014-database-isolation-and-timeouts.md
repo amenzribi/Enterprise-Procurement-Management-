@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Timeouts: applied in Sprint 1. `READ_COMMITTED_SNAPSHOT`: **direction approved** on 2026-11-16 for testing on a database copy; **not enabled on any database**; enabling needs a separate approval per database. Plan: `ADR-013-to-017-implementation-plans.md` |
+| Status | Timeouts: applied in Sprint 1. `READ_COMMITTED_SNAPSHOT`: **direction approved** on 2026-11-16 for testing on a database copy; **not enabled on any database**; enabling needs a separate approval per database. **Tested on a disposable database (Sprint 2, P1.6, 2026-11-18): 321/324; it breaks the document counter's "create if missing" check and gap-free numbering under concurrency (`docs/sprints/sprint-02-progress.md`, finding 1). Do not enable until those checks read with an explicit lock.** Plan: `ADR-013-to-017-implementation-plans.md` |
 | Date | 2026-11-16 |
 | Sprint | 1 (hardening) |
 | Audit | DB-3, P-1 (`docs/audit/05-database-review.md`, `04`) |

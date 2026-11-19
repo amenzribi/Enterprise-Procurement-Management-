@@ -1,48 +1,63 @@
 <!-- checkpoint:start -->
-# Handoff: Sprint 1 closed (2026-11-18); three commits approved and being pushed to `enterprise/feat/internal-messaging`
+# Handoff: Sprint 2 P1 committed locally (five commits, 2026-11-19); push awaiting approval
 
-**Resume here.** Read `CLAUDE.md`, this section, `STATUS.md`, then `docs/sprints/sprint-01-progress.md` (section "F-1, F-2, F-5") and `docs/sprints/sprint-01-test-results.md` section 8. Nothing is committed or pushed. Do not commit, push, deploy or start Sprint 2 without the owner's approval.
+**Resume here.** Read `CLAUDE.md`, this section, `STATUS.md`, `docs/sprints/sprint-02-plan.md` and `docs/sprints/sprint-02-progress.md`. Do not commit, push, deploy, merge, create cloud resources or start P2 without the owner's approval. A copy of this block is kept in `C:/qa/checkpoints/` (STATUS.md and HANDOFF.md were found reverted to older content on 2026-11-18 evening; cause unknown; rebuilt from the session record).
 
 | Item | Value |
 |---|---|
-| Branch | `feat/internal-messaging`, base `c7b901d`; all changes uncommitted |
-| State | F-1, F-2, F-5 implemented (no migration, no new state), fourth independent review done and fixed; backend 298/298, frontend lint, 255/255, build |
-| Remaining | Owner approved closure and the current invoice rules (no third person). Git preparation: verify the 3-commit split, test commit 1 alone in a temporary worktree (`C:/qa/wt-msg`), migrations order, mixed files, exclusions, secret scan; then present file lists and commands and WAIT for approval. Push only to `enterprise/feat/internal-messaging`. **Progress 2026-11-18:** split verified from the tested messaging trees (`bb5bdd80`, `eaec3f50`): commit 1 = 51 files (tree `a80b3fff`), commit 2 = 84, commit 3 = 31, excluded 4; migrations V22 in commit 1, V23 and V24 in commit 2; secret scan clean; commit 1 frontend in worktree `C:/qa/wt-msg`: lint, 253/253, build pass; backend `verify -Pdb-it` on its own database **208/208, V22 applied, at v22** (`C:/qa/c1-backend.log`). Worktree and test database removed. Plan script (not run) and file lists: `C:/qa/git-plan/`. **Owner approved the plan and the push on 2026-11-18** (no merge, no deploy, no Sprint 2). After the push: commit hashes, push result and CI status are recorded in the working copy of this file and STATUS.md (not in a further commit without permission). |
+| Branch | local `sprint-2` from `72a2280`; remote `enterprise/feat/internal-messaging` at `72a2280` (CI green, run 44276571868) |
+| Recovery references | `refs/backup/sprint1/branch-before-commits` (`c7b901d`), `refs/backup/sprint1/working-tree-before-commits` (`79c60d8`), `refs/backup/sprint1/before-stabilization` (`b92cb3f`) |
+| Not to commit | `FrontEnd/angular.json` (CLI analytics ID), `docs/tooling.md`, `.anchor/`, `docs/superpowers/` |
 
-## Done for F-1, F-2, F-5
+## Sprint 2 P1 (implemented, uncommitted)
 
-- F-1: accounts created inactive; the creator, or an administrator the creator created, cannot activate (403 `four-eyes`); set-up link sent at activation; audit `USER_CREATED`, `USER_ACTIVATED`, `PASSWORD_SETUP_ISSUED`.
-- F-2: ADMIN and GLOBAL_ADMIN never granted by the creator nor to oneself (`Role.requiresFourEyes`); bootstrap of two global administrators (`GLOBAL_ADMIN_BOOTSTRAP_SECOND_EMAIL`), audited `GLOBAL_ADMIN_BOOTSTRAPPED`.
-- F-5: `buyer-is-requester` (assign, accept), `buyer-cannot-receive` (receipt create/confirm, service acceptance), `invoice-recorder` (attest, pay; recording never attests or pays), `payment-needs-manager`.
-- Docs: README (bootstrap, administration rules, procurement separation of duties), CLAUDE.md = AGENTS.md.
-- Frontend: 255/255, lint clean, build succeeds.
+| Step | Main files | Evidence |
+|---|---|---|
+| P1.1 ClamAV fail-closed | `document/ClamAvScanner`, `ClamAvConfiguration`, `ScanPolicy` (counters), `DeploymentConfigurationGuard`, `application.yml` (`APP_CLAMAV_HOST`) | ClamAvScannerTests 8, guard tests |
+| P1.2 Two DB identities | `.github/workflows/ci.yml`, `scripts/db/grant-application-roles.sql`, `verify-runtime-permissions.sql`, `SqlServerTestSupport.ownerJdbc()`, `SqlServerIntegrationTests` | 12/12 checks on a disposable copy; suite as runtime identity only in CI (needs a push) |
+| P1.3 Audit Center | `auditcenter/*`, `audit/AuditSearch`, `AuditLog.verifyChainInBatches`, `V25__audit_event_time_index.sql`, `SecurityConfiguration`, `MeAssembler` (`AUDIT_VIEW`), `FrontEnd/.../admin/audit-center*`, i18n | AuditCenterIntegrationTests 6, frontend spec 4 |
+| P1.4 Monitoring | `pom.xml` (Prometheus registry), `SecurityConfiguration.isManagementPort`, `platform/web/HealthzController`, guard (`MANAGEMENT_SERVER_*`), `system-status.service.ts`, proxy files | ManagementPortIntegrationTests 3, Observability 6 |
+| P1.5 ADR-016 | `UserAdminController/Service/Views`, `users-admin.ts`, i18n, `PasswordResetMailListener` (`PASSWORD_RESET_SELF`), `messages*.properties` (nine Arabic keys repaired), `e2e/sprint-01-hardening.spec.ts` | PasswordMailTests 2, AdministratorLimits |
+| P1.6 Snapshot isolation | `ReadIsolationIntegrationTests`; ADR-014 status | Disposable copy 321/324 before stabilisation |
 
-## Independent review of F-1/F-2/F-5 (done) and its fixes (applied, affected tests pass)
+## Stabilisation (owner approved 2026-11-18)
 
-Review result: 5 Major, 3 Minor, 1 Info (to be recorded in `docs/reviews/sprint-01-independent-review.md`). Full backend on the code *before* these fixes: **293/293** (`C:/qa/s1/f125-full.log`).
+1. **Snapshot-safe first writers and 2. first-writer 503: done.** `request/FirstWriterConcurrencyIntegrationTests` reproduced, before the fix, 503 `busy` in normal mode and a duplicate document counter under READ_COMMITTED_SNAPSHOT. Fix: the existence check of `createCounterIfMissing` (Request, Po, Shipment, Receipt numbering) and of `AuditLog.createHeadIfMissing` reads `WITH (READUNCOMMITTED)`, and the row is re-created at most three times if the first writer rolled back. After: FirstWriter 3/3, RequestSubmission 4/4, SqlServerIntegration 20/20 in normal mode and on the disposable snapshot database. Gap-free numbering verified: rollback reuses the number, increments are serialised on the counter row, numbered requests are never deleted (javadoc of `RequestNumbering`).
+3. **Global Administrator e-mail correction: done.** `identity/EmailChange{Service,Store,Controller,Tokens}`, events `EmailChangeVerificationRequested`/`EmailAddressChanged`, `notification/EmailChange{LinkResolver,MailListener}`, `Notifications.enqueueToAddress`, migration `V26__account_email_change.sql`, `UserAdminService` (activation and reset links refused with `email-change-pending` while open), `SecurityConfiguration` (public `POST /api/v1/auth/email-change/confirm`), matrix lines; frontend: section in `users-admin.ts` (permission `USER_ADMIN_GLOBAL`), public page `features/auth/email-change-confirm.ts` at `/e` (token posted only on click), `safe-return-url.ts` excludes `/e`, i18n en/fr/ar; approval refusal code `email-change-four-eyes`. Tests: `EmailChangeIntegrationTests` 5, `users-admin.spec.ts` 3, `email-change-confirm.spec.ts` 4, `e2e/sprint-02-email-change.spec.ts` 2 (passes alone). README rule row; ADR-016 status.
+4. **Validation: all done except one clean complete browser run.**
+   - Backend full suite **337/337** (`C:/qa/s1/p1-final-full3.log`, all fixes included; jar in `C:/qa/s1/BackEnd/target`).
+   - Disposable RCSI database: FirstWriter, RequestSubmission, ReadIsolation, EmailChange, SqlServerIntegration **33/33**; database **dropped**.
+   - Frontend: lint clean, **268/268**, build OK (two budget warnings that predate Sprint 1). Lint rerun clean after the last e2e changes.
+   - Live probes: `/healthz` and `/actuator/health` answer only `{"status":"UP"}`; `/actuator/prometheus`, `/env`, `/loggers`, `/api/v1/admin/audit/events` answer 401 anonymously.
+   - Secret scan of diff and new files: clean (only deliberately refused test values).
+   - **Browser run 1** (22:21–22:59): 68/71, invalid. The machine slept 22:29–22:40 (the keep-awake call in `C:/qa/s1/e2e/run-full.ps1` threw a cast error and never took effect; **fixed** with `[uint32]`). It found three real defects, all fixed test-first (red, then green):
+     - **S5** the application did not start with background jobs on (`AuditCenter` executor ambiguous). Fixed with `@Qualifier("applicationTaskExecutor")`; `auditcenter/AuditCenterWiringTests`.
+     - **S6, present since Sprint 10 (`6046316`):** set-up and reset e-mails carried the raw `{{link:password-reset:...}}` text (the sender pattern rejected a hyphenated kind and the `SETUP` argument). Fixed: `NoticeLinkResolver.KIND`/`ARG` shared with `OutboxSender.PLACEHOLDER`; `placeholder()` refuses unmatched kinds. Tests: `notification/MailLinkIntegrationTests` 3 (links redeemed from the .eml files) and `support/SentMail` helper.
+     - **S7** a supplier contact's two simultaneous first "mark as read" calls gave 500 (duplicate participant). Fixed: `MessagingStore.ensureParticipant` is one locked `INSERT ... WHERE NOT EXISTS (UPDLOCK, HOLDLOCK)`; test in `MessagingIntegrationTests`.
+     - One sign-in failure at 22:25 during host-wide slowness (no lock refusal); not reproduced; cause not proven.
+   - **Browser run 2** (23:50–00:23, no sleep, clean backend log): **70/71**. The only failure was a locator in the new e-mail spec (`getByRole('status')` also matched the toast region); fixed (`locator('main')`), and the spec then passed alone 2/2. Logs: `C:/qa/s1/e2e/pw-run2-70of71.log`, `backend-run2.log`.
+   - **Browser run 3** was started on a fresh database and **stopped by the owner's request** at 00:45 after about 33 tests: no result.
+   - **2026-11-19:** added `e2e/sprint-02-mail-links.spec.ts` (2 tests: set-up, administrator reset and self-service reset links followed from the e-mail files) and a generic `mailedLink` helper in `e2e/support.ts`. **Browser run 4 (08:15–08:40): 73/73**, one uninterrupted run, fresh database, keep-awake confirmed (`C:/qa/s1/e2e/keep-awake.txt`), no sleep event, no 5xx, 187 e-mails with no unresolved placeholder. Archived: `C:/qa/s1/e2e/pw-run4-73of73.{log,json}`, `backend-run4.log`. Instance stopped; `docs/qa/evidence` and `docs/design/verification` untouched. Secret scan clean.
+5. **Done 2026-11-19: five local commits on `sprint-2`** (`794e1b3`, `e4e8cef`, `cfcccd4`, `3235287`, then the documentation commit); recovery reference `refs/backup/sprint2/working-tree-before-commits` (`4770f92`). **Resume here: the owner decides on the push** (to `enterprise/feat/internal-messaging` or a new remote branch; never `main`), then CI proves P1.2. Open: the commit-1-only observation on `ApprovalIntegrationTests` (see the progress report); database decision: SQL Server 2022, PostgreSQL deferred (ADR-001 note). How the commits were made:
+   1. Stage each commit from intermediate blobs (`git hash-object -w` + `git update-index --cacheinfo`), without touching the working tree.
+   2. Check that each intermediate tree compiles and passes its targeted tests, in a copy outside the workspace.
+   3. Then commit and, only if approved, push.
 
-Code fixes already applied (not yet tested):
-1. Requester refused (403 `buyer-is-requester`) in `OrderingService.requireAwardActor`, `SourcingService.requireCanOpen` and `requireSourcingActor`, `LogisticsService.requireActor`.
-2. `ReceiptService.markInvoicePaid`: refuses the attester (audit `INVOICE_MATCH_ATTESTED` actor) and the buyer (assigned or PO issuer), 403 `payment-not-independent`; `attestInvoiceMatch` refuses the payer.
-3. `UserDirectory.createdBy` now follows the creation chain (`creationChain`, depth 5); activation refuses anyone in the chain.
-4. `setTemporaryPassword`: 403 `use-reset-link` on inactive accounts and on accounts in the actor's creation chain.
-5. `acceptShortfall` and a closure waiver refuse the buyer; `requireNotBuyer` also covers the PO issuer (`ReceiptStore.poIssuer`).
-6. Roles given at creation are audited (`ROLE_GRANTED`).
+   The plan, in order:
+      1. pre-existing defects S6 and S7 (mail links, messaging race: `OutboxSender`, `NoticeLinkResolver`, `MessagingStore`, `SentMail`, `MailLinkIntegrationTests`, `MessagingIntegrationTests`, `e2e/support.ts`, `e2e/sprint-02-mail-links.spec.ts`);
+      2. P1.1–P1.6 (including the S5 fix and `AuditCenterWiringTests`);
+      3. concurrency stabilisation S1–S3 (four numbering classes, the `AuditLog` head creation, `FirstWriterConcurrencyIntegrationTests`);
+      4. e-mail correction S4 (V26);
+      5. documents.
 
-Tests adapted, 5 regression tests added; affected classes 87/87; **full backend 298/298** (`C:/qa/s1/r4-full.log`); frontend lint, 255/255, build. Review recorded in `docs/reviews/sprint-01-independent-review.md`; final report written in `docs/sprints/sprint-01-remediation-report.md` except `BROWSER_RESULT`. Browser attempt 1: 67/69 (two test defects, fixed: `ordering-logistics-journey` checkbox, `support.ts` sign-in race; log `pw-r4-attempt1.log`). Attempt 2: 68/69 (`request-to-closure-20-step` receipt-panel helper reloaded too fast under load; fixed in it and in `ordering-logistics-journey`; log `pw-r4-attempt2.log`). Attempt 3: 67/69 (two test time limits, raised; `pw-r4-attempt3.log`). Attempt 4: 67/69 (time limits in two other tests; OneDrive sync uses a full core). **2026-11-18: attempt 6 67/69 (time limits under load); attempt 7 69/69, 0 flaky, 25.7 min, uninterrupted (`C:/qa/s1/e2e/pw-final.log`). Instance stopped; evidence folders unchanged. Final report complete.** Earlier: paused by the owner at 00:05 on 2026-11-18 during attempt 5 (stopped; no result; instance stopped, nothing running, evidence folders unchanged). **To resume:** if possible pause OneDrive sync (owner's choice), then `& C:/qa/s1/e2e/start-instance.ps1` and `& C:/qa/s1/e2e/run-full.ps1` (screenshots go to `C:/qa/s1/e2e/evidence` and `verification`); on a clean 69/69 fill `BROWSER_RESULT` in `docs/sprints/sprint-01-remediation-report.md` section 4 and present the GO/NO-GO and commit plan. If the backend code changes, rerun `verify -Pdb-it` first (it builds the jar). Old note (started 00:01 on 2026-11-18, `C:/qa/s1/e2e/pw-final.log`, exit in `pw-final.exit`). After it: check System log for sleep events, stop java on :8085 and ng on :4205, `git checkout -- docs/qa/evidence docs/design/verification`, fill BROWSER_RESULT, present report.
-
-## Notes
-
-- `FrontEnd/angular.json` carries an Angular CLI analytics ID written by a tool run on 2026-11-16; not project work; keep it out of commits.
-- Local leftovers: database `procurement_qa_s1val` (test only); logs under `C:\qa\s1`.
+      Files shared between commits (staged per commit as intermediate blobs, without touching the working tree): `AuditLog` (P1 and S1), `SecurityConfiguration`, `UserAdminService`, `authorization-matrix.txt`, `AuthorizationMatrixIntegrationTests`, `messages*.properties`, `users-admin.ts`, `i18n/*.json` (P1 and S4). Verify each intermediate tree compiles and passes its targeted tests before proposing it.
 
 ## Commands
 
 ```powershell
-& C:/qa/s1/run.ps1 <log-name> verify -Pdb-it                       # full backend suite (copy outside the workspace)
+& C:/qa/s1/run.ps1 <log-name> verify -Pdb-it          # full backend suite (copy outside the workspace)
 cd FrontEnd; npm run lint; npm test; npm run build
-& C:/qa/s1/e2e/start-instance.ps1                                  # fresh test database + instance (:8085, :4205), after a verify run
-& C:/qa/s1/e2e/run-full.ps1                                        # full browser run; then stop java/ng and restore docs/qa/evidence, docs/design/verification
+& C:/qa/s1/e2e/start-instance.ps1; & C:/qa/s1/e2e/run-full.ps1   # browser suite, fresh database
 ```
 <!-- checkpoint:end -->
 

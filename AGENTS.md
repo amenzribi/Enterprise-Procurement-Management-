@@ -9,7 +9,7 @@ Functional reference: Solution Guide v3.0 (`docs/specification/…_Solution_Guid
 
 - Backend: Java 21, Spring Boot 4.1, Spring Modulith, JPA/Hibernate 7, Flyway, Maven Wrapper — `BackEnd/`
 - Frontend: Angular 22 (standalone, signals, zoneless, OnPush), Angular CDK, ngx-translate, Vitest — `FrontEnd/`
-- Database: Microsoft SQL Server only (ADR-001). Never H2/PostgreSQL, including in tests.
+- Database: Microsoft SQL Server only (ADR-001). Never H2/PostgreSQL, including in tests. PostgreSQL is deferred to a future experimental branch (owner, 2026-11-19): in new code prefer portable SQL and keep SQL Server-specific constructs (lock hints, `sp_getapplock`, `OUTPUT`, `TOP`, error numbers) to where they are needed; do not rewrite tested code only for portability.
 - No React or second frontend framework. No new infrastructure (queues, search engines, BPMN engines) without an ADR (ADR-003).
 
 ## Commands (PowerShell)

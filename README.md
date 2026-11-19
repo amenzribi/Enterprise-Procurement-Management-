@@ -141,9 +141,11 @@ Nothing has been deployed yet; the rules below are what the code enforces.
 | `uat`, `staging`, `preprod`, `production` | Neither development profiles nor `demo` | Deployed rules below. Any other value is refused |
 
 Deployed rules: secure session cookies (`app.security.cookie-secure` and `server.servlet.session.cookie.secure`), no
-testing hooks, no API documentation, `MAIL_MODE` stated, `APP_PUBLIC_BASE_URL` in HTTPS.
-Not checked yet: `APP_ALLOW_UNSCANNED_DOWNLOADS=true` and an empty `APP_TRUSTED_PROXIES` behind a proxy are accepted;
-both are the operator's responsibility (see the table below).
+testing hooks, no API documentation, `MAIL_MODE` stated, `APP_PUBLIC_BASE_URL` in HTTPS, no unscanned downloads,
+and in uat, staging, preprod and production an antivirus scanner (`APP_CLAMAV_HOST`) and a private management port
+(`MANAGEMENT_SERVER_PORT`, `MANAGEMENT_SERVER_ADDRESS`).
+Not checked yet: an empty `APP_TRUSTED_PROXIES` behind a proxy is accepted; it is the operator's responsibility (see
+the table below).
 
 | Variable | Required | Meaning |
 |---|---|---|
@@ -153,7 +155,9 @@ both are the operator's responsibility (see the table below).
 | `APP_PUBLIC_BASE_URL` | Yes, HTTPS | Public address of the application, used in e-mail links |
 | `MAIL_MODE` | Yes | `smtp` (with `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`) or `file`. There is no default: `file` writes e-mails, which contain live links, to `MAIL_DIRECTORY` |
 | `APP_TRUSTED_PROXIES` | Behind a reverse proxy | The proxy's address as the application sees it. Without it every user shares the proxy's address for rate limits |
-| `APP_ALLOW_UNSCANNED_DOWNLOADS` | No | Leave unset. Without an antivirus scanner (ADR-013) uploaded files are stored as `PENDING` and cannot be downloaded; `true` allows unscanned downloads and is a risk to accept in writing |
+| `MANAGEMENT_SERVER_PORT`, `MANAGEMENT_SERVER_ADDRESS` | **Yes** in uat, staging, preprod, production | Moves the actuator, Prometheus included, to its own port on a loopback or private address (ADR-018); the monitoring agent reads `/actuator/prometheus` there without signing in. Health stays on the application port at `/healthz` (System status page, uptime check). Never route the management port through the public proxy |
+| `APP_CLAMAV_HOST`, `APP_CLAMAV_PORT` | **Yes** in uat, staging, preprod, production | ClamAV `clamd` (ADR-013), normally `127.0.0.1` and `3310`, loopback only. Startup is refused without it in those environments; any scanner error refuses the upload (fail-closed) |
+| `APP_ALLOW_UNSCANNED_DOWNLOADS` | No | Development only. Refused at startup in every deployed environment (`demo` included). Without a scanner, files stay `PENDING` and cannot be downloaded |
 | `DB_LOCK_TIMEOUT_MS`, `DB_TRANSACTION_TIMEOUT` | No | Defaults `10000` and `30s`. A request blocked longer gets 503 "busy" |
 | `LOGGING_STRUCTURED_FORMAT_CONSOLE` | No | `ecs` for JSON log lines |
 
@@ -189,8 +193,8 @@ create or activate accounts or administrators without a second administrator.
 | ADMIN and GLOBAL_ADMIN are never granted by the account's creator nor to oneself (F-2) | Another global administrator |
 | "Creator" means the whole creation chain, five levels deep: whoever created the creator of an account counts as its creator for activation, roles, named approvers and delegations | — |
 | The creator never reactivates an account they created, whatever its roles (stricter than required, deliberately) | Another administrator |
-| No temporary password on an account not yet activated, nor on one the administrator created: the set-up link is the first credential | — |
-| Temporary passwords: global administrators only, never on their own account nor on an account holding a sensitive or administrator role (ADR-016 will remove them) | — |
+| Nobody chooses another person's password (ADR-016, Sprint 2): the temporary-password endpoint is removed; the owner receives a set-up link (new account, after activation) or a reset link, and the e-mail says whether an administrator or the owner asked | — |
+| Correcting an account's e-mail address (ADR-016 step 5, Sprint 2): global administrators only, never their own account or a supplier contact; nothing changes until the owner opens the single-use link sent to the **new** address; an approver, buyer, receiver, purchasing manager or administrator account first needs a second global administrator (not the requester, not the target, not created by the requester); while the change is open the account cannot be activated and no set-up or reset link is issued; on confirmation earlier links stop working, sessions end and the old address is told. Every step and refusal is audited | `EmailChangeIntegrationTests` |
 
 **Onboarding in a company with a single administrator:** that administrator creates the account; a global
 administrator activates it and gives it any buyer, receiver, purchasing manager or approver role. An account a global administrator

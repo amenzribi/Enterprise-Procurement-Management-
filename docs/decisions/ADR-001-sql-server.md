@@ -1,6 +1,6 @@
 # ADR-001: Microsoft SQL Server as the system database
 
-- Status: Accepted (client decision, 2026-10-24)
+- Status: Accepted (client decision, 2026-10-24); **reaffirmed by the owner on 2026-11-19**: development, Google Cloud UAT and the path to production continue on SQL Server 2022. A PostgreSQL migration is deferred to a future, dedicated experimental branch once the application baseline is stable (assessment of 2026-11-19: about 6 to 9 weeks, mainly native SQL, locking and case-insensitive comparison). Meanwhile new features avoid unnecessary new SQL Server-specific dependencies, without changing existing, tested code for that reason alone.
 - Supersedes: specification §22 "Base de données : PostgreSQL, migrations Flyway"
 
 ## Context

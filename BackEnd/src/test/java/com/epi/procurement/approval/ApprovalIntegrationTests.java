@@ -190,10 +190,54 @@ class ApprovalIntegrationTests extends SqlServerTestSupport {
 				() -> karim.post("/api/v1/approvals/tasks/" + task[0] + "/reject",
 						"{\"version\":" + task[1] + ",\"reason\":\"No\"}")));
 		assertThat(results.stream().filter(r -> r.status() == 200)).hasSize(1);
-		String status = sami.get("/api/v1/requests/" + id).json("$.status");
-		assertThat(status).isIn("APPROVED", "REJECTED");
 		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status IN "
 				+ "('APPROVED', 'REJECTED')", Integer.class, id)).isEqualTo(1);
+		// Either may win; the request must then be exactly in the winner's state. (The internal status of an approved
+		// request is IN_PURCHASING_REVIEW, user status APPROVED: the test used to accept only APPROVED or REJECTED,
+		// so it failed whenever the approval won.)
+		assertOutcome(sami, id, results.get(0).status() == 200);
+	}
+
+	/** Both orders of the same two decisions, so both outcomes are checked on every run, not only when raced. */
+	@Test
+	void theFirstOfALinkApprovalAndAnInboxRejectionDecidesAndTheOtherIsRefused() {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		ApiClient karim = signedIn("manager.tn@demo.local");
+		ApiClient anonymous = client();
+		anonymous.csrf();
+
+		long approvedFirst = submit(sami, request("Link first", "TND", 50, "DEMO-SPARE"));
+		String token = linkToken(userId("manager.tn@demo.local"), approvedFirst);
+		long[] task = myTask(karim, approvedFirst);
+		anonymous.post("/api/v1/approval-links/approve", tokenBody(token)).expectStatus(200);
+		karim.post("/api/v1/approvals/tasks/" + task[0] + "/reject", "{\"version\":" + task[1] + ",\"reason\":\"No\"}")
+			.expectStatus(409);
+		assertOutcome(sami, approvedFirst, true);
+
+		long rejectedFirst = submit(sami, request("Inbox first", "TND", 50, "DEMO-SPARE"));
+		String secondToken = linkToken(userId("manager.tn@demo.local"), rejectedFirst);
+		long[] secondTask = myTask(karim, rejectedFirst);
+		karim.post("/api/v1/approvals/tasks/" + secondTask[0] + "/reject",
+				"{\"version\":" + secondTask[1] + ",\"reason\":\"No\"}").expectStatus(200);
+		assertThat(anonymous.post("/api/v1/approval-links/approve", tokenBody(secondToken)).expectStatus(404).code())
+			.isEqualTo("link-invalid");
+		assertOutcome(sami, rejectedFirst, false);
+	}
+
+	/**
+	 * The request and its tasks are in the state of the decision that won: approved (internal IN_PURCHASING_REVIEW,
+	 * user status APPROVED, one approved task) or rejected (REJECTED, one rejected task); never both, nothing pending.
+	 */
+	private void assertOutcome(ApiClient requester, long requestId, boolean approvalWon) {
+		ApiClient.Response detail = requester.get("/api/v1/requests/" + requestId).expectStatus(200);
+		assertThat((String) detail.json("$.status")).isEqualTo(approvalWon ? "IN_PURCHASING_REVIEW" : "REJECTED");
+		assertThat((String) detail.json("$.userStatus")).isEqualTo(approvalWon ? "APPROVED" : "REJECTED");
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status = 'APPROVED'",
+				Integer.class, requestId)).isEqualTo(approvalWon ? 1 : 0);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status = 'REJECTED'",
+				Integer.class, requestId)).isEqualTo(approvalWon ? 0 : 1);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM approval_task WHERE request_id = ? AND status = 'PENDING'",
+				Integer.class, requestId)).isZero();
 	}
 
 	@Test

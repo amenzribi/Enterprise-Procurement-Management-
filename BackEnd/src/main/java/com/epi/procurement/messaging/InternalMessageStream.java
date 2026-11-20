@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -151,7 +150,7 @@ class InternalMessageStream {
 	}
 
 	/** Closes streams whose session ended or whose account is no longer active, and keeps the others alive. */
-	@Scheduled(fixedDelay = HEARTBEAT_SECONDS * 1000L, initialDelay = HEARTBEAT_SECONDS * 1000L)
+	/** Run by {@link InternalMessageStreamHeartbeat}, and directly by tests. */
 	void heartbeat() {
 		for (Map.Entry<Long, List<Connection>> entry : byUser.entrySet()) {
 			boolean active = users.loadCurrentUser(entry.getKey()).isPresent();

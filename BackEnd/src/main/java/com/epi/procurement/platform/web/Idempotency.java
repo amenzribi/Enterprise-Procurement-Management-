@@ -98,9 +98,9 @@ public class Idempotency {
 	}
 
 	/**
-	 * Deletes records past the 24 h retention (S2CR-14); returns the number deleted.
+	 * Deletes records past the 24 h retention (S2CR-14); returns the number deleted. Run hourly by
+	 * {@link IdempotencyPurgeJob}.
 	 */
-	@org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "PT1H", initialDelayString = "PT5M")
 	public int purge() {
 		return jdbc.update("DELETE FROM idempotency_record WHERE created_at < ?",
 				UtcTimes.db(clock.instant().minus(RETENTION)));

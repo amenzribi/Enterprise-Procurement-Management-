@@ -19,7 +19,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -74,16 +73,6 @@ public class OutboxSender {
 		this.resolvers = List.copyOf(resolvers);
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
 		this.retention = retention;
-	}
-
-	@Scheduled(fixedDelayString = "${app.jobs.outbox-delay:PT15S}", initialDelayString = "PT10S")
-	void scheduled() {
-		sendDue();
-	}
-
-	@Scheduled(fixedDelayString = "PT6H", initialDelayString = "PT2M")
-	void scheduledPurge() {
-		purge();
 	}
 
 	/**

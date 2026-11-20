@@ -7,7 +7,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -50,11 +49,6 @@ class ApprovalReminders {
 		this.users = users;
 		this.transaction = new TransactionTemplate(transactionManager);
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
-	}
-
-	@Scheduled(fixedDelayString = "${app.jobs.reminder-delay:PT1M}", initialDelayString = "PT30S")
-	void scheduled() {
-		run();
 	}
 
 	/**

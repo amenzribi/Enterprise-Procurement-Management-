@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -54,8 +53,8 @@ public class ExpiredTokenPurge {
 		this.retention = retention;
 	}
 
-	@Scheduled(fixedDelayString = "PT6H", initialDelayString = "PT7M")
-	void scheduled() {
+	/** Purges and logs what was deleted; run by {@link ExpiredTokenPurgeJob}. */
+	void purgeAndLog() {
 		Map<String, Integer> deleted = purge();
 		if (deleted.values().stream().anyMatch(count -> count > 0)) {
 			log.info("Expired tokens purged: {}", deleted);

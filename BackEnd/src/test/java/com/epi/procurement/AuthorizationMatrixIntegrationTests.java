@@ -68,7 +68,8 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 
 	/**
 	 * Query string and body for the endpoints that check their input before the caller: with valid input the answer
-	 * shows the authorization decision instead of a validation error. {@code <tn>} is the other company's id.
+	 * shows the authorization decision instead of a validation error. {@code <tn>} is the other company's id;
+	 * {@code <message>} a message of the other supplier's conversation probed on the supplier-portal endpoints.
 	 */
 	private static final Map<String, String[]> INPUTS = Map.of(
 			"DELETE /api/v1/admin/requests/{id}", new String[] { "?reason=matrix", null },
@@ -81,13 +82,18 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 			"POST /api/v1/messaging/conversations", new String[] { "", "{\"contextType\":\"PO\",\"contextId\":1,"
 					+ "\"supplierId\":1}" },
 			"POST /api/v1/messaging/conversations/{id}/read", new String[] { "", "{\"messageId\":1}" },
-			"POST /api/v1/supplier-portal/conversations/{id}/read", new String[] { "", "{\"messageId\":1}" });
+			"POST /api/v1/supplier-portal/conversations/{id}/read", new String[] { "", "{\"messageId\":<message>}" },
+			"POST /api/v1/supplier-portal/conversations/{id}/messages", new String[] { "", "{\"bodyText\":\"Matrix "
+					+ "probe\",\"clientMessageId\":\"0f9c2b1e-matrix-probe-0000-000000000001\"}" });
 
 	private static final Pattern VARIABLE = Pattern.compile("\\{([^}/]+)}");
 
 	@Autowired
 	@Qualifier("requestMappingHandlerMapping")
 	RequestMappingHandlerMapping mappings;
+
+	/** The message of the other supplier's conversation, for the supplier-portal mark-read probe. */
+	private String foreignMessage = "0";
 
 	@Test
 	void everyEndpointRefusesTheCallersWhoHaveNoRightToIt() throws IOException {
@@ -106,9 +112,9 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 			String[] cells = expected.get(endpoint.key());
 			String[] input = INPUTS.getOrDefault(endpoint.key(), new String[] { "", "{}" });
 			String tn = Long.toString(ids.get("companies"));
-			String path = endpoint.path(ids) + input[0].replace("<tn>", tn);
+			String path = endpoint.path(ids) + input[0].replace("<tn>", tn).replace("<message>", foreignMessage);
 			String body = endpoint.method().equals("GET") || endpoint.method().equals("DELETE") ? null
-					: input[1].replace("<tn>", tn);
+					: input[1].replace("<tn>", tn).replace("<message>", foreignMessage);
 			int asAnonymous = anonymous.send(endpoint.method(), path, body).status();
 			if (endpoint.key().equals("POST /api/v1/auth/logout")) {
 				// Signing out replaces the CSRF token; without a new one the next refusals would be 403, not 401.
@@ -256,9 +262,9 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 				}
 				String[] input = PRIVILEGED_INPUTS.getOrDefault(endpoint.key(),
 						INPUTS.getOrDefault(endpoint.key(), new String[] { "", "{}" }));
-				String path = endpoint.path(ids) + input[0].replace("<tn>", tn);
+				String path = endpoint.path(ids) + input[0].replace("<tn>", tn).replace("<message>", foreignMessage);
 				String body = endpoint.method().equals("GET") || endpoint.method().equals("DELETE") ? null
-						: input[1].replace("<tn>", tn);
+						: input[1].replace("<tn>", tn).replace("<message>", foreignMessage);
 				int status = frAdmin.send(endpoint.method(), path, body).status();
 				called++;
 				lines.add(String.format("%-98s | %s", endpoint.key(), status));
@@ -351,8 +357,10 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 	 * Identifiers of objects that belong to the Tunisian plant or to other users, keyed by the path segment that
 	 * precedes the variable ({@code /requests/{id}} gives {@code requests}). Created here, so they always exist: a
 	 * request with an attachment and a pending approval task, and a second request with its RFQ, order, shipment and
-	 * receipt. Supplier conversations, contacts, imports, absences and notifications are taken from what other test
-	 * classes left in the shared database, and fall back to an identifier that does not exist.
+	 * receipt; and a conversation of another supplier than the probing contact's (created here; the contact belongs
+	 * to DEMO-SKF), so the supplier-portal answers are refusals of an existing object whatever ran before.
+	 * Contacts, imports, absences and notifications are taken from what other test classes left in the shared
+	 * database, and fall back to an identifier that does not exist.
 	 */
 	private Map<String, Long> foreignObjects() {
 		ApiClient sami = signedIn("requester.tn@demo.local");
@@ -401,7 +409,11 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 				"shipments", "milestones", "goods-receipts" }) {
 			assertThat(ids.get(real)).as("a real object of the other company for /%s/{id}", real).isNotNull();
 		}
-		ids.put("conversations", lookup("SELECT TOP 1 id FROM conversation ORDER BY id DESC"));
+		// Not "the newest conversation": after the messaging tests that was the probing contact's own supplier's,
+		// which it may read (CI run 44531575032). A conversation of another supplier, created here.
+		long[] conversation = conversationOfAnotherSupplier(body);
+		ids.put("conversations", conversation[0]);
+		foreignMessage = Long.toString(conversation[1]);
 		ids.put("internal-conversations",
 				lookup("SELECT TOP 1 id FROM internal_conversation WHERE company_id = ? ORDER BY id DESC", tn));
 		ids.put("contacts", lookup("SELECT TOP 1 id FROM supplier_contact ORDER BY id DESC"));
@@ -485,6 +497,50 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 
 	private static int version(ApiClient client, long requestId) {
 		return ((Number) client.get("/api/v1/requests/" + requestId).expectStatus(200).json("$.version")).intValue();
+	}
+
+	/**
+	 * A Tunisian plant request in sourcing with an RFQ inviting only a supplier created here (shared, so the buyer
+	 * may invite it; no relation to DEMO-SKF, whose contact probes), and the buyer's conversation with that supplier
+	 * holding one external message. Returns the conversation and message ids.
+	 */
+	private long[] conversationOfAnotherSupplier(Map<String, Object> body) {
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		Map<String, Object> local = new LinkedHashMap<>(body);
+		local.put("title", "Authorization matrix supplier conversation");
+		local.put("purchaseType", "LOCAL");
+		ApiClient.Response draft = sami.post("/api/v1/requests", JSON.writeValueAsString(local)).expectStatus(201);
+		long id = sami.post("/api/v1/requests/" + draft.id() + "/submit", "{\"version\":" + draft.version() + "}")
+			.expectStatus(200)
+			.id();
+		ApiClient karim = signedIn("manager.tn@demo.local");
+		ApiClient.Response approval = karim.get("/api/v1/requests/" + id + "/approval").expectStatus(200);
+		karim.post("/api/v1/approvals/tasks/" + approval.json("$.myTask.id") + "/approve",
+				"{\"version\":" + approval.json("$.myTask.version") + "}").expectStatus(200);
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/purchasing/requests/" + id + "/assign",
+				"{\"version\":" + version(mehdi, id) + ",\"buyerUserId\":" + userId("buyer@demo.local") + "}")
+			.expectStatus(200);
+		ApiClient ines = signedIn("buyer@demo.local");
+		ines.post("/api/v1/purchasing/requests/" + id + "/accept", "{\"version\":" + version(ines, id) + "}")
+			.expectStatus(200);
+		long seals = ((Number) signedIn("purchasing.manager@demo.local").post("/api/v1/suppliers", "{\"code\":\"S2-MATRIX-"
+				+ java.util.UUID.randomUUID().toString().substring(0, 8) + "\",\"legalName\":\"Matrix other supplier (Demo)\","
+				+ "\"countryCode\":\"TN\",\"visibility\":\"SHARED\"}").expectStatus(201).json("$.id")).longValue();
+		long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+		assertThat(seals).isNotEqualTo(skf);
+		long rfq = ((Number) ines.post("/api/v1/sourcing/requests/" + id + "/rfq",
+				"{\"kind\":\"STANDARD\",\"supplierIds\":[" + seals + "]}").expectStatus(200).json("$.id")).longValue();
+		long conversation = ((Number) ines.post("/api/v1/messaging/conversations",
+				"{\"contextType\":\"RFQ\",\"contextId\":" + rfq + ",\"supplierId\":" + seals + "}")
+			.expectStatus(200)
+			.json("$.id")).longValue();
+		long message = ((Number) ines.post("/api/v1/messaging/conversations/" + conversation + "/messages",
+				"{\"audience\":\"EXTERNAL\",\"bodyText\":\"Matrix fixture\",\"clientMessageId\":\""
+						+ java.util.UUID.randomUUID() + "\"}")
+			.expectStatus(201)
+			.json("$.id")).longValue();
+		return new long[] { conversation, message };
 	}
 
 	private Long lookup(String sql, Object... args) {

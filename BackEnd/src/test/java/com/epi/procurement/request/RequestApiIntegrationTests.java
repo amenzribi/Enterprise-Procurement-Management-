@@ -41,7 +41,10 @@ class RequestApiIntegrationTests extends SqlServerTestSupport {
 		assertThat((Boolean) options.json("$.companies[0].canEnterOnBehalf")).isTrue();
 		assertThat((List<Integer>) options.json("$.companies[0].requesters[*].id")).contains((int) requesterId);
 
-		Map<String, Object> body = completeTnRequest("Bearings for line 2");
+		// A unique title: the lists below find this request by it, not by its position on the first page (other tests
+		// leave requests dated in the future in the shared database, which sort first).
+		String marker = "s2-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+		Map<String, Object> body = completeTnRequest("Bearings for line 2 " + marker);
 		body.put("requesterId", requesterId);
 		ApiClient.Response created = assistant.post("/api/v1/requests", json(body)).expectStatus(201);
 		long id = created.id();
@@ -57,8 +60,8 @@ class RequestApiIntegrationTests extends SqlServerTestSupport {
 		assertThat((List<Object>) created.json("$.transitions")).hasSize(1);
 
 		// The requester sees it in "My requests" and can edit it.
-		assertThat((List<Integer>) requester.get("/api/v1/requests?scope=mine").expectStatus(200).json("$.items[*].id"))
-			.contains((int) id);
+		assertThat((List<Integer>) requester.get("/api/v1/requests?scope=mine&q=" + marker).expectStatus(200)
+			.json("$.items[*].id")).containsExactly((int) id);
 		int version = created.version();
 		requester.put("/api/v1/requests/" + id, json(withVersion(body, version + 1))).expectStatus(409);
 
@@ -101,7 +104,8 @@ class RequestApiIntegrationTests extends SqlServerTestSupport {
 
 		// Visibility after submission (sprint-1 visibility table).
 		ApiClient manager = signedIn("manager.tn@demo.local");
-		assertThat((List<Integer>) manager.get("/api/v1/requests?scope=visible").json("$.items[*].id")).contains((int) id);
+		assertThat((List<Integer>) manager.get("/api/v1/requests?scope=visible&q=" + marker).expectStatus(200)
+			.json("$.items[*].id")).containsExactly((int) id);
 		assertThat((List<String>) manager.get("/api/v1/requests/" + id).expectStatus(200).json("$.actions")).isEmpty();
 		signedIn("ceo@demo.local").get("/api/v1/requests/" + id).expectStatus(200);
 		signedIn("buyer@demo.local").get("/api/v1/requests/" + id).expectStatus(404);

@@ -17,9 +17,13 @@ import com.epi.procurement.support.SqlServerTestSupport;
 
 import tools.jackson.databind.json.JsonMapper;
 
+// Its own context (other rate limits): it must not clean the shared database again (see
+// SqlServerTestSupport.TestDatabase). Cleaning reset the sequences under the context already cached, whose later
+// tests then collided on purchase_request and purchase_request_line ids (CI run 44531575032).
 @TestPropertySource(properties = {
 		"app.sourcing.quote-link-rate-limit-per-minute=3",
-		"app.sourcing.quote-link-rate-limit-per-token-per-minute=50"
+		"app.sourcing.quote-link-rate-limit-per-token-per-minute=50",
+		"test.database.clean=false"
 })
 class QuoteLinkSecurityIntegrationTests extends SqlServerTestSupport {
 

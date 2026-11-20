@@ -28,6 +28,12 @@ class ImportJobAccessIntegrationTests extends SqlServerTestSupport {
 	/** Roles granted for this test only (removed after each test). */
 	private final List<Long> grants = new ArrayList<>();
 
+	/**
+	 * Sites created by the organisation imports, removed after each test: the shared database keeps its reference
+	 * data (RequestApiIntegrationTests expects the French plant to have one site).
+	 */
+	private final List<String> siteCodes = new ArrayList<>();
+
 	private long tn;
 
 	private long fr;
@@ -51,6 +57,10 @@ class ImportJobAccessIntegrationTests extends SqlServerTestSupport {
 			jdbc.update("DELETE FROM user_role WHERE id = ?", grant);
 		}
 		grants.clear();
+		for (String code : siteCodes) {
+			jdbc.update("DELETE FROM site WHERE code = ?", code);
+		}
+		siteCodes.clear();
 	}
 
 	@Test
@@ -163,8 +173,10 @@ class ImportJobAccessIntegrationTests extends SqlServerTestSupport {
 				null);
 	}
 
-	private static String siteCsv() {
-		return "code,name,type\nS2-IMP-" + UUID.randomUUID().toString().substring(0, 8) + ",Import site (Demo),BRANCH\n";
+	private String siteCsv() {
+		String code = "S2-IMP-" + UUID.randomUUID().toString().substring(0, 8);
+		siteCodes.add(code);
+		return "code,name,type\n" + code + ",Import site (Demo),BRANCH\n";
 	}
 
 	private static String supplierCsv() {

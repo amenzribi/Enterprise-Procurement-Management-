@@ -142,7 +142,7 @@ class ImportService {
 
 	@Transactional(readOnly = true)
 	JobResult get(CurrentUser user, long id) {
-		requireImport(user);
+		requireRead(user);
 		// Scope from the stored job, never from the request; a job this user may not read is "not found" (ADR-007).
 		return jdbc.query("""
 				SELECT id, company_id, created_by, status, accepted_rows, rejected_rows FROM import_job
@@ -214,11 +214,21 @@ class ImportService {
 	}
 
 	/**
-	 * Administrators, purchasing managers and global administrators (who hold GLOBAL_ADMIN, not ADMIN, and were
-	 * refused here although the interface offers them imports through IMPORT_RUN and the organisation rule names them).
+	 * Creating an import: administrators and purchasing managers, the holders of IMPORT_RUN (MeAssembler). Global
+	 * administrators do not create imports (owner decision, Sprint 2); they read them, see {@link #requireRead}.
 	 */
 	private static boolean mayImport(CurrentUser user) {
-		return user.isGlobalAdmin() || user.hasRole(Role.ADMIN) || user.hasRole(Role.PURCHASING_MANAGER);
+		return user.hasRole(Role.ADMIN) || user.hasRole(Role.PURCHASING_MANAGER);
+	}
+
+	/**
+	 * Reading an import job: those who may import, and global administrators. Which job each of them may read is
+	 * decided by {@link #mayRead}; anyone else is refused before any job is looked up.
+	 */
+	private static void requireRead(CurrentUser user) {
+		if (!mayImport(user) && !user.isGlobalAdmin()) {
+			throw ApiProblemException.forbidden();
+		}
 	}
 
 	private static String[] splitCsv(String line) {

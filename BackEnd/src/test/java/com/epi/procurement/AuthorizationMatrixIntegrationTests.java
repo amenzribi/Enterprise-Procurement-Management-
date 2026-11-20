@@ -399,8 +399,9 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 		ids.put("notifications", lookup("SELECT TOP 1 id FROM in_app_notification WHERE user_id <> ? ORDER BY id DESC",
 				outsider));
 		// Not "the newest import job": with none in the database the probe used an id that does not exist and the
-		// privileged check passed whatever the scoping (found in Sprint 2). A Tunisian plant import, created here.
-		ids.put("imports", signedIn("global.admin@demo.local")
+		// privileged check passed whatever the scoping (found in Sprint 2). A Tunisian plant import, created here by an
+		// administrator of that company (global administrators read imports but do not create them).
+		ids.put("imports", signedIn("admin@demo.local")
 			.upload("/api/v1/imports?kind=ORGANISATION&companyId=" + tn, "sites.csv", "text/csv",
 					("code,name,type\nMATRIX-" + java.util.UUID.randomUUID().toString().substring(0, 8)
 							+ ",Matrix site (Demo),BRANCH\n").getBytes(java.nio.charset.StandardCharsets.UTF_8), null)

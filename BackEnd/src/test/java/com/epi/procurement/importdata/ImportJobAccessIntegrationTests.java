@@ -142,6 +142,48 @@ class ImportJobAccessIntegrationTests extends SqlServerTestSupport {
 	}
 
 	@Test
+	void globalAdministratorsReadEveryImportJobButCreateNone() {
+		ApiClient global = signedIn("global.admin@demo.local");
+		long before = count("SELECT COUNT(*) FROM import_job");
+		String sites = siteCsv();
+		String code = sites.lines().skip(1).findFirst().orElseThrow().split(",")[0];
+		// Creation stays with administrators and purchasing managers (IMPORT_RUN): 403, nothing created.
+		assertThat(supplierImport(global, supplierCsv()).expectStatus(403).code()).isEqualTo("forbidden");
+		assertThat(organisationImport(global, tn, sites).expectStatus(403).code()).isEqualTo("forbidden");
+		assertThat(count("SELECT COUNT(*) FROM import_job")).isEqualTo(before);
+		assertThat(count("SELECT COUNT(*) FROM site WHERE code = ?", code)).isZero();
+
+		// Reading: a company-scoped job and a group-level job, neither created by the global administrator.
+		long companyJob = organisationImport(signedIn("manager.tn@demo.local"), tn, siteCsv()).expectStatus(200).id();
+		long supplierJob = supplierImport(signedIn("purchasing.manager@demo.local"), supplierCsv()).expectStatus(200).id();
+		assertThat((String) global.get(IMPORTS + "/" + companyJob).expectStatus(200).json("$.status")).isEqualTo("COMMITTED");
+		assertThat((String) global.get(IMPORTS + "/" + supplierJob).expectStatus(200).json("$.status")).isEqualTo("COMMITTED");
+	}
+
+	@Test
+	void anAdministratorCreatesOrganisationImportsOnlyForTheCompaniesItAdministers() {
+		long before = count("SELECT COUNT(*) FROM import_job");
+		String sites = siteCsv();
+		String code = sites.lines().skip(1).findFirst().orElseThrow().split(",")[0];
+		organisationImport(signedIn("manager.tn@demo.local"), fr, sites).expectStatus(403);
+		assertThat(count("SELECT COUNT(*) FROM import_job")).isEqualTo(before);
+		assertThat(count("SELECT COUNT(*) FROM site WHERE code = ?", code)).isZero();
+	}
+
+	@Test
+	void aSupplierJobCreatorWhoLosesTheImportRoleNoLongerReadsTheJob() {
+		ApiClient creator = signedIn("buyer@demo.local"); // purchasing manager for this test only
+		long job = supplierImport(creator, supplierCsv()).expectStatus(200).id();
+		creator.get(IMPORTS + "/" + job).expectStatus(200);
+
+		revoke("buyer@demo.local", "PURCHASING_MANAGER");
+		ApiClient.Response refused = signedIn("buyer@demo.local").get(IMPORTS + "/" + job).expectStatus(403);
+		assertThat(refused.body()).doesNotContain("COMMITTED").doesNotContain("accepted").doesNotContain("rejected");
+		// The job itself is untouched; global administrators still read it.
+		signedIn("global.admin@demo.local").get(IMPORTS + "/" + job).expectStatus(200);
+	}
+
+	@Test
 	void aSupplierImportTakesNoCompanyFromTheRequest() {
 		long before = count("SELECT COUNT(*) FROM import_job");
 		signedIn("purchasing.manager@demo.local")
@@ -182,6 +224,17 @@ class ImportJobAccessIntegrationTests extends SqlServerTestSupport {
 	private static String supplierCsv() {
 		return "code,legalName,country,visibility\nS2-IMP-" + UUID.randomUUID().toString().substring(0, 8)
 				+ ",Imported supplier (Demo),TN,SHARED\n";
+	}
+
+	/** Removes a role granted by this test before the test ends. */
+	private void revoke(String email, String role) {
+		List<Long> ids = jdbc.queryForList("SELECT id FROM user_role WHERE user_id = ? AND role = ?", Long.class, userId(email),
+				role);
+		for (Long id : ids) {
+			if (grants.remove(id)) {
+				jdbc.update("DELETE FROM user_role WHERE id = ?", id);
+			}
+		}
 	}
 
 	private void grant(String email, String role, long companyId) {

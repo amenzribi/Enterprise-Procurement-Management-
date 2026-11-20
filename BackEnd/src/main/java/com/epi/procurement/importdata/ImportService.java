@@ -59,6 +59,10 @@ class ImportService {
 		if (!"SUPPLIER".equals(kind) && !"ORGANISATION".equals(kind)) {
 			throw ApiProblemException.invalidParameter("kind");
 		}
+		// A supplier import is group-level: its scope is never taken from the request (Sprint 2).
+		if ("SUPPLIER".equals(kind) && companyId != null) {
+			throw ApiProblemException.invalidParameter("companyId");
+		}
 		if ("ORGANISATION".equals(kind)
 				&& (companyId == null || !user.isGlobalAdmin() && !user.canAdminCompany(companyId))) {
 			throw ApiProblemException.forbidden();
@@ -71,14 +75,21 @@ class ImportService {
 			throw new ApiProblemException(HttpStatus.BAD_REQUEST, "validation-failed", "The file could not be read.");
 		}
 		String hash = sha256(bytes);
+		// The same file again: the earlier result, but only a job of the same scope that this user may read
+		// (otherwise another company's job id and counts would be returned, and its import skipped for this one).
+		String sameScope = companyId == null ? "company_id IS NULL" : "company_id = " + companyId.longValue();
 		List<JobResult> already = jdbc.query("""
-				SELECT TOP 1 id, status, accepted_rows, rejected_rows FROM import_job
-				WHERE group_id = ? AND kind = ? AND file_hash = ? AND status = 'COMMITTED' ORDER BY id DESC""",
-				(rs, i) -> new JobResult(rs.getLong("id"), rs.getString("status"), rs.getInt("accepted_rows"),
-						rs.getInt("rejected_rows"), List.of()),
+				SELECT id, company_id, created_by, status, accepted_rows, rejected_rows FROM import_job
+				WHERE group_id = ? AND kind = ? AND file_hash = ? AND status = 'COMMITTED' AND\s""" + sameScope
+				+ " ORDER BY id DESC",
+				(rs, i) -> mayRead(user, rs.getObject("company_id", Long.class), rs.getLong("created_by"))
+						? new JobResult(rs.getLong("id"), rs.getString("status"), rs.getInt("accepted_rows"),
+								rs.getInt("rejected_rows"), List.of())
+						: null,
 				user.groupId(), kind, hash);
-		if (!already.isEmpty()) {
-			return already.getFirst();
+		java.util.Optional<JobResult> reusable = already.stream().filter(java.util.Objects::nonNull).findFirst();
+		if (reusable.isPresent()) {
+			return reusable.get();
 		}
 		String csv = new String(bytes, StandardCharsets.UTF_8).replace("\uFEFF", "");
 		String[] lines = csv.split("\\r?\\n");
@@ -132,11 +143,32 @@ class ImportService {
 	@Transactional(readOnly = true)
 	JobResult get(CurrentUser user, long id) {
 		requireImport(user);
+		// Scope from the stored job, never from the request; a job this user may not read is "not found" (ADR-007).
 		return jdbc.query("""
-				SELECT id, status, accepted_rows, rejected_rows FROM import_job WHERE id = ? AND group_id = ?""",
-				(rs, i) -> new JobResult(rs.getLong("id"), rs.getString("status"), rs.getInt("accepted_rows"),
-						rs.getInt("rejected_rows"), List.of()),
-				id, user.groupId()).stream().findFirst().orElseThrow(ApiProblemException::notFound);
+				SELECT id, company_id, created_by, status, accepted_rows, rejected_rows FROM import_job
+				WHERE id = ? AND group_id = ?""",
+				(rs, i) -> mayRead(user, rs.getObject("company_id", Long.class), rs.getLong("created_by"))
+						? new JobResult(rs.getLong("id"), rs.getString("status"), rs.getInt("accepted_rows"),
+								rs.getInt("rejected_rows"), List.of())
+						: null,
+				id, user.groupId()).stream().filter(java.util.Objects::nonNull).findFirst()
+			.orElseThrow(ApiProblemException::notFound);
+	}
+
+	/**
+	 * Who may read an import job of their group (Sprint 2, ADR-007). A company-scoped job (organisation import):
+	 * global administrators and administrators of that company; its creator is one of them as long as they keep that
+	 * right. A group-level job (supplier import, no company): global administrators and its creator, while they may
+	 * still import. Not every administrator or purchasing manager of the group: their own company is not the job's.
+	 */
+	static boolean mayRead(CurrentUser user, Long jobCompanyId, long createdBy) {
+		if (user.isGlobalAdmin()) {
+			return true;
+		}
+		if (jobCompanyId != null) {
+			return user.canAdminCompany(jobCompanyId);
+		}
+		return createdBy == user.id() && mayImport(user);
 	}
 
 	private RowResult supplierRow(CurrentUser user, String[] cols, Instant now) {
@@ -176,9 +208,17 @@ class ImportService {
 	}
 
 	private static void requireImport(CurrentUser user) {
-		if (!user.hasRole(Role.ADMIN) && !user.hasRole(Role.PURCHASING_MANAGER)) {
+		if (!mayImport(user)) {
 			throw ApiProblemException.forbidden();
 		}
+	}
+
+	/**
+	 * Administrators, purchasing managers and global administrators (who hold GLOBAL_ADMIN, not ADMIN, and were
+	 * refused here although the interface offers them imports through IMPORT_RUN and the organisation rule names them).
+	 */
+	private static boolean mayImport(CurrentUser user) {
+		return user.isGlobalAdmin() || user.hasRole(Role.ADMIN) || user.hasRole(Role.PURCHASING_MANAGER);
 	}
 
 	private static String[] splitCsv(String line) {

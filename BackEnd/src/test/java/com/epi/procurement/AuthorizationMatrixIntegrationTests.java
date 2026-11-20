@@ -359,8 +359,8 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 	 * request with an attachment and a pending approval task, and a second request with its RFQ, order, shipment and
 	 * receipt; and a conversation of another supplier than the probing contact's (created here; the contact belongs
 	 * to DEMO-SKF), so the supplier-portal answers are refusals of an existing object whatever ran before.
-	 * Contacts, imports, absences and notifications are taken from what other test classes left in the shared
-	 * database, and fall back to an identifier that does not exist.
+	 * An import job of the Tunisian plant is created too. Contacts, absences and notifications are taken from what
+	 * other test classes left in the shared database, and fall back to an identifier that does not exist.
 	 */
 	private Map<String, Long> foreignObjects() {
 		ApiClient sami = signedIn("requester.tn@demo.local");
@@ -398,7 +398,14 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 		ids.put("absences", lookup("SELECT TOP 1 id FROM user_absence WHERE user_id <> ? ORDER BY id DESC", outsider));
 		ids.put("notifications", lookup("SELECT TOP 1 id FROM in_app_notification WHERE user_id <> ? ORDER BY id DESC",
 				outsider));
-		ids.put("imports", lookup("SELECT TOP 1 id FROM import_job ORDER BY id DESC"));
+		// Not "the newest import job": with none in the database the probe used an id that does not exist and the
+		// privileged check passed whatever the scoping (found in Sprint 2). A Tunisian plant import, created here.
+		ids.put("imports", signedIn("global.admin@demo.local")
+			.upload("/api/v1/imports?kind=ORGANISATION&companyId=" + tn, "sites.csv", "text/csv",
+					("code,name,type\nMATRIX-" + java.util.UUID.randomUUID().toString().substring(0, 8)
+							+ ",Matrix site (Demo),BRANCH\n").getBytes(java.nio.charset.StandardCharsets.UTF_8), null)
+			.expectStatus(200)
+			.id());
 		ids.put("purchase-orders", lookup("SELECT id FROM purchase_order WHERE request_id = ?", chain));
 		ids.put("rfqs", lookup("SELECT id FROM rfq WHERE request_id = ?", chain));
 		ids.put("shipments", lookup("SELECT id FROM shipment WHERE request_id = ?", chain));
@@ -406,7 +413,7 @@ class AuthorizationMatrixIntegrationTests extends SqlServerTestSupport {
 				+ "WHERE s.request_id = ?", chain));
 		ids.put("goods-receipts", lookup("SELECT TOP 1 id FROM goods_receipt WHERE request_id = ?", chain));
 		for (String real : new String[] { "requests", "attachments", "tasks", "approval-rules", "purchase-orders", "rfqs",
-				"shipments", "milestones", "goods-receipts" }) {
+				"shipments", "milestones", "goods-receipts", "imports" }) {
 			assertThat(ids.get(real)).as("a real object of the other company for /%s/{id}", real).isNotNull();
 		}
 		// Not "the newest conversation": after the messaging tests that was the probing contact's own supplier's,

@@ -91,6 +91,7 @@ class ReceiptService {
 	ReceiptView createReceipt(CurrentUser user, long requestId, CreateReceiptBody body) {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
 		requireReceiver(user, request);
+		requireNotBuyer(user, request);
 		requireRequestVersion(body == null ? null : body.requestVersion(), request);
 		requireDeliverable(request);
 		ReceiptStore.PoSnap po = store.findPo(requestId).orElseThrow(ApiProblemException::notFound);
@@ -175,6 +176,7 @@ class ReceiptService {
 		ReceiptStore.ReceiptRow receipt = store.findReceipt(receiptId).orElseThrow(ApiProblemException::notFound);
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, receipt.requestId());
 		requireConfirmer(user, request);
+		requireNotBuyer(user, request);
 		if (receipt.receivedByUserId() == user.id()) {
 			// D-03: recording and accepting goods are two people's work.
 			throw new ApiProblemException(HttpStatus.FORBIDDEN, "self-confirmation",
@@ -207,6 +209,7 @@ class ReceiptService {
 	ReceiptDossierView acceptService(CurrentUser user, long requestId, ServiceAcceptanceBody body) {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
 		requireConfirmer(user, request);
+		requireNotBuyer(user, request);
 		requireRequestVersion(body == null ? null : body.requestVersion(), request);
 		ReceiptStore.PoSnap po = store.findPo(requestId).orElseThrow(ApiProblemException::notFound);
 		if (linesOf(po).stream().noneMatch(ReceiptStore.PoLineSnap::service)) {
@@ -248,6 +251,8 @@ class ReceiptService {
 		if (!user.hasRoleIn(Role.PURCHASING_MANAGER, request.buyingCompanyId())) {
 			throw ApiProblemException.forbidden();
 		}
+		// Accepting a shortfall is accepting the delivery: never the buyer of the order (F-5).
+		requireNotBuyer(user, request);
 		requireRequestVersion(body == null ? null : body.requestVersion(), request);
 		RequestStatus status = RequestStatus.valueOf(request.status());
 		if (status != RequestStatus.NON_CONFORMING && status != RequestStatus.PARTIALLY_RECEIVED) {
@@ -286,6 +291,7 @@ class ReceiptService {
 		if (invoice.matchAttested()) {
 			throw ApiProblemException.conflict("already-attested", "This invoice match is already attested.");
 		}
+		requireNotRecorder(user, invoice);
 		store.attestInvoiceMatch(invoice.id());
 		requests.touchForAudit(requestId, user.id(), clock.instant());
 		RequestSnapshot after = requests.currentLocked(requestId);
@@ -297,7 +303,11 @@ class ReceiptService {
 	@Transactional
 	ReceiptDossierView markInvoicePaid(CurrentUser user, long requestId, InvoicePaidBody body) {
 		RequestSnapshot request = requests.requireVisibleForUpdate(user, requestId);
-		requireBuyer(user, request);
+		// Payment is authorised by a purchasing manager of the buying company, never by the invoice recorder (F-5).
+		if (!user.hasRoleIn(Role.PURCHASING_MANAGER, request.buyingCompanyId())) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "payment-needs-manager",
+					"Only a purchasing manager of the buying company can authorise payment.");
+		}
 		requireRequestVersion(body == null ? null : body.requestVersion(), request);
 		if ("CANCELLED".equals(request.status())) {
 			throw ApiProblemException.conflict("invalid-state", "A cancelled request cannot be paid.");
@@ -306,6 +316,12 @@ class ReceiptService {
 			.orElseThrow(() -> ApiProblemException.conflict("not-invoiced", "Record the invoice first."));
 		if ("PAID".equals(invoice.paymentStatus())) {
 			throw ApiProblemException.conflict("already-paid", "This invoice is already marked as paid.");
+		}
+		requireNotRecorder(user, invoice);
+		// Payment is independent of the purchase: never the buyer of the order (F-5).
+		if (boughtBy(user, request)) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "payment-not-independent",
+					"The buyer of this order cannot authorise its payment.");
 		}
 		Instant now = clock.instant();
 		store.updateInvoicePayment(invoice.id(), "PAID");
@@ -336,6 +352,14 @@ class ReceiptService {
 		if (!"PENDING".equals(payment) && !"PAID".equals(payment)) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("paymentStatus", "invalid")));
 		}
+		// Recording, attesting the match and authorising payment are three decisions; the recorder takes only the
+		// first (F-5). The other two are separate actions by other people.
+		if (Boolean.TRUE.equals(body.matchAttested())) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("matchAttested", "invoice-recorder")));
+		}
+		if ("PAID".equals(payment)) {
+			throw new ValidationFailedException(List.of(FieldViolation.of("paymentStatus", "invoice-recorder")));
+		}
 		String currency = body.currency().strip().toUpperCase(Locale.ROOT);
 		if (!rates.currencyExists(currency)) {
 			throw new ValidationFailedException(List.of(FieldViolation.of("currency", "invalid")));
@@ -365,6 +389,10 @@ class ReceiptService {
 		String waiver = user.hasRoleIn(Role.PURCHASING_MANAGER, request.buyingCompanyId())
 				? trim(body == null ? null : body.waiverNote())
 				: null;
+		if (waiver != null) {
+			// Waiving an outstanding quantity accepts the delivery: never the buyer of the order (F-5).
+			requireNotBuyer(user, request);
+		}
 		ClosureView closure = evaluateClosure(request, waiver);
 		if (!closure.ready()) {
 			throw ApiProblemException.conflict("closure-not-ready",
@@ -596,7 +624,7 @@ class ReceiptService {
 	private InvoiceView toInvoice(ReceiptStore.InvoiceRow invoice) {
 		return new InvoiceView(invoice.id(), invoice.requestId(), invoice.purchaseOrderId(), invoice.invoiceNumber(),
 				invoice.amount(), invoice.currency(), invoice.documentReference(), invoice.matchAttested(),
-				invoice.paymentStatus(), invoice.recordedAt(), invoice.version());
+				invoice.paymentStatus(), invoice.recordedAt(), invoice.version(), invoice.recordedByUserId());
 	}
 
 	private void requireDeliverable(RequestSnapshot request) {
@@ -627,6 +655,28 @@ class ReceiptService {
 		boolean buyer = user.hasRoleIn(Role.BUYER, request.buyingCompanyId());
 		if (!manager && !buyer) {
 			throw ApiProblemException.forbidden();
+		}
+	}
+
+	/** The assigned buyer neither records nor confirms the receipt of what they bought (F-5). */
+	/** The buyer of an order, assigned or who issued the purchase order, does not receive it (F-5). */
+	private void requireNotBuyer(CurrentUser user, RequestSnapshot request) {
+		if (boughtBy(user, request)) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "buyer-cannot-receive",
+					"The buyer of this order cannot record or confirm its receipt.");
+		}
+	}
+
+	private boolean boughtBy(CurrentUser user, RequestSnapshot request) {
+		return (request.assignedBuyerUserId() != null && request.assignedBuyerUserId() == user.id())
+				|| store.poIssuer(request.id()).map(issuer -> issuer == user.id()).orElse(false);
+	}
+
+	/** The invoice recorder neither attests the match nor authorises payment (F-5). */
+	private static void requireNotRecorder(CurrentUser user, ReceiptStore.InvoiceRow invoice) {
+		if (invoice.recordedByUserId() == user.id()) {
+			throw new ApiProblemException(HttpStatus.FORBIDDEN, "invoice-recorder",
+					"Another person must attest or authorise payment of an invoice you recorded.");
 		}
 	}
 

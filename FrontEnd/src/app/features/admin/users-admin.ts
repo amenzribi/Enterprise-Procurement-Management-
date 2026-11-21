@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { TranslatePipe } from '@ngx-translate/core';
 import { toApiProblem } from '../../core/api/api-problem';
+import { AuthService } from '../../core/auth/auth.service';
 import { NotificationService } from '../../core/notifications/notification.service';
 import { Button } from '../../shared/ui/button';
 import { EmptyState } from '../../shared/ui/empty-state';
@@ -201,6 +202,7 @@ const ASSIGNABLE = [
               {{ 'usersAdmin.revokeSessions' | translate }}
             </button>
           </div>
+          @if (canSetTemporaryPassword()) {
           <form class="temp" [formGroup]="tempPassword" (ngSubmit)="setTempPassword(detail.id)">
             <h3>{{ 'usersAdmin.tempPassword' | translate }}</h3>
             <p class="meta">{{ 'usersAdmin.tempPasswordHint' | translate }}</p>
@@ -212,6 +214,7 @@ const ASSIGNABLE = [
               {{ 'usersAdmin.tempPassword' | translate }}
             </button>
           </form>
+          }
 
           <h3>{{ 'usersAdmin.roles' | translate }}</h3>
           <ul class="roles">
@@ -369,6 +372,13 @@ const ASSIGNABLE = [
 export class UsersAdminPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly notifications = inject(NotificationService);
+  private readonly auth = inject(AuthService);
+
+  /**
+   * The server reserves administrator-chosen passwords for global administrators (audit S-4); company
+   * administrators send a reset link. No permission carries this distinction, hence the role.
+   */
+  readonly canSetTemporaryPassword = computed(() => this.auth.me()?.roles.includes('GLOBAL_ADMIN') ?? false);
 
   readonly assignable = ASSIGNABLE;
   readonly state = signal<'loading' | 'ready' | 'error'>('loading');
@@ -455,7 +465,7 @@ export class UsersAdminPage implements OnInit {
       .subscribe({
         next: (detail) => {
           this.busy.set(false);
-          this.notifications.success('usersAdmin.created');
+          this.notifications.success('usersAdmin.createdPendingActivation');
           this.create.patchValue({ email: '', displayName: '' });
           this.load();
           this.selected.set(detail);

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -14,12 +15,15 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.TransactionTimedOutException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.epi.procurement.platform.persistence.SqlServerErrors;
 
 /**
  * Renders every API error as an RFC 9457 problem detail with a stable {@code code} property the frontend can
@@ -62,20 +66,45 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	 */
 	@ExceptionHandler(PessimisticLockingFailureException.class)
 	ResponseEntity<ProblemDetail> handleLockFailure(PessimisticLockingFailureException ex) {
-		log.warn("Lock failure: {}", ex.getClass().getSimpleName());
+		// The request id and user are in the log context (RequestIdFilter); the SQL Server error number tells a
+		// deadlock victim (1205) from a lock timeout (1222). Never the statement or its parameter values.
+		int code = SqlServerErrors.errorCode(ex);
+		log.warn("Lock failure: {} (SQL Server error {}{})", ex.getClass().getSimpleName(), code,
+				code == SqlServerErrors.DEADLOCK_VICTIM ? ", deadlock victim"
+						: code == SqlServerErrors.LOCK_TIMEOUT ? ", lock timeout" : "");
+		return busy();
+	}
+
+	/**
+	 * A transaction or one of its statements exceeded the configured time limit (audit DB-3): the work was rolled
+	 * back and can be retried.
+	 */
+	@ExceptionHandler({ TransactionTimedOutException.class, QueryTimeoutException.class })
+	ResponseEntity<ProblemDetail> handleTimeout(Exception ex) {
+		log.warn("Database time limit exceeded: {}", ex.getClass().getSimpleName());
+		return busy();
+	}
+
+	private static ResponseEntity<ProblemDetail> busy() {
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+			.header(HttpHeaders.RETRY_AFTER, "2")
 			.body(problem(HttpStatus.SERVICE_UNAVAILABLE, "busy",
 					"The system is busy with a concurrent operation. Please try again in a moment."));
 	}
 
 	@ExceptionHandler(Exception.class)
-	ProblemDetail handleUnexpected(Exception ex) {
+	ResponseEntity<ProblemDetail> handleUnexpected(Exception ex) {
+		// A lock wait that ran out, however JDBC, Hibernate or Spring wrapped it (audit DB-3).
+		if (SqlServerErrors.isLockTimeout(ex)) {
+			log.warn("Lock wait timed out: {}", ex.getClass().getSimpleName());
+			return busy();
+		}
 		String reference = UUID.randomUUID().toString();
 		log.error("Unhandled exception [errorReference={}]", reference, ex);
 		ProblemDetail problem = problem(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error",
 				"An unexpected error occurred.");
 		problem.setProperty("errorReference", reference);
-		return problem;
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
 	}
 
 	/**
@@ -135,6 +164,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
 		problem.setTitle(status.getReasonPhrase());
 		problem.setProperty("code", code);
+		// The request id is in the X-Request-Id header only: two refusals that must look the same (unknown link,
+		// another company's object, wrong password) keep byte-identical bodies.
 		return problem;
 	}
 

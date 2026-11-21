@@ -56,12 +56,17 @@ export async function signIn(page: Page, email: string, lang: Lang = 'en', start
   await page.locator('#sign-in-password').fill(demoPassword());
   await page.getByRole('button', { name: t(lang, 'auth.signIn.submit') }).click();
   await expect(page).not.toHaveURL(/\/sign-in/);
-  // The account's saved language applies at sign-in unless the user changed it on the sign-in page (S1DR-21);
-  // switch explicitly when another test left a different preference on this account.
-  if ((await page.locator('html').getAttribute('lang')) !== lang) {
-    await page.locator(`app-language-select button[lang="${lang}"]`).click();
-  }
-  await expect(page.locator('html')).toHaveAttribute('lang', lang);
+  // The account's saved language applies at sign-in unless the user changed it on the sign-in page (S1DR-21). It
+  // is applied after the session's CSRF refresh, so it can arrive after a first look at the page: keep switching
+  // until both the page and the saved preference (written in the background) show the requested language. A full
+  // page load before that save commits would read the old preference and switch the interface back.
+  await expect(async () => {
+    if ((await page.locator('html').getAttribute('lang')) !== lang) {
+      await page.locator(`app-language-select button[lang="${lang}"]`).click();
+    }
+    expect((await (await page.request.get('/api/v1/me')).json()).preferredLanguage, `preferred language of ${email}`).toBe(lang);
+    expect(await page.locator('html').getAttribute('lang')).toBe(lang);
+  }).toPass({ timeout: 20_000, intervals: [250, 500, 1_000] });
 }
 
 /** A fresh browser context (separate cookies and storage), i.e. another person on another computer. */
@@ -187,7 +192,8 @@ export async function createAndSubmit(
   await fillLine(page, 0, { description: 'Mechanical seal P-204', quantity: line.quantity, unit: 'PCE', price: line.price });
   await page.getByRole('button', { name: t(lang, 'requests.form.submit') }).click();
   const preview = page.getByRole('alertdialog');
-  await expect(preview).toContainText(t(lang, 'approvals.preview.title'));
+  // The preview is fetched when the dialog opens; the first one of a run waits for a cold server and dev server.
+  await expect(preview).toContainText(t(lang, 'approvals.preview.title'), { timeout: 30_000 });
   await preview.getByRole('button', { name: t(lang, 'requests.submit.confirm') }).click();
   // Success dialog replaces the preview; wait for its title (submit can be slow under parallel IT load).
   const successTitle = page.getByRole('heading', { name: t(lang, 'requests.submit.successTitle') });

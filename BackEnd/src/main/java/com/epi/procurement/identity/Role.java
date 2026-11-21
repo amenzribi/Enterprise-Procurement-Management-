@@ -32,6 +32,22 @@ public enum Role {
 		return this == DEPARTMENT_MANAGER || this == BUDGET_APPROVER || this == MANAGEMENT_APPROVER;
 	}
 
+	/**
+	 * Roles that decide or execute spending: approving, buying, ordering and receiving. Four eyes (review RR-3): the
+	 * administrator who created an account never gives it one of these roles, and nobody gives one to themselves.
+	 */
+	public boolean isSensitive() {
+		return isApproverRole() || this == BUYER || this == RECEIVER || this == PURCHASING_MANAGER;
+	}
+
+	/**
+	 * Roles never given by the creator of an account, nor by anyone to themselves (RR-3, F-2): the sensitive roles
+	 * and the two administration roles.
+	 */
+	public boolean requiresFourEyes() {
+		return isSensitive() || this == ADMIN || this == GLOBAL_ADMIN;
+	}
+
 	public static Optional<Role> parse(String code) {
 		for (Role role : values()) {
 			if (role.name().equals(code)) {

@@ -1,0 +1,193 @@
+# Authorization matrix: the reviewed answer of every endpoint to three callers who must be refused.
+# Read by AuthorizationMatrixIntegrationTests, which fails when an answer differs or an endpoint is missing here.
+#
+# Columns: endpoint | anonymous | supplier contact | outsider
+#   anonymous  no session
+#   supplier   a supplier contact (allowed in the supplier portal only)
+#   outsider   a requester of another company, with no other role, using the ids of objects of the Tunisian plant
+#
+# Cells: 401, 403, 404 exact status; DENY = 403 or 404; OK = 2xx, this caller is entitled to it (own data only);
+#        INPUT = 400/409/415/422, refused for its content before any object is reached; SKIP = not called.
+#
+# Adding an endpoint: decide who may call it, add its line, and add a test for the callers who may.
+# Reviewed 2026-11-15 (Sprint 1): 179 endpoints. No endpoint answers a foreign object with 2xx.
+
+DELETE /api/v1/admin/absences/{id}                                                   | 401   | 403   | 403
+DELETE /api/v1/admin/requests/{id}                                                   | 401   | 403   | 403
+DELETE /api/v1/attachments/{id}                                                      | 401   | 403   | 404
+DELETE /api/v1/me/absences/{id}                                                      | 401   | 403   | 404
+DELETE /api/v1/requests/{id}                                                         | 401   | 403   | 404
+GET /api/v1/admin/absences                                                           | 401   | 403   | 403
+GET /api/v1/admin/accounts                                                           | 401   | 403   | 403
+GET /api/v1/admin/accounts/{id}                                                      | 401   | 403   | 403
+GET /api/v1/admin/approval-rules                                                     | 401   | 403   | 403
+GET /api/v1/admin/approval-rules/{id}                                                | 401   | 403   | 403
+GET /api/v1/admin/approval-rules/{id}/versions                                       | 401   | 403   | 403
+GET /api/v1/admin/approvals/awaiting-circuit                                         | 401   | 403   | 403
+GET /api/v1/admin/companies                                                          | 401   | 403   | 403
+GET /api/v1/admin/exchange-rates                                                     | 401   | 403   | 403
+GET /api/v1/admin/organization/companies                                             | 401   | 403   | 403
+GET /api/v1/admin/organization/companies/{id}/cost-centres                           | 401   | 403   | 403
+GET /api/v1/admin/organization/companies/{id}/departments                            | 401   | 403   | 403
+GET /api/v1/admin/organization/companies/{id}/sites                                  | 401   | 403   | 403
+GET /api/v1/admin/requests                                                           | 401   | 403   | 403
+GET /api/v1/admin/requests/action-matrix                                             | 401   | 403   | 403
+GET /api/v1/admin/requests/{id}                                                      | 401   | 403   | 403
+GET /api/v1/admin/users                                                              | 401   | 403   | 403
+GET /api/v1/approvals/inbox                                                          | 401   | 403   | OK
+GET /api/v1/approvals/inbox/count                                                    | 401   | 403   | OK
+GET /api/v1/approvals/tasks/{id}/delegates                                           | 401   | 403   | 404
+GET /api/v1/assistant/status                                                         | 401   | 403   | 403
+GET /api/v1/assistant/threads                                                        | 401   | 403   | 403
+GET /api/v1/attachments/{id}/content                                                 | 401   | 403   | 404
+GET /api/v1/auth/csrf                                                                | OK    | OK    | OK     # public: issues the CSRF token
+GET /api/v1/dashboards/exports/purchase-orders.csv                                   | 401   | 403   | 403
+GET /api/v1/dashboards/exports/requests.csv                                          | 401   | 403   | 403
+GET /api/v1/dashboards/management                                                    | 401   | 403   | 403
+GET /api/v1/dashboards/pipeline                                                      | 401   | 403   | 403
+GET /api/v1/dashboards/requests/{requestId}/audit-pack                               | 401   | 403   | 404
+GET /api/v1/imports/{id}                                                             | 401   | 403   | 403
+GET /api/v1/internal-messaging/conversations                                         | 401   | 403   | OK
+GET /api/v1/internal-messaging/conversations/{id}                                    | 401   | 403   | 404
+GET /api/v1/internal-messaging/conversations/{id}/candidates                         | 401   | 403   | 404
+GET /api/v1/internal-messaging/conversations/{id}/messages                           | 401   | 403   | 404
+GET /api/v1/internal-messaging/directory                                             | 401   | 403   | OK
+GET /api/v1/internal-messaging/requests/{requestId}/approvers                        | 401   | 403   | 404
+GET /api/v1/internal-messaging/requests/{requestId}/discussion                       | 401   | 403   | 404
+GET /api/v1/internal-messaging/stream                                                | 401   | 403   | SKIP   # event stream: not opened as the outsider (it would stay open); own conversations only
+GET /api/v1/internal-messaging/unread                                                | 401   | 403   | OK
+GET /api/v1/logistics/inbox                                                          | 401   | 403   | 403
+GET /api/v1/logistics/requests/{requestId}/shipments                                 | 401   | 403   | 404
+GET /api/v1/logistics/shipments/{shipmentId}                                         | 401   | 403   | 404
+GET /api/v1/me                                                                       | 401   | OK    | OK
+GET /api/v1/me/absences                                                              | 401   | 403   | OK
+GET /api/v1/me/absences/delegates                                                    | 401   | 403   | OK
+GET /api/v1/messaging/conversations                                                  | 401   | 403   | 403
+GET /api/v1/messaging/conversations/{id}                                             | 401   | 403   | 403
+GET /api/v1/messaging/conversations/{id}/messages                                    | 401   | 403   | 403
+GET /api/v1/messaging/suppliers/{supplierId}/contacts                                | 401   | 403   | 403
+GET /api/v1/notifications                                                            | 401   | 403   | OK
+GET /api/v1/notifications/unread-count                                               | 401   | 403   | OK
+GET /api/v1/ordering/requests/{requestId}/award                                      | 401   | 403   | 404
+GET /api/v1/ordering/requests/{requestId}/purchase-order                             | 401   | 403   | 404
+GET /api/v1/purchasing/buyers                                                        | 401   | 403   | 403
+GET /api/v1/purchasing/queue                                                         | 401   | 403   | 403
+GET /api/v1/purchasing/queue/count                                                   | 401   | 403   | 403
+GET /api/v1/purchasing/queue/filter-options                                          | 401   | 403   | 403
+GET /api/v1/purchasing/requests/{id}/assignments                                     | 401   | 403   | 404
+GET /api/v1/receipts/requests/{requestId}                                            | 401   | 403   | 404
+GET /api/v1/requests                                                                 | 401   | 403   | OK
+GET /api/v1/requests/form-options                                                    | 401   | 403   | OK
+GET /api/v1/requests/statuses                                                        | 401   | 403   | OK
+GET /api/v1/requests/{id}                                                            | 401   | 403   | 404
+GET /api/v1/requests/{id}/approval                                                   | 401   | 403   | 404
+GET /api/v1/requests/{id}/approval-preview                                           | 401   | 403   | 404
+GET /api/v1/requests/{id}/attachments                                                | 401   | 403   | 404
+GET /api/v1/sourcing/requests/{requestId}/rfq                                        | 401   | 403   | 404
+GET /api/v1/sourcing/rfqs/{rfqId}/comparison                                         | 401   | 403   | 404
+GET /api/v1/supplier-portal/conversations                                            | 401   | OK    | 403
+GET /api/v1/supplier-portal/conversations/{id}                                       | 401   | 404   | 403
+GET /api/v1/supplier-portal/conversations/{id}/messages                              | 401   | 404   | 403
+GET /api/v1/suppliers                                                                | 401   | 403   | 403
+GET /api/v1/suppliers/{id}                                                           | 401   | 403   | 403
+GET /api/v1/system/status                                                            | 401   | 403   | OK     # any signed-in employee: status page (S1-AC-13)
+POST /api/v1/admin/absences                                                          | 401   | 403   | 403
+POST /api/v1/admin/accounts                                                          | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/active                                              | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/password-reset                                      | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/revoke-sessions                                     | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/roles                                               | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/roles/{grantId}/remove                              | 401   | 403   | 403
+POST /api/v1/admin/accounts/{id}/temporary-password                                  | 401   | 403   | 403
+POST /api/v1/admin/approval-rules                                                    | 401   | 403   | 403
+POST /api/v1/admin/approval-rules/{id}/activate                                      | 401   | 403   | 403
+POST /api/v1/admin/approval-rules/{id}/retire                                        | 401   | 403   | 403
+POST /api/v1/admin/exchange-rates                                                    | 401   | 403   | 403
+POST /api/v1/admin/organization/companies                                            | 401   | 403   | 403
+POST /api/v1/admin/organization/companies/{id}/cost-centres                          | 401   | 403   | 403
+POST /api/v1/admin/organization/companies/{id}/departments                           | 401   | 403   | 403
+POST /api/v1/admin/organization/companies/{id}/sites                                 | 401   | 403   | 403
+POST /api/v1/admin/requests/cleanup/execute                                          | 401   | 403   | 403
+POST /api/v1/admin/requests/cleanup/preview                                          | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/archive                                             | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/cancel                                              | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/correct-draft                                       | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/correct-submitted                                   | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/remove                                              | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/restore                                             | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/restore-removed                                     | 401   | 403   | 403
+POST /api/v1/admin/requests/{id}/return-for-revision                                 | 401   | 403   | 403
+POST /api/v1/approval-links/approve                                                  | 404   | 403   | 404    # public: protected by the token in the body (404 = unknown token)
+POST /api/v1/approval-links/summary                                                  | 404   | 403   | 404    # public: protected by the token in the body
+POST /api/v1/approvals/tasks/{id}/approve                                            | 401   | 403   | 404
+POST /api/v1/approvals/tasks/{id}/delegate                                           | 401   | 403   | 404
+POST /api/v1/approvals/tasks/{id}/question                                           | 401   | 403   | 404
+POST /api/v1/approvals/tasks/{id}/reject                                             | 401   | 403   | 404
+POST /api/v1/approvals/tasks/{id}/return                                             | 401   | 403   | 404
+POST /api/v1/assistant/ask                                                           | 401   | 403   | 403
+POST /api/v1/auth/login                                                              | 401   | 403   | 401    # public: 401 is "wrong credentials"; a signed-in supplier contact is outside the portal
+POST /api/v1/auth/logout                                                             | OK    | SKIP  | SKIP   # public; not called while signed in (it would end the session used by the test)
+POST /api/v1/auth/password                                                           | 401   | INPUT | INPUT  # own password; empty body refused
+POST /api/v1/auth/password-reset/redeem                                              | INPUT | 403   | INPUT  # public: protected by the token in the body
+POST /api/v1/auth/password-reset/request                                             | OK    | 403   | OK     # public, rate-limited; always 202 so it does not reveal accounts
+POST /api/v1/auth/password/change                                                    | 401   | INPUT | INPUT  # own password; empty body refused
+POST /api/v1/imports                                                                 | 401   | 403   | INPUT  # multipart only: the role check is NOT reached by this matrix (open point in sprint-01-final-report.md)
+POST /api/v1/internal-messaging/conversations/direct                                 | 401   | 403   | INPUT  # own conversation; empty body refused
+POST /api/v1/internal-messaging/conversations/{id}/messages                          | 401   | 403   | 404
+POST /api/v1/internal-messaging/conversations/{id}/participants                      | 401   | 403   | 404
+POST /api/v1/internal-messaging/conversations/{id}/read                              | 401   | 403   | 404
+POST /api/v1/internal-messaging/requests/{requestId}/discussion                      | 401   | 403   | 404
+POST /api/v1/internal-messaging/requests/{requestId}/message-approver                | 401   | 403   | 404
+POST /api/v1/logistics/requests/{requestId}/shipments                                | 401   | 403   | 404
+POST /api/v1/logistics/shipments/{shipmentId}/documents                              | 401   | 403   | 404
+POST /api/v1/me/absences                                                             | 401   | 403   | INPUT  # own absence; empty body refused
+POST /api/v1/messaging/contacts/{contactId}/revoke                                   | 401   | 403   | 403
+POST /api/v1/messaging/conversations                                                 | 401   | 403   | 403
+POST /api/v1/messaging/conversations/{id}/messages                                   | 401   | 403   | 403
+POST /api/v1/messaging/conversations/{id}/read                                       | 401   | 403   | 403
+POST /api/v1/messaging/suppliers/{supplierId}/contacts                               | 401   | 403   | 403
+POST /api/v1/notifications/read-all                                                  | 401   | 403   | OK
+POST /api/v1/notifications/{id}/read                                                 | 401   | 403   | 404
+POST /api/v1/ordering/purchase-orders/{poId}/confirm                                 | 401   | 403   | 404
+POST /api/v1/ordering/purchase-orders/{poId}/issue                                   | 401   | 403   | 404
+POST /api/v1/ordering/requests/{requestId}/award                                     | 401   | 403   | 404
+POST /api/v1/ordering/requests/{requestId}/purchase-order                            | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/accept                                         | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/assign                                         | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/completeness-return                            | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/line-classification                            | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/purchase-mode                                  | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/question                                       | 401   | 403   | 404
+POST /api/v1/purchasing/requests/{id}/return-assignment                              | 401   | 403   | 404
+POST /api/v1/quote-links/submit                                                      | 404   | 403   | 404    # public: protected by the token in the body
+POST /api/v1/quote-links/summary                                                     | 404   | 403   | 404    # public: protected by the token in the body
+POST /api/v1/receipts/goods-receipts/{receiptId}/confirm                             | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/close                                     | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/goods-receipts                            | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/invoice                                   | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/invoice/match-attested                    | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/invoice/paid                              | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/service-acceptance                        | 401   | 403   | 404
+POST /api/v1/receipts/requests/{requestId}/shortfall-acceptance                      | 401   | 403   | 404
+POST /api/v1/requests                                                                | 401   | 403   | OK     # a requester may create a draft in their own company
+POST /api/v1/requests/{id}/answers                                                   | 401   | 403   | 404
+POST /api/v1/requests/{id}/attachments                                               | 401   | 403   | INPUT  # multipart only; a real file on a foreign request is refused in aFileCannotBeAttachedToAnotherCompanysRequest
+POST /api/v1/requests/{id}/submit                                                    | 401   | 403   | 404
+POST /api/v1/sourcing/requests/{requestId}/rfq                                       | 401   | 403   | 404
+POST /api/v1/sourcing/requests/{requestId}/validate-commercial                       | 401   | 403   | 404
+POST /api/v1/sourcing/requests/{requestId}/validate-technical                        | 401   | 403   | 404
+POST /api/v1/sourcing/rfqs/{rfqId}/close                                             | 401   | 403   | 404
+POST /api/v1/sourcing/rfqs/{rfqId}/quotes                                            | 401   | 403   | 404
+POST /api/v1/sourcing/rfqs/{rfqId}/suppliers/{rfqSupplierId}/link                    | 401   | 403   | 404
+POST /api/v1/supplier-portal/conversations/{id}/messages                             | 401   | 404   | 403
+POST /api/v1/supplier-portal/conversations/{id}/read                                 | 401   | 404   | 403
+POST /api/v1/suppliers                                                               | 401   | 403   | 403
+POST /api/v1/suppliers/{id}/deactivate                                               | 401   | 403   | 403
+PUT /api/v1/admin/accounts/{id}                                                      | 401   | 403   | 403
+PUT /api/v1/admin/approval-rules/{id}                                                | 401   | 403   | 403
+PUT /api/v1/admin/organization/companies/{id}                                        | 401   | 403   | 403
+PUT /api/v1/logistics/shipments/{shipmentId}/milestones/{milestoneId}                | 401   | 403   | 404
+PUT /api/v1/me/preferences                                                           | 401   | INPUT | INPUT  # own preferences; empty body refused
+PUT /api/v1/ordering/purchase-orders/{poId}                                          | 401   | 403   | 404
+PUT /api/v1/requests/{id}                                                            | 401   | 403   | 404
+PUT /api/v1/suppliers/{id}                                                           | 401   | 403   | 403

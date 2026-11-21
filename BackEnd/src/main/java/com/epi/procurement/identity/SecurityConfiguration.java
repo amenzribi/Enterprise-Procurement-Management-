@@ -3,6 +3,8 @@ package com.epi.procurement.identity;
 import java.time.Clock;
 import java.util.List;
 
+import jakarta.servlet.DispatcherType;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -65,6 +67,9 @@ class SecurityConfiguration {
 			.addFilterAfter(new MustChangePasswordFilter(), CurrentUserRefresh.class)
 			.addFilterAfter(new SupplierPortalRestrictionFilter(), MustChangePasswordFilter.class)
 			.authorizeHttpRequests(requests -> requests
+				// The completion of a long-lived response (the internal messaging event stream) was authorised when the
+				// request arrived; re-authorising its async dispatch after sign-out only fails on a committed response.
+				.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset/request",
@@ -77,6 +82,8 @@ class SecurityConfiguration {
 				.requestMatchers(HttpMethod.POST, "/api/v1/quote-links/summary", "/api/v1/quote-links/submit")
 				.permitAll()
 				.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+				// Metrics describe the whole installation, not one company: global administrators only (audit A-2).
+				.requestMatchers("/actuator/metrics", "/actuator/metrics/**").hasRole(Role.GLOBAL_ADMIN.name())
 				.requestMatchers("/error").permitAll()
 				.requestMatchers(API_DOC_PATHS.toArray(String[]::new)).hasAnyRole(Role.ADMIN.name(),
 						Role.GLOBAL_ADMIN.name())

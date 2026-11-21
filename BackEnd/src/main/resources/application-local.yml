@@ -5,6 +5,17 @@ spring:
   flyway:
     ignore-migration-patterns: "*:future,repeatable:missing"
 
+server:
+  # A development instance has insecure cookies and testing hooks: it listens on this machine only, so starting a
+  # server with this profile by mistake exposes nothing (review RR-6). To reach it from another device, set
+  # APP_ENVIRONMENT=development and SERVER_ADDRESS=0.0.0.0.
+  address: ${SERVER_ADDRESS:127.0.0.1}
+
 app:
   security:
     cookie-secure: false
+  mail:
+    mode: ${MAIL_MODE:file}
+  attachments:
+    # No antivirus on a developer machine: unscanned files may be downloaded here, and only here (audit S-1).
+    allow-unscanned-downloads: true

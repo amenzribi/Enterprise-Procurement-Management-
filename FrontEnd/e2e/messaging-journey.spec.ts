@@ -5,6 +5,8 @@ import { USERS, createAndSubmit, decide, demoPassword, newUserPage, signIn, t, u
  * Sprint 11: buyer opens RFQ conversation, sends EXTERNAL message, supplier replies; INTERNAL stays hidden.
  */
 test('buyer ↔ supplier messaging on RFQ (EN)', async ({ page, browser }) => {
+  // Seven sign-ins and a full request-to-RFQ path: 34 s on a quiet machine, over 60 s under load in a full run.
+  test.setTimeout(120_000);
   await signIn(page, USERS.requesterTn, 'en');
   const request = await createAndSubmit(page, 'en', uniqueTitle('Messaging'));
   const karim = await newUserPage(browser);

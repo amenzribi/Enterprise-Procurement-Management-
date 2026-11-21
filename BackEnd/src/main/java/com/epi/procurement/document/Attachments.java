@@ -39,7 +39,8 @@ import com.epi.procurement.request.RequestWorkflow;
  * <li>Upload and delete while the request is editable (draft, returned for revision), by its authors.</li>
  * <li>Content type from the bytes, max 20 MB per file, 30 files and 100 MB per request.</li>
  * <li>A file with the same name on the same request/line becomes a new version; earlier versions are kept.</li>
- * <li>Download only for users who can see the request, only after a clean scan, always as a download.</li>
+ * <li>Download only for users who can see the request, only after a clean scan, always as a download. A file that
+ * was not scanned stays in quarantine unless the development setting allows it (audit S-1).</li>
  * <li>Upload and delete are audited.</li>
  * </ul>
  */
@@ -62,7 +63,7 @@ class Attachments {
 
 	private final FileStorage storage;
 
-	private final AttachmentScanner scanner;
+	private final ScanPolicy scans;
 
 	private final UserDirectory users;
 
@@ -74,14 +75,15 @@ class Attachments {
 
 	private final com.epi.procurement.platform.persistence.TransactionLocks locks;
 
-	Attachments(DataSource dataSource, RequestWorkflow requests, FileStorage storage, AttachmentScanner scanner,
-			UserDirectory users, AuditLog auditLog, ObjectProvider<Clock> clock,
-			com.epi.procurement.platform.persistence.TransactionLocks locks,
-			@Value("${app.attachments.max-file-bytes:20971520}") long maxFileBytes) {
+	Attachments(DataSource dataSource, RequestWorkflow requests, FileStorage storage,
+			ObjectProvider<AttachmentScanner> scanner, UserDirectory users, AuditLog auditLog,
+			ObjectProvider<Clock> clock, com.epi.procurement.platform.persistence.TransactionLocks locks,
+			@Value("${app.attachments.max-file-bytes:20971520}") long maxFileBytes,
+			@Value("${app.attachments.allow-unscanned-downloads:false}") boolean allowUnscannedDownloads) {
 		this.jdbc = new JdbcTemplate(dataSource);
 		this.requests = requests;
 		this.storage = storage;
-		this.scanner = scanner;
+		this.scans = new ScanPolicy(scanner.getIfAvailable(), allowUnscannedDownloads);
 		this.users = users;
 		this.auditLog = auditLog;
 		this.clock = clock.getIfAvailable(Clock::systemUTC);
@@ -130,10 +132,7 @@ class Attachments {
 					"This request already has the maximum number or size of attachments.",
 					Map.of("maxFiles", MAX_FILES, "maxTotalBytes", MAX_TOTAL_BYTES));
 		}
-		if (scanner.scan(fileName, content) == AttachmentScanner.ScanResult.INFECTED) {
-			throw new ApiProblemException(HttpStatus.UNPROCESSABLE_CONTENT, "file-infected",
-					"The file was rejected by the antivirus.");
-		}
+		String scanStatus = scans.statusFor(fileName, content);
 		String key;
 		try {
 			key = storage.store(content);
@@ -152,10 +151,10 @@ class Attachments {
 				                        storage_key, version_no, scan_status, uploaded_by, uploaded_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", id, requestId, lineId, request.requestingCompanyId(),
 				fileName, contentType, content.length, sha256(content), key, version,
-				"CLEAN", user.id(), db(now));
+				scanStatus, user.id(), db(now));
 		auditLog.record(new AuditRecord(user.id(), user.displayName(), request.requestingCompanyId(), "ATTACHMENT",
 				id.toString(), "ATTACHMENT_UPLOADED", null, null, null,
-				"{\"requestId\":" + requestId + ",\"version\":" + version + ",\"sizeBytes\":" + content.length + "}"));
+				"{\"requestId\":" + requestId + ",\"version\":" + version + ",\"sizeBytes\":" + content.length + ",\"scan\":\"" + scanStatus + "\"}"));
 		Row row = jdbc.queryForObject("SELECT " + COLUMNS + " FROM attachment WHERE id = ?", this::row, id);
 		return view(row, Map.of(user.id(), user.displayName()), true);
 	}
@@ -164,7 +163,7 @@ class Attachments {
 	Download download(CurrentUser user, long attachmentId) {
 		Row row = find(attachmentId);
 		requests.requireVisible(user, row.requestId());
-		if (!"CLEAN".equals(row.scanStatus())) {
+		if (!scans.downloadable(row.scanStatus())) {
 			throw ApiProblemException.notFound();
 		}
 		try {
@@ -250,7 +249,7 @@ class Attachments {
 	private AttachmentView view(Row r, Map<Long, String> names, boolean editable) {
 		return new AttachmentView(r.id(), r.requestId(), r.lineId(), r.fileName(), r.contentType(), r.sizeBytes(),
 				r.versionNo(), r.scanStatus(), new AttachmentView.UserRef(r.uploadedBy(), names.getOrDefault(r.uploadedBy(), "")),
-				r.uploadedAt(), "/api/v1/attachments/" + r.id() + "/content", editable);
+				r.uploadedAt(), "/api/v1/attachments/" + r.id() + "/content", editable, scans.downloadable(r.scanStatus()));
 	}
 
 	private Row row(java.sql.ResultSet rs, int i) throws java.sql.SQLException {
@@ -269,10 +268,11 @@ class Attachments {
 
 	/**
 	 * @param canDelete whether the caller may delete it now (editable request, author)
+	 * @param downloadable whether the content can be downloaded: scanned clean, or unscanned where that is allowed
 	 */
 	record AttachmentView(long id, long requestId, Long lineId, String fileName, String contentType, long sizeBytes,
 			int version, String scanStatus, UserRef uploadedBy, Instant uploadedAt, String downloadUrl,
-			boolean canDelete) {
+			boolean canDelete, boolean downloadable) {
 
 		record UserRef(long id, String displayName) {
 		}

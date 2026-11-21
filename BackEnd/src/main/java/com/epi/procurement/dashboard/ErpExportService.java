@@ -146,12 +146,17 @@ class ErpExportService {
 		return "poNumber,status,currency,totalAmount,buyingCompanyId,chargedCompanyId,requestNumber\n";
 	}
 
-	private static String csv(String value) {
+	static String csv(String value) {
 		if (value == null) {
 			return "";
 		}
-		String escaped = value.replace("\"", "\"\"");
-		if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {
+		String text = value;
+		// A cell that starts like a formula is run by spreadsheet programs when the export is opened (audit S-14).
+		if (!text.isEmpty() && "=+-@\t\r".indexOf(text.charAt(0)) >= 0) {
+			text = "'" + text;
+		}
+		String escaped = text.replace("\"", "\"\"");
+		if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n") || escaped.contains("\r")) {
 			return "\"" + escaped + "\"";
 		}
 		return escaped;

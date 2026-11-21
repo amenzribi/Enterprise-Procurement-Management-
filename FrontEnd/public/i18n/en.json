@@ -55,7 +55,8 @@
       "import": "Master-data import",
       "users": "Users",
       "requestAdmin": "Request administration",
-      "changePassword": "Change password"
+      "changePassword": "Change password",
+      "conversations": "Messages"
     },
     "plannedSprint": "Sprint {{sprint}}",
     "pendingCount": "{{count}} waiting for your decision"
@@ -234,7 +235,8 @@
     "search": "Search",
     "reset": "Reset",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "close": "Close"
   },
   "errors": {
     "network-error": "The server could not be reached. Check your connection and try again.",
@@ -258,6 +260,13 @@
     "task-not-pending": "This decision has already been taken or reassigned.",
     "reason-required": "Give a reason.",
     "delegate-not-eligible": "This person cannot receive the approval.",
+    "delegate-is-administrator": "An administrator cannot name themselves as the delegate.",
+    "delegate-created-by-administrator": "You created this account. Another administrator must record this absence.",
+    "self-grant": "You cannot change your own roles. Ask a global administrator.",
+    "four-eyes": "You created this account. Another administrator must give it this role or reactivate it.",
+    "peer-administrator": "You cannot manage another administrator. Ask a global administrator.",
+    "cannot-set-own-password": "Change your own password from your profile.",
+    "scan-unavailable": "The file could not be checked for viruses. Try again later.",
     "absence-overlap": "This period overlaps another absence.",
     "link-invalid": "This link is no longer valid.",
     "file-too-large": "The file is larger than 20 MB.",
@@ -310,7 +319,17 @@
     "no-goods-lines": "This order has no goods to ship.",
     "classification-unconfirmed": "Purchasing must confirm the service lines before award.",
     "own-classification": "Another person must decide the classification of your own request.",
-    "already-confirmed": "These service lines are already confirmed."
+    "already-confirmed": "These service lines are already confirmed.",
+    "discussion-not-participant": "This request has a discussion you are not part of. Ask one of its participants to add you.",
+    "approver-changed": "The approver has changed since you opened this. Check who decides now, then send.",
+    "client-message-id-reused": "This message was already sent with a different text. Copy your text and send it again.",
+    "use-reset-link": "This account holds a sensitive role. Send a password reset link instead.",
+    "supplier-contact-role": "A supplier contact cannot become an employee account. Revoke the contact from messaging instead.",
+    "buyer-is-requester": "The person who asked for this purchase cannot buy it.",
+    "buyer-cannot-receive": "The buyer of this order cannot record or confirm its receipt.",
+    "invoice-recorder": "Another person must attest or authorise payment of an invoice you recorded.",
+    "payment-needs-manager": "Only a purchasing manager of the buying company can authorise payment.",
+    "payment-not-independent": "The buyer of this order cannot authorise its payment."
   },
   "auth": {
     "signOut": "Sign out",
@@ -942,6 +961,8 @@
     "errors": {
       "absence-overlap": "This period overlaps another absence.",
       "delegate-not-eligible": "This person cannot approve in your place. Choose someone with the same approval role.",
+      "delegate-is-administrator": "An administrator cannot name themselves as the delegate.",
+      "delegate-created-by-administrator": "You created this account. Another administrator must record this absence.",
       "self-delegation": "You cannot delegate to yourself.",
       "invalid-period": "Check the dates of the absence.",
       "save-failed": "The absence could not be saved. Try again."
@@ -1004,7 +1025,9 @@
       "invalid-value": "A value is not valid. Check the steps.",
       "required": "Fill in the required fields.",
       "not-in-company": "The named approver must belong to this group.",
-      "save-failed": "The rule could not be saved. Check the fields and try again."
+      "save-failed": "The rule could not be saved. Check the fields and try again.",
+      "approver-is-administrator": "You cannot name yourself as the approver.",
+      "approver-created-by-administrator": "You created this account. Another administrator must name it as approver."
     },
     "approverUserHint": "Only users of this company are listed.",
     "used": "used by requests",
@@ -1050,6 +1073,7 @@
     "empty": "No attachment.",
     "version": "version {{version}}",
     "scanning": "virus check in progress",
+    "notScanned": "not virus-checked",
     "remove": "Remove {{name}}",
     "removeTitle": "Remove this file?",
     "removeMessage": "“{{name}}” will be removed from the request.",
@@ -1446,7 +1470,8 @@
       "serviceHint": "Confirm that the service lines on this order were performed. Goods lines still need their receipts.",
       "serviceComment": "Comment",
       "serviceAccept": "Accept services",
-      "serviceAcceptedToast": "Services accepted"
+      "serviceAcceptedToast": "Services accepted",
+      "invoiceSecondPerson": "Another person attests the match, and a purchasing manager other than you authorises payment."
     },
     "status": {
       "RECORDED": "Recorded",
@@ -1592,7 +1617,8 @@
     "roleCombinations": "Approver roles may be combined with REQUESTER. BUYER and PURCHASING_MANAGER may be combined. GLOBAL_ADMIN should not be used as an “all roles” account. SUPPLIER_CONTACT is invited from messaging, not here.",
     "tempPassword": "Set temporary password",
     "tempPasswordHint": "At least 12 characters. The user must change it at first sign-in. The value is never stored in clear text or shown again.",
-    "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it."
+    "tempPasswordDone": "Temporary password set. Ask the user to sign in and change it.",
+    "createdPendingActivation": "Account created. Another administrator must activate it; its owner then receives the set-up link."
   },
   "requestAdmin": {
     "title": "Request administration",
@@ -1782,5 +1808,118 @@
   "theme": {
     "toDark": "Switch to dark theme",
     "toLight": "Switch to light theme"
+  },
+  "internalMessaging": {
+    "inbox": {
+      "title": "Messages",
+      "listLabel": "Conversations",
+      "threadLabel": "Conversation",
+      "new": "New message",
+      "search": "Search conversations",
+      "loadError": "Your conversations could not be loaded.",
+      "noMessages": "No messages yet",
+      "unread": "{{count}} unread",
+      "back": "Conversations",
+      "emptyTitle": "No conversations yet",
+      "emptyMessage": "Start one with \"New message\", or from a request with \"Message approver\".",
+      "noMatch": "No conversation matches this search.",
+      "pickTitle": "Choose a conversation",
+      "pickMessage": "Or start a new one with a colleague of your company."
+    },
+    "directory": {
+      "label": "Find a colleague",
+      "hint": "Colleagues of your company. Messages are private to the two of you.",
+      "name": "Name",
+      "department": "Department",
+      "role": "Role",
+      "anyRole": "Any role",
+      "none": "No colleague matches these filters."
+    },
+    "roles": {
+      "REQUESTER": "Requester",
+      "ENTER_ON_BEHALF": "Enters requests for others",
+      "DEPARTMENT_MANAGER": "Department manager",
+      "BUDGET_APPROVER": "Budget approver",
+      "MANAGEMENT_APPROVER": "Management approver",
+      "BUYER": "Buyer",
+      "PURCHASING_MANAGER": "Purchasing manager",
+      "RECEIVER": "Receiver",
+      "GROUP_MANAGEMENT": "Group management",
+      "ADMIN": "Company administrator",
+      "GLOBAL_ADMIN": "Global administrator",
+      "AUDITOR": "Auditor"
+    },
+    "thread": {
+      "loading": "Loading the conversation…",
+      "history": "Messages",
+      "older": "Show earlier messages",
+      "empty": "No messages yet. Say hello.",
+      "sending": "Sending…",
+      "sent": "Sent",
+      "retry": "Try again",
+      "discard": "Remove",
+      "dismiss": "Dismiss",
+      "notFound": "This conversation is not available",
+      "notFoundHint": "It does not exist, or you no longer have access to it or to its request.",
+      "loadError": "This conversation could not be loaded."
+    },
+    "composer": {
+      "label": "Message",
+      "placeholder": "Write a message",
+      "send": "Send",
+      "shortcut": "Ctrl + Enter to send",
+      "remaining": "{{count}} characters left",
+      "attachRequest": "Attach a request",
+      "findRequest": "Find a request by reference or title",
+      "noRequests": "No request found.",
+      "removeRequest": "Remove the attached request",
+      "cardWithheld": "Sent without the request card: not everyone in this conversation can see that request."
+    },
+    "card": {
+      "open": "Open the request",
+      "unavailable": "A request you cannot see"
+    },
+    "system": {
+      "started": "{{actor}} started the discussion",
+      "added": "{{actor}} added {{person}}",
+      "preview": "Participants changed"
+    },
+    "discussion": {
+      "title": "Discussion",
+      "openFull": "Open in Messages",
+      "participants": "{{count}} participants",
+      "add": "Add a colleague",
+      "addHint": "Only colleagues who can already see this request can be added.",
+      "addSearch": "Search colleagues",
+      "noCandidates": "No other colleague can see this request.",
+      "notParticipant": "This request has a discussion. Ask one of its participants to add you.",
+      "startHint": "Start a discussion with the current approvers. Others can be added if they can see the request.",
+      "start": "Start a discussion",
+      "loadError": "The discussion could not be loaded."
+    },
+    "approver": {
+      "action": "Message approver",
+      "title": "Message the approver",
+      "choose": "Send to",
+      "to": "To",
+      "message": "Message",
+      "onBehalfOf": "on behalf of {{name}}",
+      "suggestion": "Could you please review this request when you have a moment?",
+      "sent": "Sent to {{name}}. They can open the request from the message and decide in the approval workflow.",
+      "openConversation": "Open the conversation",
+      "openInbox": "Open Messages",
+      "changed": "The approver has changed since you opened this. Check who decides now, then send.",
+      "state": {
+        "NOT_IN_APPROVAL": "This request is not waiting for an approval.",
+        "NO_APPROVER": "No approver is assigned at the moment. The approval workflow assigns one at the next stage.",
+        "SELF_ONLY": "You are the current approver of this request."
+      }
+    },
+    "errors": {
+      "not-eligible": "This colleague cannot be added: they belong to another company or their account is not active.",
+      "no-request-access": "This colleague cannot see the request, so they cannot be added.",
+      "discussion-exists": "This request already has a discussion.",
+      "unexpected": "Something went wrong. Try again."
+    }
   }
 }

@@ -104,7 +104,7 @@ export function formatSize(bytes: number, locale: string): string {
                         · {{ file.uploadedBy.displayName }}
                       }
                       @if (file.scanStatus === 'PENDING') {
-                        · {{ 'attachments.scanning' | translate }}
+                        · {{ (file.downloadable ? 'attachments.notScanned' : 'attachments.scanning') | translate }}
                       } @else if (file.scanStatus === 'INFECTED' || file.scanStatus === 'REJECTED') {
                         · {{ 'attachments.infected' | translate }}
                       }
@@ -360,7 +360,7 @@ export class Attachments {
   }
 
   protected downloadable(file: Attachment): boolean {
-    return !file.scanStatus || file.scanStatus === 'CLEAN';
+    return file.downloadable ?? (!file.scanStatus || file.scanStatus === 'CLEAN');
   }
 
   protected size(bytes: number): string {

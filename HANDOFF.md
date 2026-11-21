@@ -1,3 +1,189 @@
+<!-- checkpoint:start -->
+# Handoff: Sprint 1 closed (2026-11-18); three commits approved and being pushed to `enterprise/feat/internal-messaging`
+
+**Resume here.** Read `CLAUDE.md`, this section, `STATUS.md`, then `docs/sprints/sprint-01-progress.md` (section "F-1, F-2, F-5") and `docs/sprints/sprint-01-test-results.md` section 8. Nothing is committed or pushed. Do not commit, push, deploy or start Sprint 2 without the owner's approval.
+
+| Item | Value |
+|---|---|
+| Branch | `feat/internal-messaging`, base `c7b901d`; all changes uncommitted |
+| State | F-1, F-2, F-5 implemented (no migration, no new state), fourth independent review done and fixed; backend 298/298, frontend lint, 255/255, build |
+| Remaining | Owner approved closure and the current invoice rules (no third person). Git preparation: verify the 3-commit split, test commit 1 alone in a temporary worktree (`C:/qa/wt-msg`), migrations order, mixed files, exclusions, secret scan; then present file lists and commands and WAIT for approval. Push only to `enterprise/feat/internal-messaging`. **Progress 2026-11-18:** split verified from the tested messaging trees (`bb5bdd80`, `eaec3f50`): commit 1 = 51 files (tree `a80b3fff`), commit 2 = 84, commit 3 = 31, excluded 4; migrations V22 in commit 1, V23 and V24 in commit 2; secret scan clean; commit 1 frontend in worktree `C:/qa/wt-msg`: lint, 253/253, build pass; backend `verify -Pdb-it` on its own database **208/208, V22 applied, at v22** (`C:/qa/c1-backend.log`). Worktree and test database removed. Plan script (not run) and file lists: `C:/qa/git-plan/`. **Owner approved the plan and the push on 2026-11-18** (no merge, no deploy, no Sprint 2). After the push: commit hashes, push result and CI status are recorded in the working copy of this file and STATUS.md (not in a further commit without permission). |
+
+## Done for F-1, F-2, F-5
+
+- F-1: accounts created inactive; the creator, or an administrator the creator created, cannot activate (403 `four-eyes`); set-up link sent at activation; audit `USER_CREATED`, `USER_ACTIVATED`, `PASSWORD_SETUP_ISSUED`.
+- F-2: ADMIN and GLOBAL_ADMIN never granted by the creator nor to oneself (`Role.requiresFourEyes`); bootstrap of two global administrators (`GLOBAL_ADMIN_BOOTSTRAP_SECOND_EMAIL`), audited `GLOBAL_ADMIN_BOOTSTRAPPED`.
+- F-5: `buyer-is-requester` (assign, accept), `buyer-cannot-receive` (receipt create/confirm, service acceptance), `invoice-recorder` (attest, pay; recording never attests or pays), `payment-needs-manager`.
+- Docs: README (bootstrap, administration rules, procurement separation of duties), CLAUDE.md = AGENTS.md.
+- Frontend: 255/255, lint clean, build succeeds.
+
+## Independent review of F-1/F-2/F-5 (done) and its fixes (applied, affected tests pass)
+
+Review result: 5 Major, 3 Minor, 1 Info (to be recorded in `docs/reviews/sprint-01-independent-review.md`). Full backend on the code *before* these fixes: **293/293** (`C:/qa/s1/f125-full.log`).
+
+Code fixes already applied (not yet tested):
+1. Requester refused (403 `buyer-is-requester`) in `OrderingService.requireAwardActor`, `SourcingService.requireCanOpen` and `requireSourcingActor`, `LogisticsService.requireActor`.
+2. `ReceiptService.markInvoicePaid`: refuses the attester (audit `INVOICE_MATCH_ATTESTED` actor) and the buyer (assigned or PO issuer), 403 `payment-not-independent`; `attestInvoiceMatch` refuses the payer.
+3. `UserDirectory.createdBy` now follows the creation chain (`creationChain`, depth 5); activation refuses anyone in the chain.
+4. `setTemporaryPassword`: 403 `use-reset-link` on inactive accounts and on accounts in the actor's creation chain.
+5. `acceptShortfall` and a closure waiver refuse the buyer; `requireNotBuyer` also covers the PO issuer (`ReceiptStore.poIssuer`).
+6. Roles given at creation are audited (`ROLE_GRANTED`).
+
+Tests adapted, 5 regression tests added; affected classes 87/87; **full backend 298/298** (`C:/qa/s1/r4-full.log`); frontend lint, 255/255, build. Review recorded in `docs/reviews/sprint-01-independent-review.md`; final report written in `docs/sprints/sprint-01-remediation-report.md` except `BROWSER_RESULT`. Browser attempt 1: 67/69 (two test defects, fixed: `ordering-logistics-journey` checkbox, `support.ts` sign-in race; log `pw-r4-attempt1.log`). Attempt 2: 68/69 (`request-to-closure-20-step` receipt-panel helper reloaded too fast under load; fixed in it and in `ordering-logistics-journey`; log `pw-r4-attempt2.log`). Attempt 3: 67/69 (two test time limits, raised; `pw-r4-attempt3.log`). Attempt 4: 67/69 (time limits in two other tests; OneDrive sync uses a full core). **2026-11-18: attempt 6 67/69 (time limits under load); attempt 7 69/69, 0 flaky, 25.7 min, uninterrupted (`C:/qa/s1/e2e/pw-final.log`). Instance stopped; evidence folders unchanged. Final report complete.** Earlier: paused by the owner at 00:05 on 2026-11-18 during attempt 5 (stopped; no result; instance stopped, nothing running, evidence folders unchanged). **To resume:** if possible pause OneDrive sync (owner's choice), then `& C:/qa/s1/e2e/start-instance.ps1` and `& C:/qa/s1/e2e/run-full.ps1` (screenshots go to `C:/qa/s1/e2e/evidence` and `verification`); on a clean 69/69 fill `BROWSER_RESULT` in `docs/sprints/sprint-01-remediation-report.md` section 4 and present the GO/NO-GO and commit plan. If the backend code changes, rerun `verify -Pdb-it` first (it builds the jar). Old note (started 00:01 on 2026-11-18, `C:/qa/s1/e2e/pw-final.log`, exit in `pw-final.exit`). After it: check System log for sleep events, stop java on :8085 and ng on :4205, `git checkout -- docs/qa/evidence docs/design/verification`, fill BROWSER_RESULT, present report.
+
+## Notes
+
+- `FrontEnd/angular.json` carries an Angular CLI analytics ID written by a tool run on 2026-11-16; not project work; keep it out of commits.
+- Local leftovers: database `procurement_qa_s1val` (test only); logs under `C:\qa\s1`.
+
+## Commands
+
+```powershell
+& C:/qa/s1/run.ps1 <log-name> verify -Pdb-it                       # full backend suite (copy outside the workspace)
+cd FrontEnd; npm run lint; npm test; npm run build
+& C:/qa/s1/e2e/start-instance.ps1                                  # fresh test database + instance (:8085, :4205), after a verify run
+& C:/qa/s1/e2e/run-full.ps1                                        # full browser run; then stop java/ng and restore docs/qa/evidence, docs/design/verification
+```
+<!-- checkpoint:end -->
+
+# Handoff: Internal employee messaging, final verification (2026-11-14)
+
+**State: ready for the owner's review. Not committed, not pushed.** The feature commit and any push wait for the owner's instruction. When committing, leave out `docs/tooling.md` and `.anchor/`.
+
+Design, rules, API and limits: [docs/architecture/internal-messaging.md](docs/architecture/internal-messaging.md). Plan: [docs/superpowers/plans/2026-11-13-internal-messaging.md](docs/superpowers/plans/2026-11-13-internal-messaging.md). Short state: [STATUS.md](STATUS.md).
+
+## Tested code state
+
+| Item | Value |
+|---|---|
+| Branch | `feat/internal-messaging` |
+| Base commit | `c7b901d719ac2b86ff438a1d34ff70e1ce314bb3` (approved Meridian refinement) |
+| Working tree | Uncommitted: 16 modified tracked files (docs included), plus new files under `BackEnd/…/messaging/`, `FrontEnd/…/internal-messaging/`, the migration, tests and docs |
+| `BackEnd/` tree hash | `bb5bdd80a7cdb3e7c15782d7b4db41f2c7172f8b` |
+| `FrontEnd/` tree hash | `eaec3f501060dab2a25af0ec6fdd77af94ff7b26` |
+| Last source edits | Backend 2026-11-14 00:06:58, frontend 2026-11-13 17:27:32; every check below ran after these |
+
+The tree hashes are of the working tree as tested (36 files, +5,845 / −13 against `c7b901d` in those two folders). To compare later: `GIT_INDEX_FILE=<temp> git read-tree HEAD && git add -A -- BackEnd FrontEnd && git rev-parse $(git write-tree):BackEnd` (and `:FrontEnd`). It uses a temporary index and leaves the real index and refs untouched. The three backend copies used (tests in `C:\qa\im-test`, isolated suite in `C:\qa\im-verify`, review instance in `C:\qa\im-review`) were compared file by file with the workspace: no differences.
+
+## Results
+
+| Check | Where | Result |
+|---|---|---|
+| Backend `mvnw.cmd verify -Pdb-it` | SQL Server, `procurement_test` | **208 / 208**, build success (15 messaging tests, module structure test included) |
+| Frontend lint | Workspace | Pass |
+| Frontend unit tests | Workspace | **253 / 253** |
+| Frontend build | Workspace | Pass. Two warnings: initial bundle 524.60 kB (500 kB budget; 518.70 kB before this work), `sign-in.scss` 9.24 kB (unchanged) |
+| Full Playwright suite, 66 tests | Isolated instance: frontend :4203, backend :8083 (jar built from this tree), **fresh database** `procurement_qa_msg_verify` migrated and seeded for the run; nothing else using it | **66 / 66 in 27.0 min**, no retries |
+| Messaging scenarios repeated | Review instance | 9 / 9 (3 scenarios × 3) |
+| Message emails | 180 mail files of the isolated run | None from internal messaging; none links to `/conversations` |
+
+**Isolation of the suite run.** Own backend, frontend and database; no screenshot or probe script ran during it. Playwright output, traces and the JSON report went to `C:\qa\im-verify` (outside OneDrive), with `--output` and `--reporter=list,json`. Two specs write screenshots to hard-coded paths in the repository (`docs/qa/evidence`, `docs/design/verification`). Those were restored with `git checkout` afterwards; no tracked file stays modified.
+
+## 25-second send: investigated
+
+The slow send was seen once, on the review instance, while the full suite was running. Measured afterwards on the isolated instance under normal load:
+
+| Path | Median | p95 | Max |
+|---|---|---|---|
+| Send API round trip, direct to the backend (20 sends) | 30.5 ms | 55.4 ms | 55.4 ms |
+| Send API round trip, through the dev-server proxy (20 sends) | 27.0 ms | 61.3 ms | 61.3 ms |
+| Live event at the recipient, after the send response | 2.3–2.6 ms | 5.3–9.7 ms | 9.7 ms |
+| Recipient's follow-up fetch of the new message | 12.9–19.7 ms | 19.4–23.3 ms | 23.3 ms |
+| Browser: Send click → bubble shows "Sent" (10 sends) | 117 ms | 213 ms | 213 ms |
+| Browser: the send request inside that (browser's own timing) | 26 ms | 38 ms | 38 ms |
+| Browser: Send click → text displayed in the recipient's open thread | 210 ms | 226 ms | 226 ms |
+
+- **Where the time goes:** a little under a quarter of the click-to-"Sent" time is the server; the rest is the browser (rendering, plus the test driver's polling). Event delivery after commit takes milliseconds. No event was missed (0 of 40).
+- **The slow send was not reproduced.**
+  - At the time, OneDrive sync was using about 46% CPU on Playwright traces written inside the synced folder, and the review backend runs under `spring-boot:run` with the C1 compiler only.
+  - A SQL Server blocking monitor saw no lock wait over one second in the reruns.
+  - The message was stored once.
+  - Conclusion: machine load, not a code path. It can't be proven after the fact.
+- **A real defect found while checking this:** simultaneous retries of one message could deadlock in SQL Server, and one tab got 503 `busy`.
+  - Reproduced: one 503 in a round of eight.
+  - Fixed: the conversation row is locked first, in every transaction that writes a message or participant.
+  - Covered by `t10`: five rounds of eight simultaneous sends, all 200/201. It fails without the fix and passes with it.
+  - The review instance's earlier "Lock failure" log lines could have had this cause; that is not proven.
+
+## Access verification (backend, SQL Server tests)
+
+| Requirement | Test | Verified |
+|---|---|---|
+| Removed participant who still sees the request | `t15` | Request page still 200. Every conversation endpoint is 404: detail, messages (newest, after, before), send, read, candidates, add participant. Not listed, unread excluded, no live event, gone from the others' participant list. Re-added by a participant: one audited addition, a system line, history visible again |
+| Account deactivation | `t07` | Events stop at once, before the heartbeat. The heartbeat closes the stream. The old session gets 401 on messages, list, unread and stream. After reactivation, a new sign-in reconnects, recovers the message sent meanwhile exactly once, and gets live events |
+| Authorization change (role and request access withdrawn) | `t06` | Discussion 404 and not streamed, while direct messages still stream. The request card shows nothing. Access given back: readable again, and the resync returns exactly the missed message |
+| Reconnect | `t11`, `t06`, `t07` | Resync by `afterId` with no duplicates. After sign-out the stream closes at the heartbeat, and the old cookie gets 401 (stream included) |
+| Private direct messages refused to outsiders | `t03`, `t04`, `t05` | Unrelated employee of the same company, company ADMIN, GLOBAL_ADMIN, user of another company: 404 on all 8 conversation calls. The text never appears in a response; not listed, not counted, not streamed. Supplier contact: 403 on all of them and on the stream. The two participants still read it |
+
+**Removal has no screen in this release.** `t15` sets `removed_at` directly. While writing it, a latent defect turned up: adding a removed person again silently did nothing (unique key) yet answered 200. The row is now restored.
+
+## Changes in this verification pass
+
+- `InternalMessagingStore`: `lockConversation` (fixed lock order), and re-adding a removed participant restores the row.
+- `InternalMessagingService`: takes the conversation lock before message and participant writes; the system line for an addition gets a unique key, so a second addition is recorded.
+- `InternalMessagingIntegrationTests`:
+  - `t03` widened to the full outsider matrix.
+  - `t06` and `t07` extended to live delivery and restoration.
+  - `t10` strengthened.
+  - `t11` gained the sign-out checks.
+  - New `t15` covers removed participants.
+  - The in-memory send limit is reset before each test.
+- `docs/architecture/internal-messaging.md`: removal, deactivation, authorization change, sign-out, lock order, a separate section on the single-node limitation, e-mail disabled, retention pending.
+
+## Review instance
+
+**http://localhost:4202** (frontend, this working tree), backend :8082 restarted on 2026-11-14 with the tested code, database `procurement_qa_messaging` (data kept), mail files in `C:\qa\im-review\mail`. The QA instance (:4201 / :8081) and the owner's :4200 / :8080 are untouched. The instance runs while the session that started it is alive. Sign in with the demo accounts (`requester.tn@demo.local`, `manager.tn@demo.local`, `manager2.tn@demo.local`, `buyer@demo.local`, `receiver.tn@demo.local`, `requester.fr@demo.local`, …) and the password given to the backend as `DEMO_USER_PASSWORD` (told to the owner in the session, not written here).
+
+```powershell
+# Backend (copy outside the workspace, isolated database, port 8082)
+cd C:\qa\im-review\BackEnd
+$env:SERVER_PORT="8082"; $env:DEMO_USER_PASSWORD="<choose>"; $env:APP_PUBLIC_BASE_URL="http://localhost:4202"; $env:MAIL_DIRECTORY="C:\qa\im-review\mail"
+$env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=procurement_qa_messaging;integratedSecurity=true;encrypt=true;trustServerCertificate=true"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev,demo"
+# Frontend
+cd FrontEnd; npx ng serve --port 4202 --proxy-config C:\qa\im-review\proxy.conf.8082.json
+# Isolated full suite (fresh database, jar on 8083, ng serve on 4203; output outside OneDrive)
+java "-Djava.library.path=<copy>\target\native" -jar <copy>\target\procurement-0.1.0-SNAPSHOT.jar "--spring.profiles.active=dev,demo"
+$env:E2E_BASE_URL="http://localhost:4203"; $env:PLAYWRIGHT_JSON_OUTPUT_NAME="C:\qa\im-verify\pw-results.json"
+npx playwright test -c e2e/playwright.config.ts --reporter=list,json --output C:\qa\im-verify\pw-output
+git checkout -- docs/qa/evidence docs/design/verification
+```
+
+Probes used for the timings (outside the repository): `C:\qa\im-verify\latency-api.mjs`, `latency-browser.mjs`, `sse-proxy-check.mjs`.
+
+## Migration
+
+V22 adds three tables and three sequences; nothing existing changes, no backfill. Rollback before any message exists: drop them. After messages exist, dropping them deletes employee correspondence. No migration was added in this pass.
+
+## Decisions for the owner (open)
+
+1. **Retention: pending a product decision.** No policy for employee messages exists in the project, and nothing is deleted automatically.
+2. **Live delivery is limited to one backend node** (next section).
+3. **E-mail for messages: disabled for this phase.** Nothing is sent. `InternalMessagePosted` is the extension point, if it is wanted later.
+
+## Limitation: one backend node
+
+Live connections are held in one backend process. With two or more nodes, a message stored through node A is not pushed to a recipient connected to node B. That recipient sees it at the next resync (reconnect, navigation, 30-minute stream end, or opening the conversation), and their unread badge is stale until then. Nothing is lost. Deploy one backend node until either sticky sessions with a per-node poll, or a shared broker (with an ADR under ADR-003), is chosen.
+
+## Other limitations
+
+- Removing a participant or leaving a discussion has no screen yet; the server rules for it are in place and tested.
+- Former approvers keep request access under the existing request rules (`request_participant`), and therefore keep the discussion unless removed.
+- Not in this release: attachments, groups, reactions, typing, presence, editing or deleting messages.
+- The initial bundle is 24.6 kB over its budget (18.7 kB over before this work).
+
+## Next action
+
+The owner reviews http://localhost:4202, decides the three points above, then instructs on the commit and push.
+
+## Skills Review
+
+- ✅ `superpowers:writing-plans`, `backend-design:migration-safety`, `backend-design:auth-and-authorization`, `backend-design:idempotency-and-side-effects`, `securitymaxxing:security-review-method`: applied during the build (2026-11-13).
+- This pass: no new skill invoked; the checks followed the owner's verification list.
+- ❌ Self-assessment: the original race test (one round of four) passed while the deadlock existed; only the stronger test showed it. The first API probe hung because it never exited, which I first misread as proxy buffering until a chunk trace showed the proxy delivers events within 3 ms.
+
+---
+
 # Handoff: Meridian refinement, approved and committed (2026-11-12)
 
 **Approved by the owner on 2026-11-12** and committed locally as `feat(ui): complete Meridian interface refinements`, annotated tag `meridian-refinement-approved` on `stabilization-and-ledger-redesign`. Find the commit with `git rev-parse meridian-refinement-approved^{commit}`. Not pushed; a push needs the owner's separate instruction.

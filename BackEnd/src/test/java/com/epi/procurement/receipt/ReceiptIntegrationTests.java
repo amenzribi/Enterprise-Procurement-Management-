@@ -54,12 +54,13 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		ines.post("/api/v1/receipts/requests/" + id + "/invoice",
 				JSON.writeValueAsString(Map.of("requestVersion", version, "invoiceNumber", "INV-100", "amount", 35,
-						"currency", "EUR", "documentReference", "PDF-REF-1", "matchAttested", true, "paymentStatus",
+						"currency", "EUR", "documentReference", "PDF-REF-1", "matchAttested", false, "paymentStatus",
 						"PENDING")))
 			.expectStatus(200);
 		assertThat((String) samiStatus(id)).isEqualTo("INVOICED");
 
 		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		attestByManager(id);
 		version = ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		mehdi.post("/api/v1/receipts/requests/" + id + "/close",
 				JSON.writeValueAsString(Map.of("requestVersion", version, "rating", 5, "scoreComment", "On time")))
@@ -183,11 +184,11 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		ApiClient ines = signedIn("buyer@demo.local");
 		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion", version,
-				"invoiceNumber", "INV-X", "amount", 35, "currency", "ZZZZ", "matchAttested", true)))
+				"invoiceNumber", "INV-X", "amount", 35, "currency", "ZZZZ", "matchAttested", false)))
 			.expectStatus(422);
 		ines.post("/api/v1/receipts/requests/" + id + "/invoice",
 				JSON.writeValueAsString(Map.of("requestVersion", version, "invoiceNumber", "INV-Y", "amount",
-						new java.math.BigDecimal("35.005"), "currency", "EUR", "matchAttested", true)))
+						new java.math.BigDecimal("35.005"), "currency", "EUR", "matchAttested", false)))
 			.expectStatus(200);
 		assertThat(jdbc.queryForObject("SELECT amount FROM supplier_invoice WHERE request_id = ?",
 				java.math.BigDecimal.class, id)).isEqualByComparingTo("35.01");
@@ -215,7 +216,8 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		ApiClient ines = signedIn("buyer@demo.local");
 		version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion", version,
-				"invoiceNumber", "INV-S", "amount", 35, "currency", "EUR", "matchAttested", true))).expectStatus(200);
+				"invoiceNumber", "INV-S", "amount", 35, "currency", "EUR", "matchAttested", false))).expectStatus(200);
+		attestByManager(id);
 		version = ((Number) sami.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version + "}").expectStatus(200);
 		assertThat((String) samiStatus(id)).isEqualTo("CLOSED");
@@ -241,15 +243,19 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 	void aPendingInvoiceCanBeMarkedPaidOnceByPurchasing() {
 		long id = invoiced("Payment update");
 		ApiClient ines = signedIn("buyer@demo.local");
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
 		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		String body = "{\"requestVersion\":" + version + "}";
 		signedIn("requester.fr@demo.local").post("/api/v1/receipts/requests/" + id + "/invoice/paid", body).expectStatus(404);
 		signedIn("requester.tn@demo.local").post("/api/v1/receipts/requests/" + id + "/invoice/paid", body).expectStatus(403);
+		// F-5: the buyer who recorded the invoice does not authorise its payment; a purchasing manager does.
+		assertThat(ines.post("/api/v1/receipts/requests/" + id + "/invoice/paid", body).expectStatus(403).code())
+			.isEqualTo("payment-needs-manager");
 
-		ines.post("/api/v1/receipts/requests/" + id + "/invoice/paid", body).expectStatus(200);
+		mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/paid", body).expectStatus(200);
 		assertThat((String) samiStatus(id)).isEqualTo("PAID");
-		version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
-		ines.post("/api/v1/receipts/requests/" + id + "/invoice/paid", "{\"requestVersion\":" + version + "}").expectStatus(409);
+		version = ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/paid", "{\"requestVersion\":" + version + "}").expectStatus(409);
 		assertThat((String) ines.get("/api/v1/receipts/requests/" + id).json("$.invoice.paymentStatus")).isEqualTo("PAID");
 	}
 
@@ -361,10 +367,14 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 				"{\"requestVersion\":" + version + "}").expectStatus(404);
 		sami.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
 			.expectStatus(403);
-		ines.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
+		// F-5: the recorder does not attest; another purchasing person does.
+		assertThat(ines.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested",
+				"{\"requestVersion\":" + version + "}").expectStatus(403).code()).isEqualTo("invoice-recorder");
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
 			.expectStatus(200);
-		version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
-		ines.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
+		version = ((Number) mehdi.get("/api/v1/requests/" + id).json("$.version")).intValue();
+		mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", "{\"requestVersion\":" + version + "}")
 			.expectStatus(409);
 		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version + "}").expectStatus(200);
 		assertThat((String) samiStatus(id)).isEqualTo("CLOSED");
@@ -580,8 +590,9 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 				JSON.writeValueAsString(Map.of("requestVersion", version(sami, id), "comment", "Again")))
 			.expectStatus(409);
 		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion",
-				version(ines, id), "invoiceNumber", "INV-SVC", "amount", 25, "currency", "EUR", "matchAttested", true)))
+				version(ines, id), "invoiceNumber", "INV-SVC", "amount", 25, "currency", "EUR", "matchAttested", false)))
 			.expectStatus(200);
+		attestByManager(id);
 		sami.post("/api/v1/receipts/requests/" + id + "/close", "{\"requestVersion\":" + version(sami, id) + "}")
 			.expectStatus(200);
 		assertThat((String) samiStatus(id)).isEqualTo("CLOSED");
@@ -769,6 +780,201 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		return Map.of("description", description, "quantity", quantity, "unit", "PCE", "estimatedUnitPrice", 20, "lineKind", kind);
 	}
 
+	// ---- F-5: separation of duties on receipts and invoices
+
+	@Test
+	void recordingAnInvoiceNeitherAttestsItNorAuthorisesItsPayment() {
+		long id = accepted("F5 record only");
+		ApiClient ines = signedIn("buyer@demo.local");
+		for (String extra : new String[] { "\"matchAttested\":true", "\"paymentStatus\":\"PAID\"" }) {
+			assertThat(ines.post("/api/v1/receipts/requests/" + id + "/invoice", "{\"requestVersion\":" + version(ines, id)
+					+ ",\"invoiceNumber\":\"INV-F5\",\"amount\":35,\"currency\":\"EUR\"," + extra + "}").expectStatus(422)
+				.body()).as(extra).contains("invoice-recorder");
+		}
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM supplier_invoice WHERE request_id = ?", Integer.class, id))
+			.isZero();
+	}
+
+	@Test
+	void aPurchasingManagerWhoRecordsAnInvoiceNeitherAttestsNorPaysIt() {
+		long id = accepted("F5 manager records");
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion",
+				version(mehdi, id), "invoiceNumber", "INV-M", "amount", 35, "currency", "EUR"))).expectStatus(200);
+		assertThat(((Number) mehdi.get("/api/v1/receipts/requests/" + id).json("$.invoice.recordedByUserId")).longValue())
+			.isEqualTo(userId("purchasing.manager@demo.local"));
+		String body = "{\"requestVersion\":" + version(mehdi, id) + "}";
+		assertThat(mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", body).expectStatus(403).code())
+			.isEqualTo("invoice-recorder");
+		assertThat(mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/paid", body).expectStatus(403).code())
+			.isEqualTo("invoice-recorder");
+		// The buyer, a different person, may attest; payment still needs a purchasing manager other than the recorder.
+		ApiClient ines = signedIn("buyer@demo.local");
+		ines.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested", body).expectStatus(200);
+		assertThat(ines.post("/api/v1/receipts/requests/" + id + "/invoice/paid",
+				"{\"requestVersion\":" + version(ines, id) + "}").expectStatus(403).code()).isEqualTo("payment-needs-manager");
+		assertThat((String) mehdi.get("/api/v1/receipts/requests/" + id).json("$.invoice.paymentStatus"))
+			.isEqualTo("PENDING");
+	}
+
+	@Test
+	void theAssignedBuyerNeitherRecordsNorConfirmsTheReceipt() {
+		// The buyer also holds RECEIVER for the plant: the rule is about this order, not about the role.
+		ApiClient global = signedIn("global.admin@demo.local");
+		long inesId = userId("buyer@demo.local");
+		long tn = companyId("DEMO-TN-PLT");
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'RECEIVER', ?)", inesId, tn);
+		try {
+			long id = delivered("F5 buyer receives");
+			assertThat(jdbc.queryForObject("SELECT assigned_buyer_user_id FROM purchase_request WHERE id = ?", Long.class,
+					id)).isEqualTo(inesId);
+			ApiClient ines = signedIn("buyer@demo.local");
+			assertThat(ines.post("/api/v1/receipts/requests/" + id + "/goods-receipts",
+					"{\"requestVersion\":" + version(ines, id) + "}").expectStatus(403).code()).isEqualTo("buyer-cannot-receive");
+			// Recorded by the receiver, the buyer cannot confirm it either.
+			ApiClient omar = signedIn("receiver.tn@demo.local");
+			ApiClient.Response receipt = omar.post("/api/v1/receipts/requests/" + id + "/goods-receipts",
+					"{\"requestVersion\":" + version(omar, id) + "}").expectStatus(200);
+			assertThat(ines.post("/api/v1/receipts/goods-receipts/" + receipt.json("$.id") + "/confirm", "{}")
+				.expectStatus(403)
+				.code()).isEqualTo("buyer-cannot-receive");
+			signedIn("requester.tn@demo.local").post("/api/v1/receipts/goods-receipts/" + receipt.json("$.id") + "/confirm",
+					"{}").expectStatus(200);
+		}
+		finally {
+			jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'RECEIVER' AND company_id = ?", inesId, tn);
+			global.get("/api/v1/me").expectStatus(200);
+		}
+	}
+
+	/** Review of F-5, findings 5 and 2: a manager who bought the order neither accepts its shortfall nor pays it. */
+	@Test
+	void aPurchasingManagerWhoBoughtTheOrderNeitherAcceptsItsShortfallNorPaysIt() {
+		long inesId = userId("buyer@demo.local");
+		long id = rejected("F5 buyer manager");
+		long buying = jdbc.queryForObject("SELECT buying_company_id FROM purchase_request WHERE id = ?", Long.class, id);
+		// Fixture: the assigned buyer, who issued the purchase order, is also a purchasing manager.
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'PURCHASING_MANAGER', ?)", inesId, buying);
+		try {
+			ApiClient ines = signedIn("buyer@demo.local");
+			assertThat(ines.post("/api/v1/receipts/requests/" + id + "/shortfall-acceptance", JSON.writeValueAsString(
+					Map.of("requestVersion", version(ines, id), "reason", "Credited by supplier"))).expectStatus(403).code())
+				.isEqualTo("buyer-cannot-receive");
+			ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+			mehdi.post("/api/v1/receipts/requests/" + id + "/shortfall-acceptance", JSON.writeValueAsString(
+					Map.of("requestVersion", version(mehdi, id), "reason", "Credited by supplier"))).expectStatus(200);
+			// Mehdi records the invoice; Ines, a manager here, would pay it: refused, she bought the order.
+			mehdi.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion",
+					version(mehdi, id), "invoiceNumber", "INV-BM", "amount", 35, "currency", "EUR"))).expectStatus(200);
+			assertThat(ines.post("/api/v1/receipts/requests/" + id + "/invoice/paid",
+					"{\"requestVersion\":" + version(ines, id) + "}").expectStatus(403).code())
+				.isEqualTo("payment-not-independent");
+			assertThat((String) mehdi.get("/api/v1/receipts/requests/" + id).json("$.invoice.paymentStatus"))
+				.isEqualTo("PENDING");
+		}
+		finally {
+			jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'PURCHASING_MANAGER' AND company_id = ?", inesId,
+					buying);
+		}
+	}
+
+	/** Review of F-5, finding 1: a purchasing manager never does the buyer's work on their own request. */
+	@Test
+	void aRequesterWhoIsAlsoPurchasingManagerCannotSourceTheirOwnRequest() {
+		long samiId = userId("requester.tn@demo.local");
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long id = accept(assign(approve(submit(sami, request("F5 own sourcing")))));
+		long buying = jdbc.queryForObject("SELECT buying_company_id FROM purchase_request WHERE id = ?", Long.class, id);
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'PURCHASING_MANAGER', ?)", samiId, buying);
+		try {
+			sami = signedIn("requester.tn@demo.local");
+			long skf = jdbc.queryForObject("SELECT id FROM supplier WHERE code = 'DEMO-SKF'", Long.class);
+			String rfq = "{\"kind\":\"QUICK\",\"supplierIds\":[" + skf + "]}";
+			assertThat(sami.post("/api/v1/sourcing/requests/" + id + "/rfq", rfq).expectStatus(403).code())
+				.isEqualTo("buyer-is-requester");
+			// The assigned buyer still sources it.
+			signedIn("buyer@demo.local").post("/api/v1/sourcing/requests/" + id + "/rfq", rfq).expectStatus(200);
+		}
+		finally {
+			jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'PURCHASING_MANAGER' AND company_id = ?", samiId,
+					buying);
+		}
+	}
+
+	/**
+	 * CI stabilisation (deadlock seen 2026-11-18): the receipt view reads a shipment and then its DELIVERED milestone,
+	 * while recording a milestone used to write the milestone and then the shipment. Concurrent, the two locked the rows
+	 * in opposite order and SQL Server killed the read (503). The view must stay available while milestones change.
+	 */
+	@Test
+	void theReceiptViewNeverDeadlocksWithAMilestoneUpdate() throws Exception {
+		long id = delivered("Milestone and receipt view");
+		ApiClient ines = signedIn("buyer@demo.local");
+		ApiClient omar = signedIn("receiver.tn@demo.local");
+		ApiClient sami = signedIn("requester.tn@demo.local");
+		long shipmentId = jdbc.queryForObject("SELECT id FROM shipment WHERE request_id = ?", Long.class, id);
+		long milestoneId = jdbc.queryForObject(
+				"SELECT id FROM shipment_milestone WHERE shipment_id = ? AND code = 'DELIVERED'", Long.class, shipmentId);
+		int milestonesBefore = jdbc.queryForObject("SELECT COUNT(*) FROM shipment_milestone WHERE shipment_id = ?",
+				Integer.class, shipmentId);
+		String actual = jdbc.queryForObject("SELECT CONVERT(VARCHAR(10), actual_date, 23) FROM shipment_milestone WHERE id = ?",
+				String.class, milestoneId);
+		int updates = 60;
+		var pool = Executors.newFixedThreadPool(3);
+		var done = new java.util.concurrent.atomic.AtomicBoolean(false);
+		try {
+			java.util.concurrent.Future<List<Integer>> writer = pool.submit(() -> {
+				List<Integer> statuses = new ArrayList<>();
+				try {
+					for (int i = 0; i < updates; i++) {
+						int version = jdbc.queryForObject("SELECT version FROM shipment WHERE id = ?", Integer.class, shipmentId);
+						statuses.add(ines.put("/api/v1/logistics/shipments/" + shipmentId + "/milestones/" + milestoneId,
+								"{\"version\":" + version + ",\"actualDate\":\"" + actual + "\",\"note\":\"Re-checked " + i + "\"}")
+							.status());
+					}
+				}
+				finally {
+					done.set(true);
+				}
+				return statuses;
+			});
+			java.util.function.Function<ApiClient, Callable<List<Integer>>> reader = who -> () -> {
+				List<Integer> statuses = new ArrayList<>();
+				while (!done.get()) {
+					statuses.add(who.get("/api/v1/receipts/requests/" + id).status());
+				}
+				return statuses;
+			};
+			java.util.concurrent.Future<List<Integer>> readerA = pool.submit(reader.apply(omar));
+			java.util.concurrent.Future<List<Integer>> readerB = pool.submit(reader.apply(sami));
+			List<Integer> written = writer.get();
+			List<Integer> read = new ArrayList<>(readerA.get());
+			read.addAll(readerB.get());
+			assertThat(written).as("milestone updates").hasSize(updates).containsOnly(200);
+			assertThat(read).as("receipt views while milestones change").isNotEmpty().containsOnly(200);
+		}
+		finally {
+			pool.shutdownNow();
+		}
+		// Nothing duplicated or lost: same milestones, the delivery still recorded, no receipt created.
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM shipment_milestone WHERE shipment_id = ?", Integer.class,
+				shipmentId)).isEqualTo(milestonesBefore);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM shipment_milestone WHERE id = ? AND actual_date IS NOT NULL",
+				Integer.class, milestoneId)).isEqualTo(1);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM goods_receipt WHERE request_id = ?", Integer.class, id)).isZero();
+		assertThat((String) samiStatus(id)).isEqualTo("DELIVERED");
+		assertThat(jdbc.queryForObject("""
+				SELECT COUNT(*) FROM audit_event WHERE entity_type = 'PURCHASE_REQUEST' AND entity_id = ?
+				AND action = 'SHIPMENT_MILESTONE_UPDATED'""", Integer.class, Long.toString(id))).isEqualTo(updates + 1);
+	}
+
+	/** The match attested by the purchasing manager, who did not record the invoice (F-5). */
+	private void attestByManager(long id) {
+		ApiClient mehdi = signedIn("purchasing.manager@demo.local");
+		mehdi.post("/api/v1/receipts/requests/" + id + "/invoice/match-attested",
+				"{\"requestVersion\":" + version(mehdi, id) + "}").expectStatus(200);
+	}
+
 	private long confirmedPo(String title, List<Map<String, Object>> lines) {
 		ApiClient sami = signedIn("requester.tn@demo.local");
 		Map<String, Object> draft = request(title);
@@ -835,8 +1041,9 @@ class ReceiptIntegrationTests extends SqlServerTestSupport {
 		ApiClient ines = signedIn("buyer@demo.local");
 		int version = ((Number) ines.get("/api/v1/requests/" + id).json("$.version")).intValue();
 		ines.post("/api/v1/receipts/requests/" + id + "/invoice", JSON.writeValueAsString(Map.of("requestVersion", version,
-				"invoiceNumber", "INV-W", "amount", 35, "currency", "EUR", "matchAttested", true)))
+				"invoiceNumber", "INV-W", "amount", 35, "currency", "EUR", "matchAttested", false)))
 			.expectStatus(200);
+		attestByManager(id);
 		return id;
 	}
 

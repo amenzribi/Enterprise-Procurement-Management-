@@ -19,7 +19,7 @@ class ClientAddressResolverTests {
 	}
 
 	@Test
-	void usesLeftmostXForwardedForWhenPeerIsTrusted() {
+	void usesTheAddressAddedByTheTrustedProxy() {
 		ClientAddressResolver resolver = ClientAddressResolver.forTrustedPeers(List.of("10.0.0.1"));
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setRemoteAddr("10.0.0.1");
@@ -43,6 +43,46 @@ class ClientAddressResolverTests {
 		request.setRemoteAddr("127.0.0.1");
 		request.addHeader("X-Forwarded-For", "198.51.100.1");
 		assertThat(resolver.resolve(request)).isEqualTo("127.0.0.1");
+	}
+
+	@Test
+	void aForgedLeftmostAddressDoesNotReplaceTheOneTheProxySaw() {
+		// Audit S-3: nginx, IIS ARR and cloud load balancers append the real peer to whatever the client sent.
+		ClientAddressResolver resolver = ClientAddressResolver.forTrustedPeers(List.of("10.0.0.1"));
+		for (String forged : new String[] { "1.2.3.4", "9.9.9.9, 8.8.8.8", "10.0.0.1", "garbage" }) {
+			MockHttpServletRequest request = new MockHttpServletRequest();
+			request.setRemoteAddr("10.0.0.1");
+			request.addHeader("X-Forwarded-For", forged + ", 203.0.113.50");
+			assertThat(resolver.resolve(request)).as(forged).isEqualTo("203.0.113.50");
+		}
+	}
+
+	@Test
+	void trustedProxiesInTheChainAreSkippedFromTheRight() {
+		ClientAddressResolver resolver = ClientAddressResolver.forTrustedPeers(List.of("10.0.0.1", "10.0.0.2"));
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.setRemoteAddr("10.0.0.1");
+		request.addHeader("X-Forwarded-For", "1.2.3.4, 203.0.113.50, 10.0.0.2");
+		assertThat(resolver.resolve(request)).isEqualTo("203.0.113.50");
+	}
+
+	@Test
+	void severalHeaderLinesAreReadAsOneList() {
+		ClientAddressResolver resolver = ClientAddressResolver.forTrustedPeers(List.of("10.0.0.1"));
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.setRemoteAddr("10.0.0.1");
+		request.addHeader("X-Forwarded-For", "1.2.3.4");
+		request.addHeader("X-Forwarded-For", "203.0.113.50:51234");
+		assertThat(resolver.resolve(request)).isEqualTo("203.0.113.50");
+	}
+
+	@Test
+	void theForwardedHeaderIsAlsoReadFromTheRight() {
+		ClientAddressResolver resolver = ClientAddressResolver.forTrustedPeers(List.of("127.0.0.1"));
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.setRemoteAddr("127.0.0.1");
+		request.addHeader("Forwarded", "for=1.2.3.4, for=\"[2001:db8::7]:4711\";proto=https");
+		assertThat(resolver.resolve(request)).isEqualTo("2001:db8::7");
 	}
 
 }

@@ -1,0 +1,128 @@
+# Continuous integration (audit D-1, A-9; Sprint 1). Builds and tests both halves on every push and pull request.
+# It never deploys: deployment to UAT is a separate, manually approved step that takes the artefacts produced here.
+#
+# Status: written in Sprint 1 and not yet executed (nothing was pushed during the sprint). The first run on a Linux
+# runner is also the first run of the backend suite on Linux; expect to adjust it. See docs/sprints/.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 21, SQL Server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: BackEnd
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # The project tests only against Microsoft SQL Server (ADR-001). The container and its password exist for
+      # this job only; the password is generated here and never stored.
+      - name: Start SQL Server
+        run: |
+          SA_PASSWORD="Ci-$(openssl rand -hex 16)-aA1"
+          echo "::add-mask::$SA_PASSWORD"
+          echo "DB_PASSWORD=$SA_PASSWORD" >> "$GITHUB_ENV"
+          docker run -d --name sqlserver -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
+            -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+          for attempt in $(seq 1 60); do
+            if docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" > /dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b \
+            -Q "CREATE DATABASE procurement_test COLLATE Latin1_General_100_CI_AS_SC_UTF8"
+
+      - name: Build and test (unit, module structure, SQL Server integration)
+        env:
+          DB_TEST_URL: jdbc:sqlserver://localhost:1433;databaseName=procurement_test;encrypt=true;trustServerCertificate=true
+          DB_USERNAME: sa
+        run: sh ./mvnw -B -ntp verify -Pdb-it
+
+      # On failure, keep SQL Server's own deadlock reports (system_health): they name the statements and locks
+      # involved. They hold parameterised statement text and lock resources, never parameter values or passwords.
+      - name: SQL Server deadlock reports
+        if: failure()
+        run: |
+          mkdir -p target/sqlserver-diagnostics
+          docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$DB_PASSWORD" -C -I -y 0 \
+            -Q "SET NOCOUNT ON; SELECT CAST(event_data AS XML) FROM sys.fn_xe_file_target_read_file('system_health*.xel', NULL, NULL, NULL) WHERE object_name = 'xml_deadlock_report'" \
+            > target/sqlserver-diagnostics/deadlock-reports.xml || true
+
+      - name: Test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports-${{ github.sha }}
+          path: |
+            BackEnd/target/surefire-reports
+            BackEnd/target/authorization-matrix-actual.txt
+            BackEnd/target/sqlserver-diagnostics
+          if-no-files-found: ignore
+
+      - name: Application jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: procurement-backend-${{ github.sha }}
+          path: BackEnd/target/procurement-*.jar
+          if-no-files-found: error
+
+  frontend:
+    name: Frontend (Angular)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: FrontEnd
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: FrontEnd/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      # Fails the job on a known vulnerability in what is shipped to users; development tooling is reported only.
+      - name: Dependency advisories (production)
+        run: npm audit --omit=dev
+
+      - name: Dependency advisories (development tooling, informative)
+        run: npm audit || true
+
+      - name: Static bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: procurement-frontend-${{ github.sha }}
+          path: FrontEnd/dist
+          if-no-files-found: error

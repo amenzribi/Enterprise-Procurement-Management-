@@ -14,6 +14,8 @@ export interface Attachment {
   version?: number | null;
   /** Download is offered only once the virus scan reported the file clean (S2DR-11). */
   scanStatus?: string | null;
+  /** Set by the server: scanned clean, or not scanned where the environment allows that (development). */
+  downloadable?: boolean;
   uploadedBy?: PersonOption | null;
   uploadedAt: string;
   downloadUrl?: string | null;

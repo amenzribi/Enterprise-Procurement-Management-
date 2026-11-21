@@ -265,7 +265,8 @@ test('a service order is accepted in the browser, and Close explains what is mis
   await expect(close).toBeDisabled({ timeout: 20_000 });
   await expect(panel.locator('#closure-why')).toContainText(t('en', 'receipt.closureMissingItem.match-attested'));
 
-  await ines.ok('POST', `/api/v1/receipts/requests/${order.id}/invoice/match-attested`, { requestVersion: await ines.version(order.id) });
+  // F-5: the buyer who recorded the invoice does not attest it; the purchasing manager does.
+  await mehdi.ok('POST', `/api/v1/receipts/requests/${order.id}/invoice/match-attested`, { requestVersion: await mehdi.version(order.id) });
   await page.reload();
   await expect(close).toBeEnabled({ timeout: 20_000 });
   await close.click();

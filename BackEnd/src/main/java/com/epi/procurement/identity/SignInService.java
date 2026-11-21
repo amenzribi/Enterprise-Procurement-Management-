@@ -6,10 +6,13 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.epi.procurement.audit.AuditLog;
 import com.epi.procurement.audit.AuditRecord;
+import com.epi.procurement.platform.persistence.SqlServerErrors;
 
 /**
  * Decides whether a sign-in attempt succeeds (S1-AC-01, S1DR-03/04/05).
@@ -22,6 +25,9 @@ import com.epi.procurement.audit.AuditRecord;
 class SignInService {
 
 	private static final Logger log = LoggerFactory.getLogger(SignInService.class);
+
+	/** Attempts of the sign-in audit append when SQL Server chooses it as a deadlock victim (CI, 2026-11-18). */
+	static final int AUDIT_ATTEMPTS = 3;
 
 	private final CredentialStore credentials;
 
@@ -46,6 +52,29 @@ class SignInService {
 	}
 
 	/**
+	 * Appends the {@code SIGNED_IN} event. The append is its own transaction (no transaction surrounds sign-in), so
+	 * when SQL Server chooses it as a deadlock victim (error 1205) the whole append was rolled back and is run again
+	 * in a new transaction: no event is lost or written twice, and the chain stays intact. Only the append is retried,
+	 * never the credential check; any other failure, or a deadlock on the last attempt, propagates and the sign-in
+	 * fails. Inside an outer transaction nothing is retried, because a deadlock has already rolled that back.
+	 */
+	private void recordSignIn(AuditRecord record) {
+		boolean retryable = !TransactionSynchronizationManager.isActualTransactionActive();
+		for (int attempt = 1;; attempt++) {
+			try {
+				auditLog.record(record);
+				return;
+			}
+			catch (DataAccessException ex) {
+				if (!retryable || !SqlServerErrors.isDeadlockVictim(ex) || attempt >= AUDIT_ATTEMPTS) {
+					throw ex;
+				}
+				log.warn("Sign-in audit retried after a deadlock (attempt {} of {})", attempt, AUDIT_ATTEMPTS);
+			}
+		}
+	}
+
+	/**
 	 * @return the signed-in principal, or empty for any kind of failure
 	 */
 	Optional<AuthenticatedUser> signIn(String rawEmail, String password, String address) {
@@ -61,7 +90,7 @@ class SignInService {
 				&& (!credential.get().demo() || demoActive)) {
 			throttle.recordSuccess(email, address);
 			CredentialStore.StoredCredential user = credential.get();
-			auditLog.record(new AuditRecord(user.userId(), user.email(), null, "USER_SESSION",
+			recordSignIn(new AuditRecord(user.userId(), user.email(), null, "USER_SESSION",
 					Long.toString(user.userId()), "SIGNED_IN", null, null, null, null));
 			return Optional.of(new AuthenticatedUser(user.userId(), user.email()));
 		}

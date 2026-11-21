@@ -42,9 +42,12 @@ record ReceiptLineView(long id, long purchaseOrderLineId, Long shipmentLineId, l
 record EvidenceView(long id, String kind, String referenceNumber, String note, String fileName, Instant uploadedAt) {
 }
 
+/**
+ * @param recordedByUserId who recorded the invoice: that person neither attests it nor authorises its payment (F-5)
+ */
 record InvoiceView(long id, long requestId, long purchaseOrderId, String invoiceNumber, BigDecimal amount,
 		String currency, String documentReference, boolean matchAttested, String paymentStatus, Instant recordedAt,
-		int version) {
+		int version, long recordedByUserId) {
 }
 
 record ClosureView(boolean ready, List<String> missing, boolean closed, Integer rating) {

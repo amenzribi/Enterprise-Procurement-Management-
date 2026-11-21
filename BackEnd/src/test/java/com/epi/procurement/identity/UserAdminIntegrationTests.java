@@ -75,6 +75,9 @@ class UserAdminIntegrationTests extends SqlServerTestSupport {
 		long userId = ((Number) admin.post("/api/v1/admin/accounts", """
 				{"email":"%s","displayName":"Reset User","companyId":%d,"preferredLanguage":"en","active":true,"roles":[]}
 				""".formatted(email, companyId)).expectStatus(201).json("$.id")).longValue();
+		// F-1: a new account is inactive until another administrator activates it.
+		signedIn("admin@demo.local").post("/api/v1/admin/accounts/" + userId + "/active", "{\"active\":true}")
+			.expectStatus(200);
 
 		admin.post("/api/v1/admin/accounts/" + userId + "/password-reset", "{}").expectStatus(202);
 		String path = passwordResetTokens.createLinkPath(userId, "RESET", null);
@@ -129,9 +132,9 @@ class UserAdminIntegrationTests extends SqlServerTestSupport {
 				AND user_id = (SELECT id FROM user_account WHERE email = 'admin@demo.local')""", Long.class);
 		ApiClient global = signedIn("global.admin@demo.local");
 		long globalId = ((Number) global.get("/api/v1/me").expectStatus(200).json("$.id")).longValue();
-		global.post("/api/v1/admin/accounts/" + globalId + "/roles", """
-				{"role":"BUYER","companyId":%d,"departmentId":null}
-				""".formatted(adminCompany)).expectStatus(200);
+		// Fixture: a global administrator holding a company role. Set directly, because nobody may give themselves
+		// a sensitive role through the API (review RR-3) and the demo has a single global administrator.
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'BUYER', ?)", globalId, adminCompany);
 		long grantId = jdbc.queryForObject("SELECT id FROM user_role WHERE user_id = ? AND role = 'BUYER' AND company_id = ?",
 				Long.class, globalId, adminCompany);
 		signedIn("admin@demo.local").post("/api/v1/admin/accounts/" + globalId + "/roles/" + grantId + "/remove", "{}").expectStatus(403);
@@ -149,10 +152,14 @@ class UserAdminIntegrationTests extends SqlServerTestSupport {
 		long secondId = ((Number) admin.post("/api/v1/admin/accounts", """
 				{"email":"%s","displayName":"Second GA","companyId":%d,"preferredLanguage":"en","active":true,"roles":[]}
 				""".formatted(email, companyId)).expectStatus(201).json("$.id")).longValue();
-		admin.post("/api/v1/admin/accounts/" + secondId + "/roles",
+		// F-2: the creator never grants GLOBAL_ADMIN; a second global administrator comes from the bootstrap
+		// (GLOBAL_ADMIN_BOOTSTRAP_SECOND_EMAIL), simulated here by a direct insert, and is active.
+		assertThat(admin.post("/api/v1/admin/accounts/" + secondId + "/roles",
 				"""
 						{"role":"GLOBAL_ADMIN","companyId":null,"departmentId":null}
-						""").expectStatus(200);
+						""").expectStatus(403).code()).isEqualTo("four-eyes");
+		jdbc.update("INSERT INTO user_role (user_id, role, company_id) VALUES (?, 'GLOBAL_ADMIN', NULL)", secondId);
+		jdbc.update("UPDATE user_account SET is_active = 1 WHERE id = ?", secondId);
 		admin.post("/api/v1/admin/accounts/" + secondId + "/active", "{\"active\":false}").expectStatus(200);
 		long firstId = ((Number) admin.get("/api/v1/me").expectStatus(200).json("$.id")).longValue();
 		admin.post("/api/v1/admin/accounts/" + firstId + "/active", "{\"active\":false}").expectStatus(409);

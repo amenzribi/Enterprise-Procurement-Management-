@@ -206,7 +206,8 @@ class LogisticsService {
 		}
 		RequestSnapshot after = requests.currentLocked(requestId);
 		audit(user, after, "SHIPMENT_CREATED", after.status(), null,
-				"{\"shipmentId\":" + shipmentId + ",\"number\":\"" + number + "\",\"kind\":\"" + kind + "\"}");
+				"{\"shipmentId\":" + shipmentId + ",\"number\":" + AuditRecord.jsonString(number) + ",\"kind\":"
+						+ AuditRecord.jsonString(String.valueOf(kind)) + "}");
 		notifyAuthors(after, "SHIPMENT_CREATED", user);
 		return toView(store.findShipment(shipmentId).orElseThrow(), LocalDate.ofInstant(now, ZoneOffset.UTC));
 	}
@@ -229,20 +230,21 @@ class LogisticsService {
 			throw new ValidationFailedException(List.of(FieldViolation.of("actualDate", "note-required")));
 		}
 		String note = body != null && StringUtils.hasText(body.note()) ? body.note().strip() : milestone.note();
-		store.updateMilestone(milestoneId, planned, actual, note);
 		Instant now = clock.instant();
 		LocalDate today = LocalDate.ofInstant(now, ZoneOffset.UTC);
+		// Lock order: the shipment row before its milestones, the order in which the receipt view reads them. Writing
+		// the milestone first let a concurrent reader hold the shipment while waiting for the milestone, and SQL Server
+		// killed one of the two (deadlock seen 2026-11-18). The new shipment status depends only on the milestones'
+		// dates, with this milestone's new date taken into account, so it can be written first.
+		boolean allDone = actual != null && store.milestones(shipmentId).stream()
+			.allMatch(m -> m.id() == milestoneId ? actual != null : m.actualDate() != null);
+		store.bumpShipment(shipmentId, allDone ? "DELIVERED" : "IN_PROGRESS");
+		store.updateMilestone(milestoneId, planned, actual, note);
 		if (actual != null) {
 			RequestStatus mapped = STATUS_MAP.get(milestone.code());
 			if (mapped != null) {
 				requests.enterShipmentStatus(request.id(), mapped, user.id(), now, "milestone-" + milestone.code());
 			}
-			boolean allDone = store.milestones(shipmentId).stream()
-				.allMatch(m -> m.id() == milestoneId ? actual != null : m.actualDate() != null);
-			store.bumpShipment(shipmentId, allDone ? "DELIVERED" : "IN_PROGRESS");
-		}
-		else {
-			store.bumpShipment(shipmentId, "IN_PROGRESS");
 		}
 		if (planned != null && actual == null && planned.isBefore(today)) {
 			notifyAuthors(requests.currentLocked(request.id()), "SHIPMENT_DELAY", user);
@@ -312,6 +314,11 @@ class LogisticsService {
 				&& store.assignmentAccepted(request.id(), user.id());
 		if (!manager && !acceptedBuyer) {
 			throw ApiProblemException.forbidden();
+		}
+		// Separation of duties (F-5): whoever asked for the purchase does not buy it, even as purchasing manager.
+		if (request.isAuthor(user.id())) {
+			throw new ApiProblemException(org.springframework.http.HttpStatus.FORBIDDEN, "buyer-is-requester",
+					"You cannot buy for your own request.");
 		}
 	}
 

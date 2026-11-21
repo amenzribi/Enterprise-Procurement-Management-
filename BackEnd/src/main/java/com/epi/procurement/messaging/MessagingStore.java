@@ -279,13 +279,17 @@ class MessagingStore {
 		return ids.stream().findFirst();
 	}
 
+	/**
+	 * @param createdBy the buyer who invites the contact; recorded so the four-eyes rule knows who created the account
+	 * (review F-4)
+	 */
 	long insertSupplierContactUser(String email, String displayName, long companyId, long siteId, Long departmentId,
-			String language) {
+			String language, long createdBy) {
 		return jdbc.queryForObject("""
 				INSERT INTO user_account (email, display_name, company_id, site_id, department_id, preferred_language,
-				                          is_demo, is_active)
-				OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, 0, 1)""", Long.class, email, displayName, companyId, siteId,
-				departmentId, language);
+				                          is_demo, is_active, created_by_user_id)
+				OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?)""", Long.class, email, displayName, companyId, siteId,
+				departmentId, language, createdBy);
 	}
 
 	void grantSupplierContactRole(long userId) {

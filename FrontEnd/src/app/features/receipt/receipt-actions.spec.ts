@@ -300,4 +300,19 @@ describe('ReceiptActions', () => {
     button.click();
     expect(http.expectOne('/api/v1/receipts/requests/42/invoice/paid').request.body).toEqual({ requestVersion: 3 });
   });
+
+  it('offers neither attestation nor payment to the person who recorded the invoice', async () => {
+    const invoice = { id: 1, invoiceNumber: 'I', amount: 35, currency: 'EUR', documentReference: null, matchAttested: false, paymentStatus: 'PENDING', recordedByUserId: ME.id };
+    await open('INVOICED', dossier({ invoice }));
+    const labels = [...element().querySelectorAll('button')].map((b) => b.textContent ?? '');
+    expect(labels.some((text) => text.includes('receipt.actions.attestNow'))).toBe(false);
+    expect(labels.some((text) => text.includes('receipt.actions.markPaid'))).toBe(false);
+  });
+
+  it('records an invoice without attesting it: attestation is another person’s step', async () => {
+    await open('ACCEPTED', dossier());
+    const form = element().querySelector<HTMLInputElement>('#inv-no')!.closest('form')!;
+    expect(form.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(form.textContent).toContain('receipt.actions.invoiceSecondPerson');
+  });
 });

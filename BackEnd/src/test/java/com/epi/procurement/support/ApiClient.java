@@ -162,6 +162,96 @@ public final class ApiClient {
 		}
 	}
 
+	/**
+	 * Opens a Server-Sent Events stream with this client's session and collects its lines on a background thread.
+	 * Close it when done.
+	 */
+	public LiveStream openStream(String path) {
+		HttpRequest request = HttpRequest.newBuilder(URI.create(base + path))
+			.header("Accept", "text/event-stream")
+			.GET()
+			.build();
+		LiveStream stream = new LiveStream();
+		java.util.concurrent.CompletableFuture<HttpResponse<java.util.stream.Stream<String>>> future = http
+			.sendAsync(request, HttpResponse.BodyHandlers.ofLines());
+		Thread reader = new Thread(() -> {
+			try {
+				HttpResponse<java.util.stream.Stream<String>> response = future.get();
+				stream.status = response.statusCode();
+				stream.body = response.body();
+				response.body().forEach(stream.lines::add);
+			}
+			catch (Exception ex) {
+				// Closed by the test or by the server.
+			}
+			finally {
+				stream.lines.add(LiveStream.CLOSED);
+			}
+		}, "test-sse-reader");
+		reader.setDaemon(true);
+		reader.start();
+		return stream;
+	}
+
+	public static final class LiveStream implements AutoCloseable {
+
+		static final String CLOSED = "<<closed>>";
+
+		final java.util.concurrent.BlockingQueue<String> lines = new java.util.concurrent.LinkedBlockingQueue<>();
+
+		volatile int status;
+
+		volatile java.util.stream.Stream<String> body;
+
+		private final List<String> seen = new java.util.ArrayList<>();
+
+		/** Waits for a line containing {@code text}; returns it, or null after the timeout or when the stream ends. */
+		public String await(String text, java.time.Duration timeout) {
+			long deadline = System.nanoTime() + timeout.toNanos();
+			try {
+				while (System.nanoTime() < deadline) {
+					String line = lines.poll(Math.max(1, deadline - System.nanoTime()), java.util.concurrent.TimeUnit.NANOSECONDS);
+					if (line == null || line.equals(CLOSED)) {
+						if (line != null) {
+							seen.add(line);
+						}
+						return null;
+					}
+					seen.add(line);
+					if (line.contains(text)) {
+						return line;
+					}
+				}
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+			return null;
+		}
+
+		/** True once the server has ended the stream. */
+		public boolean awaitClosed(java.time.Duration timeout) {
+			if (seen.contains(CLOSED)) {
+				return true;
+			}
+			await(CLOSED + "never", timeout);
+			return seen.contains(CLOSED);
+		}
+
+		public int status() {
+			return status;
+		}
+
+		@Override
+		public void close() {
+			java.util.stream.Stream<String> b = body;
+			if (b != null) {
+				b.close();
+			}
+		}
+
+	}
+
 	private static String quote(String value) {
 		return value == null ? "null" : "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
 	}

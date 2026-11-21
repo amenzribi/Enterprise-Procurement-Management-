@@ -8,7 +8,7 @@ import { NotificationService } from '../../core/notifications/notification.servi
 import { Button } from '../../shared/ui/button';
 import { PurchaseRequest } from '../requests/request.models';
 import { ReceiptApi } from './receipt.api';
-import { GoodsReceipt, ReceiptDossier, ReceiptLineDraft, ShipmentLineReceipt } from './receipt.models';
+import { GoodsReceipt, ReceiptDossier, ReceiptLineDraft, ShipmentLineReceipt, SupplierInvoice } from './receipt.models';
 
 type OpenLine = ShipmentLineReceipt & { purchaseOrderLineId: number; description: string; unit: string };
 
@@ -133,10 +133,10 @@ const scaled = (value: string): number => Math.round(Number(value || 0) * 10_000
                 · {{ 'receipt.actions.matchAttested' | translate }}
               }
             </p>
-            @if (!inv.matchAttested && canInvoice()) {
+            @if (!inv.matchAttested && canAttest(inv)) {
               <button appButton variant="secondary" type="button" [disabled]="busy()" (click)="attest()">{{ 'receipt.actions.attestNow' | translate }}</button>
             }
-            @if (inv.paymentStatus === 'PENDING' && canInvoice()) {
+            @if (inv.paymentStatus === 'PENDING' && canPay(inv)) {
               <button appButton variant="secondary" type="button" [disabled]="busy()" (click)="markPaid()">{{ 'receipt.actions.markPaid' | translate }}</button>
             }
           } @else if (canInvoice() && isAcceptedOrLater()) {
@@ -147,10 +147,7 @@ const scaled = (value: string): number => Math.round(Number(value || 0) * 10_000
               <input id="inv-amt" type="number" step="0.01" [value]="invoiceAmount()" (input)="invoiceAmount.set($any($event.target).value)" />
               <label class="label" for="inv-doc">{{ 'receipt.actions.docRef' | translate }}</label>
               <input id="inv-doc" [value]="docRef()" (input)="docRef.set($any($event.target).value)" />
-              <label class="check">
-                <input type="checkbox" [checked]="matchAttested()" (change)="matchAttested.set($any($event.target).checked)" />
-                {{ 'receipt.actions.attestMatch' | translate }}
-              </label>
+              <p class="muted small">{{ 'receipt.actions.invoiceSecondPerson' | translate }}</p>
               <button appButton type="submit" [disabled]="busy() || !invoiceNo().trim()">
                 {{ 'receipt.actions.recordInvoice' | translate }}
               </button>
@@ -230,7 +227,6 @@ export class ReceiptActions {
   protected readonly invoiceNo = signal('');
   protected readonly invoiceAmount = signal('');
   protected readonly docRef = signal('');
-  protected readonly matchAttested = signal(false);
   protected readonly rating = signal('');
   protected readonly waiver = signal('');
   protected readonly busy = signal(false);
@@ -290,6 +286,20 @@ export class ReceiptActions {
 
   protected canManage(): boolean {
     return hasPermission(this.auth.me(), 'PURCHASING_MANAGE');
+  }
+
+  /** The invoice recorder neither attests the match nor authorises payment (F-5); the server enforces it. */
+  protected recordedInvoice(invoice: SupplierInvoice): boolean {
+    return invoice.recordedByUserId !== undefined && invoice.recordedByUserId === this.auth.me()?.id;
+  }
+
+  protected canAttest(invoice: SupplierInvoice): boolean {
+    return this.canInvoice() && !this.recordedInvoice(invoice);
+  }
+
+  /** Payment is authorised by a purchasing manager who did not record the invoice. */
+  protected canPay(invoice: SupplierInvoice): boolean {
+    return this.canManage() && !this.recordedInvoice(invoice);
   }
 
   /** Delivered shipment lines with something left to receive: one form row each. */
@@ -467,7 +477,7 @@ export class ReceiptActions {
           amount: Number(this.invoiceAmount()),
           currency: this.dossier()?.purchaseOrder?.currency ?? this.request().currency,
           documentReference: this.docRef().trim() || undefined,
-          matchAttested: this.matchAttested(),
+          matchAttested: false,
           paymentStatus: 'PENDING',
         },
         newIdempotencyKey(),

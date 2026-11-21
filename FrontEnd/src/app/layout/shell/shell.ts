@@ -27,6 +27,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ApprovalCountService } from '../../features/approvals/approval-count.service';
 import { PurchasingCountService } from '../../features/purchasing/purchasing-count.service';
 import { InAppNotifications } from '../../features/notifications/in-app-notifications';
+import { MessagingLiveService } from '../../features/internal-messaging/messaging-live.service';
 import { NAVIGATION, NavGroup, NavItem } from '../navigation';
 import { NotificationBell } from '../notification-bell';
 import { UserMenu } from '../user-menu';
@@ -67,6 +68,8 @@ export class Shell {
   private readonly auth = inject(AuthService);
   protected readonly approvalCount = inject(ApprovalCountService);
   protected readonly purchasingCount = inject(PurchasingCountService);
+  /** Created with the workspace: opens the live stream and keeps the unread count for the navigation. */
+  protected readonly messages = inject(MessagingLiveService);
   private readonly inAppNotifications = inject(InAppNotifications);
 
   /** Navigation filtered by the user's permissions; empty groups are hidden. */
@@ -77,6 +80,7 @@ export class Shell {
       ...group,
       items: group.items
         .filter((item) => !item.permission || hasPermission(me, item.permission))
+        .filter((item) => !item.hiddenFor || !hasPermission(me, item.hiddenFor))
         .map((item) => {
           // Several journey entries open the same page; only the first is marked as the current location.
           const sharesRoute = !!item.route && seen.has(item.route);

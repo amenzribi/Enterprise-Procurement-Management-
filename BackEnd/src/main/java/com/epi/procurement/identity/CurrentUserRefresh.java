@@ -63,6 +63,9 @@ final class CurrentUserRefresh extends OncePerRequestFilter {
 			}
 			else {
 				request.setAttribute(CurrentUserProvider.CACHE_ATTRIBUTE, user.get());
+				// For the access line and every log line of this request; cleared by RequestIdFilter.
+				org.slf4j.MDC.put(com.epi.procurement.platform.web.RequestIdFilter.MDC_USER_ID,
+						Long.toString(user.get().id()));
 				List<SimpleGrantedAuthority> authorities = authorities(user.get());
 				if (!sameAuthorities(authentication, authorities)) {
 					SecurityContext context = SecurityContextHolder.getContext();

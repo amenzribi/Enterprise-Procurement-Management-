@@ -50,7 +50,8 @@ class ApprovalAdminController {
 	}
 
 	/**
-	 * Companies of the administrator's group (S2CR-02).
+	 * Companies the administrator administers: the whole group for a global administrator, their own companies for
+	 * a company administrator (S2CR-02, ADR-007, audit S-7).
 	 */
 	@GetMapping("/admin/companies")
 	List<CompanyItem> companies() {
@@ -58,12 +59,15 @@ class ApprovalAdminController {
 		Absences.requireAdmin(admin);
 		return organization.companiesOfGroup(admin.groupId())
 			.stream()
+			.filter(c -> admin.canAdminCompany(c.id()))
 			.map(c -> new CompanyItem(c.id(), c.code(), c.name(), c.currencyCode()))
 			.toList();
 	}
 
 	/**
-	 * Active users of the administrator's group (S2CR-02), e.g. to pick a named approver or an absence delegate.
+	 * Active users the administrator may see (S2CR-02), e.g. to pick a named approver or an absence delegate: the
+	 * group for a global administrator; for a company administrator, the users of their companies and the holders
+	 * of group-wide roles (ADR-007, audit S-7).
 	 */
 	@GetMapping("/admin/users")
 	List<UserDirectory.UserListing> users(@RequestParam(required = false) Long companyId,
@@ -76,7 +80,11 @@ class ApprovalAdminController {
 		if (q != null && q.length() > 100) {
 			throw com.epi.procurement.platform.web.ApiProblemException.invalidParameter("q");
 		}
-		return users.searchUsers(admin.groupId(), companyId, role, q);
+		if (companyId != null && !admin.canAdminCompany(companyId)) {
+			throw com.epi.procurement.platform.web.ApiProblemException.notFound();
+		}
+		return users.searchUsers(admin.groupId(), companyId, role, q,
+				admin.isGlobalAdmin() ? null : admin.adminCompanyIds());
 	}
 
 	record CompanyItem(long id, String code, String name, String currency) {

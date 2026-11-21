@@ -312,6 +312,11 @@ class OrderingService {
 		if (!manager && !acceptedBuyer) {
 			throw ApiProblemException.forbidden();
 		}
+		// Separation of duties (F-5): whoever asked for the purchase does not buy it, even as purchasing manager.
+		if (request.isAuthor(user.id())) {
+			throw new ApiProblemException(org.springframework.http.HttpStatus.FORBIDDEN, "buyer-is-requester",
+					"You cannot buy for your own request.");
+		}
 	}
 
 	private void requireOrderingViewer(CurrentUser user, RequestSnapshot request) {

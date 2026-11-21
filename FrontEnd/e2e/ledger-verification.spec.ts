@@ -7,7 +7,8 @@ import { Lang, USERS, createAndSubmit, newUserPage, signIn, t, uniqueTitle } fro
  * Verification of the Ledger redesign: layouts, languages, role restrictions by direct URL, keyboard and touch use,
  * focus restoration, and the loading, empty, error and session-expiry states of the rebuilt inbox.
  */
-const SHOTS = resolve(__dirname, '../../docs/design/verification');
+// E2E_SHOTS_DIR lets a validation run keep its screenshots out of the working tree (default: the documented folder).
+const SHOTS = process.env['E2E_SHOTS_DIR'] ?? resolve(__dirname, '../../docs/design/verification');
 
 const WIDTHS = [375, 768, 1280, 1920];
 const UNTRANSLATED = /\b(approvals|requests|purchasing|receipt|overview|nav|errors|common|tracker|logistics)\.[a-zA-Z-]+(\.[a-zA-Z-]+)*\b/;

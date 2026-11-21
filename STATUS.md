@@ -2,7 +2,7 @@
 
 Short, current state of the project. Detail and history are in [HANDOFF.md](HANDOFF.md).
 
-_Updated 2026-11-19._
+_Updated 2026-11-21._
 
 | Area | State |
 |---|---|
@@ -26,7 +26,7 @@ _Updated 2026-11-19._
 - **Branch:** local `sprint-2` from `72a2280` (Sprint 1, CI green). All Sprint 2 work is uncommitted; nothing pushed, merged, deployed or provisioned; no Google Cloud resource.
 - **P0 approved 2026-11-18:** D1a Google Cloud UAT (e2-standard-4), ADR-018 in principle (provisioning needs a separate approval), D10 Sprint 1 pull request prepared but not merged, D11 HTTPS and IP allow-list, D12 Secret Manager, D13 ADR-016, D14 anchoring deferred, D15 Cloud Monitoring, D17 SQL Server 2022. **Pending:** D8 (Developer licence), D9 (mail relay), D16 (domain), D18 (trial account).
 - **P1 implemented:** fail-closed ClamAV; two database identities in CI; Global Administrator Audit Center; private monitoring endpoint and `/healthz`; ADR-016 links only (temporary passwords removed; Arabic e-mails repaired); snapshot isolation tested on a disposable copy. Full backend 324/324 before stabilisation; frontend lint, 259/259, build. Report: [docs/sprints/sprint-02-progress.md](docs/sprints/sprint-02-progress.md).
-- **Committed locally on 2026-11-19 (five commits `794e1b3`, `e4e8cef`, `cfcccd4`, `3235287` and the documentation commit); not pushed. Waiting for the owner's approval to push.** Database: SQL Server 2022 confirmed; PostgreSQL deferred to a future experimental branch (ADR-001 note). First-writer 503 and snapshot-isolation duplicates fixed; Global Administrator e-mail correction (V26). The browser runs found three defects, all fixed test-first: the application did not start with background jobs on; **set-up and reset e-mails had no usable link since Sprint 10**; a supplier read race (500). Final: backend **337/337**, disposable snapshot-isolation database 33/33 (dropped), frontend lint, 268/268, build, **browser 73/73 in one uninterrupted run** on a fresh database, secret scan clean. Report: [docs/sprints/sprint-02-progress.md](docs/sprints/sprint-02-progress.md).
+- **Pushed and CI green (2026-11-21):** `enterprise/sprint-2` at `f57f700`, run https://github.com/amenzribi/Enterprise-Procurement-Management-/actions/runs/44875958782: backend **351/351 as the restricted runtime identity**, permission verification 12/12, jar, frontend lint, 268/268, build, 0 production advisories. The CI rounds also fixed: background jobs now obey `app.jobs.enabled`; **import jobs scoped to their company or creator** (security, ADR-007; global administrators read but do not create imports); several order-dependent tests. Not merged, deployed or provisioned. Database: SQL Server 2022 confirmed; PostgreSQL deferred (ADR-001 note). Report: [docs/sprints/sprint-02-progress.md](docs/sprints/sprint-02-progress.md).
 - Snapshot isolation is **not** enabled on any database people use.
 
 ## Hardening sprint 1 (closed 2026-11-18; committed, pushed, **CI green**)

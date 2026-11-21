@@ -1,8 +1,14 @@
 # Sprint 2 progress: P1, application readiness
 
-**Date:** 2026-11-18, validation completed 2026-11-19. **Branch:** local `sprint-2` from `72a2280`. **State:** P1.1 to
-P1.6 implemented, stabilised and validated locally; **committed locally on 2026-11-19 in five commits (below); not pushed, merged, deployed or
-provisioned**. Plan: `sprint-02-plan.md`.
+**Date:** 2026-11-18, validation completed 2026-11-21. **Branch:** `sprint-2`, pushed to `enterprise/sprint-2` (HEAD
+`f57f700`), **CI green** (run 44875958782). **State:** P1.1 to P1.6 implemented, stabilised, validated and pushed; not
+merged, deployed or provisioned. Plan: `sprint-02-plan.md`.
+
+**CI evidence (2026-11-21, run https://github.com/amenzribi/Enterprise-Procurement-Management-/actions/runs/44875958782):**
+backend **351/351 as the restricted runtime identity** on SQL Server 2022; runtime permission verification **12/12
+PASS**; application jar built; frontend lint clean, **268/268**, production build; production dependency advisories
+**0 vulnerabilities**. Locally on the same commit: 351/351 as the emulated runtime identity (default order) and 351/351
+in reverse-alphabetical order (no sleep during the run); permission script 12/12.
 
 **Final validation (2026-11-19, one code state):** backend **337/337** on SQL Server; disposable snapshot-isolation
 database **33/33** (dropped); frontend lint clean, **268/268**, build succeeds; browser suite **73/73 in one
@@ -107,9 +113,52 @@ weeks; the native SQL in 44 files, the locking and error-number handling, and ca
 work). New features avoid unnecessary new SQL Server-specific dependencies without destabilising tested code. Recorded
 in ADR-001 and `CLAUDE.md`/`AGENTS.md`.
 
+## CI stabilisation (2026-11-19 to 2026-11-21, owner-approved step by step)
+
+The first CI runs on `sprint-2` (now running the suite as the restricted runtime identity, P1.2) and adverse local test
+orders exposed test-infrastructure faults, one configuration defect and one security defect. Each was reproduced before
+it was fixed.
+
+| Commit | Kind | What |
+|---|---|---|
+| `794e1b3` .. `7b6207e` | P1 | The five P1 commits (see "Commits" below) |
+| `e8bec4e` | test | E-mail helpers pick the e-mail actually sent (outbox id, numeric order) |
+| `87d2ae1` | test | Privileged fixtures (triggers) through the owner connection; `APPLOCK_TEST` instead of `sys.dm_tran_locks` |
+| `e819d6b` | test | The quote-link security context no longer wipes the shared test database (sequence resets, duplicate keys) |
+| `05dddd6` | test | Supplier-portal authorization probed with another supplier's conversation; cross-access test (404 x4, no leak, no state change) |
+| `1a56275` | test | On-behalf journey finds its request by a unique title, not its page position |
+| `4e42f22` | **production** | `app.jobs.enabled=false` disables all six application jobs (Spring Modulith moments enabled scheduling globally) |
+| `226d1da` | test | Isolation test restores the configured 5 s lock timeout on the pooled connection |
+| `d0ba358` | **production, security** | Import jobs scoped to their company or creator (ADR-007); safe re-upload reuse; no client-supplied scope for supplier imports |
+| `5561151` | test | Import access test removes the sites it creates |
+| `bfe2f08` | test | Approval/rejection race checks the winner's exact outcome; both orders tested every run |
+| `f57f700` | **production, security** | Correction of `d0ba358`: global administrators read import jobs but do not create imports |
+
+### Import-job authorization policy (owner decision, 2026-11-20)
+
+- **Create** (`POST /api/v1/imports`): ADMIN and PURCHASING_MANAGER only (the holders of `IMPORT_RUN`); organisation
+  imports only for a company the administrator administers. GLOBAL_ADMIN gets 403. Role model and frontend unchanged.
+- **Read** (`GET /api/v1/imports/{id}`): company-scoped jobs by global administrators and that company's
+  administrators (the creator while they keep the right); group-level supplier jobs by global administrators and
+  their creator while still allowed to import; everyone else 404, identical to an unknown id, no status or counts.
+- **Re-upload** of the same file reuses only a job of the same scope that the caller may read.
+- Note: the message of `d0ba358` wrongly says the interface offers imports to global administrators; `f57f700`
+  corrects it (history not rewritten).
+
+### Remaining risks
+
+| Risk | Note |
+|---|---|
+| Live internal messaging works on one node only | Deploy a single node until the multi-node option is decided |
+| Possible duplicate e-mail after recovery | The outbox reclaims a message stuck in SENDING after 5 minutes (crash or very slow relay); the Message-ID is stable |
+| Prometheus per-URI metric cardinality | Micrometer stops tagging new URIs after 100 (seen in the browser run); review the limit with monitoring in P2 |
+| Spring Modulith moments | Unused; its hourly and daily tasks still run on every instance (harmless) |
+| E-mail delivery proven only in file mode | D9 (mail relay) open; UAT must prove real delivery |
+| Snapshot isolation (ADR-014) | Safe for numbering and audit-chain creation in tests; still not enabled |
+
 ## Decisions for the owner
 
-1. **Approve the push** of the five local commits, so CI proves P1.2 (two database identities).
+1. **Close Sprint 2 P1** (CI green on `f57f700`, P1.2 proven: suite as the runtime identity, permissions 12/12).
 2. Findings 1 and 2 and ADR-016 step 5 are **done** (S1 to S4).
 3. Still pending from P0: D8 (Developer edition licensing), D9 (mail relay), D16 (domain), D18 (trial account).
 4. P2 (UAT provisioning on Google Cloud) not started; it needs its own approval.

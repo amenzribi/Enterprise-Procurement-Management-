@@ -1,5 +1,15 @@
 <!-- checkpoint:start -->
-# Handoff: Sprint 2 P1 committed locally (five commits, 2026-11-19); push awaiting approval
+# Handoff: Sprint 2 P1 pushed, CI green (2026-11-21); waiting for the owner's closure decision
+
+**Current state (resume here):** `enterprise/sprint-2` = local `sprint-2` = `f57f700`. CI run 44875958782 green
+(backend 351/351 as the restricted runtime identity, permissions 12/12, jar, frontend 268/268, build, 0 production
+advisories). All commits and the import-job authorization policy: `docs/sprints/sprint-02-progress.md` ("CI
+stabilisation"). Next: the owner decides on P1 closure, then P2 (needs its own approval). Not merged into `main`;
+nothing deployed or provisioned. Uncommitted by design: `FrontEnd/angular.json`, `docs/tooling.md`, `.anchor/`,
+`docs/superpowers/`. Disposable database `procurement_rtid_test` dropped after validation. Checkpoints:
+`C:/qa/checkpoints/`.
+
+## History of the P1 checkpoint (2026-11-19)
 
 **Resume here.** Read `CLAUDE.md`, this section, `STATUS.md`, `docs/sprints/sprint-02-plan.md` and `docs/sprints/sprint-02-progress.md`. Do not commit, push, deploy, merge, create cloud resources or start P2 without the owner's approval. A copy of this block is kept in `C:/qa/checkpoints/` (STATUS.md and HANDOFF.md were found reverted to older content on 2026-11-18 evening; cause unknown; rebuilt from the session record).
 
@@ -38,7 +48,7 @@
    - **Browser run 2** (23:50–00:23, no sleep, clean backend log): **70/71**. The only failure was a locator in the new e-mail spec (`getByRole('status')` also matched the toast region); fixed (`locator('main')`), and the spec then passed alone 2/2. Logs: `C:/qa/s1/e2e/pw-run2-70of71.log`, `backend-run2.log`.
    - **Browser run 3** was started on a fresh database and **stopped by the owner's request** at 00:45 after about 33 tests: no result.
    - **2026-11-19:** added `e2e/sprint-02-mail-links.spec.ts` (2 tests: set-up, administrator reset and self-service reset links followed from the e-mail files) and a generic `mailedLink` helper in `e2e/support.ts`. **Browser run 4 (08:15–08:40): 73/73**, one uninterrupted run, fresh database, keep-awake confirmed (`C:/qa/s1/e2e/keep-awake.txt`), no sleep event, no 5xx, 187 e-mails with no unresolved placeholder. Archived: `C:/qa/s1/e2e/pw-run4-73of73.{log,json}`, `backend-run4.log`. Instance stopped; `docs/qa/evidence` and `docs/design/verification` untouched. Secret scan clean.
-5. **Done 2026-11-19: five local commits on `sprint-2`** (`794e1b3`, `e4e8cef`, `cfcccd4`, `3235287`, then the documentation commit); recovery reference `refs/backup/sprint2/working-tree-before-commits` (`4770f92`). **Resume here: the owner decides on the push** (to `enterprise/feat/internal-messaging` or a new remote branch; never `main`), then CI proves P1.2. Open: the commit-1-only observation on `ApprovalIntegrationTests` (see the progress report); database decision: SQL Server 2022, PostgreSQL deferred (ADR-001 note). How the commits were made:
+5. **Done 2026-11-19: five local commits on `sprint-2`** (`794e1b3`, `e4e8cef`, `cfcccd4`, `3235287`, then the documentation commit); recovery reference `refs/backup/sprint2/working-tree-before-commits` (`4770f92`). **(Superseded: pushed 2026-11-21, see the top of this file.)** The owner decided on the push (to `enterprise/feat/internal-messaging` or a new remote branch; never `main`), then CI proves P1.2. Open: the commit-1-only observation on `ApprovalIntegrationTests` (see the progress report); database decision: SQL Server 2022, PostgreSQL deferred (ADR-001 note). How the commits were made:
    1. Stage each commit from intermediate blobs (`git hash-object -w` + `git update-index --cacheinfo`), without touching the working tree.
    2. Check that each intermediate tree compiles and passes its targeted tests, in a copy outside the workspace.
    3. Then commit and, only if approved, push.

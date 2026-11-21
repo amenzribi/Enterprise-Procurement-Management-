@@ -108,8 +108,24 @@ and pushes follow the same rule as Sprint 1: shown to the owner first.
 |---|---|
 | P5.1 Workload definition: "common API operations" = request list and detail, approval inbox and decision, purchasing queue, sign-in, receipt view; mix and think times agreed | Written and approved |
 | P5.2 Synthetic seed at agreed volumes; k6 scripts in `perf/`; load generated from an e2-standard-2 Spot VM in the same region, created for each session and deleted afterwards (G9) | Reproducible from a clean database; the generator's own CPU stays under 70 % (otherwise the results measure the generator) |
-| P5.3 Baseline (10 users), then 100 concurrent users, then a 2 h soak | At 100 users: p95 < 1 s for each common operation; server errors (5xx) < 1 % of requests, with **no 500 at all** and 503 `busy` counted separately; no deadlock in the SQL Server reports, or each analysed; heap and connections stable during the soak |
-| P5.4 Overload test (beyond 100 users) | Capacity figure recorded; overload answered with clean 503, never 500 |
+| P5.3 Load steps (owner, 2026-11-21): 10-user baseline, then 25, 50 and 100 concurrent users (each step 15 min after a 2 min ramp), then a 2 h soak at 100 users | See "Measurement rules" and "Acceptance by step" below |
+| P5.4 Controlled overload and recovery: ramp beyond 100 users until the first refusals (150, 200, ...), hold 10 min, then back to 50 users | Capacity figure recorded (users at which p95 > 2 s or 503 > 5 %); overload answered with clean 503 `busy` and `Retry-After`, never 500; within 5 min of returning to 50 users, the 50-user criteria hold again with no restart; no stuck SENDING e-mails, no open transactions, connection pool back below its maximum |
+
+**Measurement rules.** Latency is measured per operation of P5.1 on responses that reached the application (k6 `http_req_duration`, excluding the think time). **Server errors** are 5xx only. Expected business answers are **not** errors and are counted separately: validation (400, 409, 415, 422), authentication and authorization refusals (401, 403, 404), and rate limiting (429). An unexpected 4xx (one that the script does not expect for that step) is reported as a script or application defect. Any 500 fails the step. 503 `busy` is counted separately as contention.
+
+**Acceptance by step** (each common operation, measured over the whole step):
+
+| Step | p95 | p99 | 5xx (all) | 503 `busy` | 500 |
+|---|---|---|---|---|---|
+| 10 users (baseline) | < 500 ms | < 1 s | 0 | 0 | 0 |
+| 25 users | < 600 ms | < 1.2 s | < 0.1 % | < 0.1 % | 0 |
+| 50 users | < 800 ms | < 1.5 s | < 0.5 % | < 0.5 % | 0 |
+| 100 users | < 1 s | < 2 s | < 1 % | < 1 % | 0 |
+| 2 h soak (100 users) | as 100 users, and no upward trend over the 2 h | | as 100 users | as 100 users | 0 |
+
+Also at every step: no SQL Server deadlock left unanalysed; database lock timeouts (error 1222) recorded; JVM heap after garbage collection and the connection pool stable during the soak; host CPU of the load generator under 70 %.
+
+**Before UAT opens to testers** (owner, 2026-11-21), all of: HTTPS working on the UAT domain (D16); SMTP relay delivering set-up and reset links (D9); security configuration verified (P2.2 to P2.6); backups running and **at least one successful restore drill** (P3.1, P3.2); minimum monitoring and alerts (P4.1, P4.2 for application down, 5xx, disk, backup, certificate); and a performance smoke test (the 10-user baseline of P5.3 passing). The full load steps, soak and overload test complete before the UAT GO report. Snapshot isolation stays disabled; it is evaluated only on an isolated copy (P5.5).
 | P5.5 ADR-014 measured on a copy with the same workload (D4) | Recommendation with numbers; no change without approval |
 
 ### P6. Closure

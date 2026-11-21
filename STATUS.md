@@ -7,11 +7,11 @@ _Updated 2026-11-21._
 | Area | State |
 |---|---|
 | Published baseline | `c7b901d` (Meridian refinement), pushed to `enterprise/main` on 2026-11-12 |
-| Work in progress | Internal employee messaging on `feat/internal-messaging` (from `c7b901d`), uncommitted, awaiting the owner's review |
-| Review instance | http://localhost:4202 (backend :8082 on the tested code, database `procurement_qa_messaging`); runs while the session that started it is alive |
-| Hardening sprint 1 | Remediation complete and verified on one code state: backend 284/284, frontend lint, 253/253, build, browser 69/69 uninterrupted. Uncommitted. Waiting for the owner: Go/No-Go, F-1, F-2, F-5, commit plan. Report: [docs/sprints/sprint-01-remediation-report.md](docs/sprints/sprint-01-remediation-report.md) |
-| CI | `.github/workflows/ci.yml` written; **never run** (nothing pushed) |
-| Release gates | Independent QA, penetration test, MFA verification and restore drill still open; pilot, UAT and production are no-go |
+| Work in progress | **Sprint 2 P1: CLOSED, GO** (owner, 2026-11-21) on `enterprise/sprint-2` (`19824ac`; code `f57f700`). Not merged into `main`. Next: Git integration proposal and P2 decisions, each awaiting approval |
+| Review instance | None running |
+| Hardening sprint 1 | Closed 2026-11-18; committed and pushed on `enterprise/feat/internal-messaging` (`72a2280`), CI green |
+| CI | `.github/workflows/ci.yml`; last runs green: 44875958782 (`f57f700`) and 44876567944 (`19824ac`) |
+| Release gates | **Google Cloud UAT: not yet approved** (P2 needs its own approval and D8, D9, D16, D18). **Production: NO-GO** (independent QA, penetration test, MFA verification, restore drill, real mail delivery open) |
 
 ## Internal messaging (in review)
 
@@ -21,7 +21,7 @@ _Updated 2026-11-21._
 - Live delivery works on one backend node only; deploy one node until the multi-node option is decided.
 - Decisions needed from the owner: message retention (pending; nothing is deleted); how live delivery reaches other nodes before any multi-node deployment; e-mail for messages (disabled for this phase; extension point only).
 
-## Sprint 2 (P0 approved; P1 implemented, stabilisation in progress; nothing committed)
+## Sprint 2 (P0 approved; **P1 CLOSED, GO, 2026-11-21**; P2 not started)
 
 - **Branch:** local `sprint-2` from `72a2280` (Sprint 1, CI green). All Sprint 2 work is uncommitted; nothing pushed, merged, deployed or provisioned; no Google Cloud resource.
 - **P0 approved 2026-11-18:** D1a Google Cloud UAT (e2-standard-4), ADR-018 in principle (provisioning needs a separate approval), D10 Sprint 1 pull request prepared but not merged, D11 HTTPS and IP allow-list, D12 Secret Manager, D13 ADR-016, D14 anchoring deferred, D15 Cloud Monitoring, D17 SQL Server 2022. **Pending:** D8 (Developer licence), D9 (mail relay), D16 (domain), D18 (trial account).

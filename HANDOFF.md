@@ -1,10 +1,10 @@
 <!-- checkpoint:start -->
-# Handoff: Sprint 2 P1 pushed, CI green (2026-11-21); waiting for the owner's closure decision
+# Handoff: Sprint 2 P1 CLOSED, GO (owner, 2026-11-21); Google Cloud UAT not yet approved; production NO-GO
 
 **Current state (resume here):** `enterprise/sprint-2` = local `sprint-2` = `f57f700`. CI run 44875958782 green
 (backend 351/351 as the restricted runtime identity, permissions 12/12, jar, frontend 268/268, build, 0 production
 advisories). All commits and the import-job authorization policy: `docs/sprints/sprint-02-progress.md` ("CI
-stabilisation"). Next: the owner decides on P1 closure, then P2 (needs its own approval). Not merged into `main`;
+stabilisation"). P1 closed by the owner on 2026-11-21. Next, each awaiting approval: the Git integration into `main` and the P2 decisions (D8, D9, D16, D18). Not merged into `main`;
 nothing deployed or provisioned. Uncommitted by design: `FrontEnd/angular.json`, `docs/tooling.md`, `.anchor/`,
 `docs/superpowers/`. Disposable database `procurement_rtid_test` dropped after validation. Checkpoints:
 `C:/qa/checkpoints/`.

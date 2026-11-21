@@ -1,5 +1,7 @@
 # Sprint 2 progress: P1, application readiness
 
+**P1: CLOSED, GO (owner, 2026-11-21).** Google Cloud UAT: not yet approved (P2). Production: NO-GO.
+
 **Date:** 2026-11-18, validation completed 2026-11-21. **Branch:** `sprint-2`, pushed to `enterprise/sprint-2` (HEAD
 `f57f700`), **CI green** (run 44875958782). **State:** P1.1 to P1.6 implemented, stabilised, validated and pushed; not
 merged, deployed or provisioned. Plan: `sprint-02-plan.md`.
@@ -158,7 +160,7 @@ it was fixed.
 
 ## Decisions for the owner
 
-1. **Close Sprint 2 P1** (CI green on `f57f700`, P1.2 proven: suite as the runtime identity, permissions 12/12).
+1. ~~Close Sprint 2 P1~~: **closed, GO, 2026-11-21** (CI green on `f57f700`, P1.2 proven).
 2. Findings 1 and 2 and ADR-016 step 5 are **done** (S1 to S4).
 3. Still pending from P0: D8 (Developer edition licensing), D9 (mail relay), D16 (domain), D18 (trial account).
 4. P2 (UAT provisioning on Google Cloud) not started; it needs its own approval.
